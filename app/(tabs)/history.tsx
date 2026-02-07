@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useRef } from "react";
 import {
   StyleSheet,
   Text,
@@ -6,13 +6,22 @@ import {
   FlatList,
   Pressable,
   Platform,
-  Alert,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useFocusEffect } from "expo-router";
 import * as Haptics from "expo-haptics";
-import Animated, { FadeInDown } from "react-native-reanimated";
+import Animated, {
+  FadeInDown,
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  withSpring,
+  runOnJS,
+  interpolate,
+  Extrapolation,
+} from "react-native-reanimated";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Colors from "@/constants/colors";
 import {
   GeneratedWorkout,
@@ -20,11 +29,20 @@ import {
 } from "@/lib/exercises";
 import { getWorkouts, deleteWorkout } from "@/lib/workout-storage";
 
-function WorkoutHistoryItem({ item, index, onDelete }: {
+const DELETE_THRESHOLD = -80;
+const SNAP_OPEN = -90;
+
+function SwipeableWorkoutItem({ item, index, onDelete }: {
   item: GeneratedWorkout;
   index: number;
   onDelete: (id: string) => void;
 }) {
+  const translateX = useSharedValue(0);
+  const rowHeight = useSharedValue(1);
+  const rowOpacity = useSharedValue(1);
+  const contextX = useSharedValue(0);
+  const isOpen = useRef(false);
+
   const date = new Date(item.createdAt);
   const dateStr = date.toLocaleDateString("en-US", {
     month: "short",
@@ -38,89 +56,153 @@ function WorkoutHistoryItem({ item, index, onDelete }: {
   const totalSets = item.exercises.reduce((sum, e) => sum + e.sets, 0);
   const isStrength = item.style === "strength";
 
-  const handlePress = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    router.push({ pathname: "/workout/[id]", params: { id: item.id } });
-  };
+  const triggerDelete = useCallback(() => {
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    onDelete(item.id);
+  }, [item.id, onDelete]);
 
-  const handleLongPress = () => {
+  const handleDeletePress = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    Alert.alert(
-      "Delete Workout",
-      "Are you sure you want to remove this workout?",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: () => onDelete(item.id),
-        },
-      ],
+    translateX.value = withTiming(-400, { duration: 250 });
+    rowHeight.value = withTiming(0, { duration: 300 });
+    rowOpacity.value = withTiming(0, { duration: 250 }, () => {
+      runOnJS(triggerDelete)();
+    });
+  }, [triggerDelete]);
+
+  const panGesture = Gesture.Pan()
+    .activeOffsetX([-10, 10])
+    .failOffsetY([-5, 5])
+    .onStart(() => {
+      contextX.value = translateX.value;
+    })
+    .onUpdate((event) => {
+      const newX = contextX.value + event.translationX;
+      translateX.value = Math.min(0, Math.max(newX, -150));
+    })
+    .onEnd((event) => {
+      if (translateX.value < DELETE_THRESHOLD) {
+        translateX.value = withSpring(SNAP_OPEN, { damping: 20, stiffness: 200 });
+        isOpen.current = true;
+        runOnJS(Haptics.impactAsync)(Haptics.ImpactFeedbackStyle.Light);
+      } else {
+        translateX.value = withSpring(0, { damping: 20, stiffness: 200 });
+        isOpen.current = false;
+      }
+    });
+
+  const tapGesture = Gesture.Tap()
+    .onEnd(() => {
+      if (isOpen.current) {
+        translateX.value = withSpring(0, { damping: 20, stiffness: 200 });
+        isOpen.current = false;
+      } else {
+        runOnJS(Haptics.impactAsync)(Haptics.ImpactFeedbackStyle.Light);
+        runOnJS(router.push)({ pathname: "/workout/[id]", params: { id: item.id } });
+      }
+    });
+
+  const composedGesture = Gesture.Race(panGesture, tapGesture);
+
+  const cardAnimStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: translateX.value }],
+  }));
+
+  const deleteActionStyle = useAnimatedStyle(() => {
+    const actionOpacity = interpolate(
+      translateX.value,
+      [0, -40, -80],
+      [0, 0.5, 1],
+      Extrapolation.CLAMP,
     );
-  };
+    const scale = interpolate(
+      translateX.value,
+      [0, -60, -90],
+      [0.5, 0.8, 1],
+      Extrapolation.CLAMP,
+    );
+    return {
+      opacity: actionOpacity,
+      transform: [{ scale }],
+    };
+  });
+
+  const rowContainerStyle = useAnimatedStyle(() => ({
+    opacity: rowOpacity.value,
+    transform: [{ scaleY: rowHeight.value }],
+    marginBottom: interpolate(rowHeight.value, [0, 1], [0, 12]),
+    overflow: "hidden" as const,
+  }));
 
   return (
-    <Animated.View entering={FadeInDown.delay(index * 60).duration(350)}>
-      <Pressable
-        style={({ pressed }) => [
-          styles.historyCard,
-          pressed && { opacity: 0.85, transform: [{ scale: 0.98 }] },
-        ]}
-        onPress={handlePress}
-        onLongPress={handleLongPress}
-      >
-        <View style={styles.historyCardHeader}>
-          <View style={styles.historyCardTitleRow}>
-            <Text style={styles.historyCardTitle} numberOfLines={1}>
-              {item.name}
-            </Text>
-            <View
-              style={[
-                styles.styleBadge,
-                {
-                  backgroundColor: isStrength
-                    ? "rgba(92, 124, 250, 0.15)"
-                    : "rgba(255, 107, 53, 0.15)",
-                },
-              ]}
-            >
-              <Text
-                style={[
-                  styles.styleBadgeText,
-                  { color: isStrength ? Colors.strength : Colors.hypertrophy },
-                ]}
-              >
-                {isStrength ? "STR" : "HYP"}
+    <Animated.View
+      entering={FadeInDown.delay(index * 60).duration(350)}
+      style={rowContainerStyle}
+    >
+      <View style={styles.swipeContainer}>
+        <Animated.View style={[styles.deleteAction, deleteActionStyle]}>
+          <Pressable onPress={handleDeletePress} style={styles.deleteButton}>
+            <Ionicons name="trash" size={22} color="#FFF" />
+            <Text style={styles.deleteText}>Delete</Text>
+          </Pressable>
+        </Animated.View>
+
+        <GestureDetector gesture={composedGesture}>
+          <Animated.View style={[styles.historyCard, cardAnimStyle]}>
+            <View style={styles.historyCardHeader}>
+              <View style={styles.historyCardTitleRow}>
+                <Text style={styles.historyCardTitle} numberOfLines={1}>
+                  {item.name}
+                </Text>
+                <View
+                  style={[
+                    styles.styleBadge,
+                    {
+                      backgroundColor: isStrength
+                        ? "rgba(92, 124, 250, 0.15)"
+                        : "rgba(255, 107, 53, 0.15)",
+                    },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.styleBadgeText,
+                      { color: isStrength ? Colors.strength : Colors.hypertrophy },
+                    ]}
+                  >
+                    {isStrength ? "STR" : "HYP"}
+                  </Text>
+                </View>
+              </View>
+              <Text style={styles.historyCardType}>
+                {WORKOUT_TYPE_LABELS[item.workoutType]}
               </Text>
             </View>
-          </View>
-          <Text style={styles.historyCardType}>
-            {WORKOUT_TYPE_LABELS[item.workoutType]}
-          </Text>
-        </View>
 
-        <View style={styles.historyCardStats}>
-          <View style={styles.historyStatItem}>
-            <Ionicons name="barbell-outline" size={14} color={Colors.textMuted} />
-            <Text style={styles.historyStatText}>
-              {item.exercises.length} exercises
-            </Text>
-          </View>
-          <View style={styles.historyStatItem}>
-            <Ionicons name="layers-outline" size={14} color={Colors.textMuted} />
-            <Text style={styles.historyStatText}>{totalSets} sets</Text>
-          </View>
-          <View style={styles.historyStatItem}>
-            <Ionicons name="time-outline" size={14} color={Colors.textMuted} />
-            <Text style={styles.historyStatText}>{item.durationMinutes} min</Text>
-          </View>
-        </View>
+            <View style={styles.historyCardStats}>
+              <View style={styles.historyStatItem}>
+                <Ionicons name="barbell-outline" size={14} color={Colors.textMuted} />
+                <Text style={styles.historyStatText}>
+                  {item.exercises.length} exercises
+                </Text>
+              </View>
+              <View style={styles.historyStatItem}>
+                <Ionicons name="layers-outline" size={14} color={Colors.textMuted} />
+                <Text style={styles.historyStatText}>{totalSets} sets</Text>
+              </View>
+              <View style={styles.historyStatItem}>
+                <Ionicons name="time-outline" size={14} color={Colors.textMuted} />
+                <Text style={styles.historyStatText}>{item.durationMinutes} min</Text>
+              </View>
+            </View>
 
-        <View style={styles.historyCardFooter}>
-          <Text style={styles.historyDateText}>{dateStr} at {timeStr}</Text>
-          <Ionicons name="chevron-forward" size={16} color={Colors.textMuted} />
-        </View>
-      </Pressable>
+            <View style={styles.historyCardFooter}>
+              <Text style={styles.historyDateText}>{dateStr} at {timeStr}</Text>
+              <Ionicons name="chevron-forward" size={16} color={Colors.textMuted} />
+            </View>
+          </Animated.View>
+        </GestureDetector>
+      </View>
     </Animated.View>
   );
 }
@@ -144,7 +226,6 @@ export default function HistoryScreen() {
   const handleDelete = async (id: string) => {
     await deleteWorkout(id);
     setWorkouts((prev) => prev.filter((w) => w.id !== id));
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   };
 
   const renderEmpty = () => (
@@ -172,7 +253,7 @@ export default function HistoryScreen() {
         data={workouts}
         keyExtractor={(item) => item.id}
         renderItem={({ item, index }) => (
-          <WorkoutHistoryItem
+          <SwipeableWorkoutItem
             item={item}
             index={index}
             onDelete={handleDelete}
@@ -214,7 +295,6 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingHorizontal: 20,
-    gap: 12,
   },
   emptyList: {
     flex: 1,
@@ -235,6 +315,35 @@ const styles = StyleSheet.create({
     fontFamily: "Rubik_400Regular",
     color: Colors.textMuted,
     textAlign: "center",
+  },
+  swipeContainer: {
+    position: "relative",
+    borderRadius: 16,
+    overflow: "hidden",
+  },
+  deleteAction: {
+    position: "absolute",
+    right: 0,
+    top: 0,
+    bottom: 0,
+    width: 90,
+    backgroundColor: Colors.error,
+    borderTopRightRadius: 16,
+    borderBottomRightRadius: 16,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  deleteButton: {
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 4,
+    width: "100%",
+    height: "100%",
+  },
+  deleteText: {
+    fontSize: 11,
+    fontFamily: "Rubik_600SemiBold",
+    color: "#FFF",
   },
   historyCard: {
     backgroundColor: Colors.surface,
