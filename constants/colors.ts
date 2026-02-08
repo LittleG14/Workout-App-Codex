@@ -17,6 +17,9 @@ const Colors = {
   error: '#FF5252',
   strength: '#5C7CFA',
   hypertrophy: '#FF6B35',
+  circuit: '#FF4757',
+  yoga: '#A78BFA',
+  cardio: '#22D3EE',
   cardGradientStart: '#1E1E1E',
   cardGradientEnd: '#141414',
 

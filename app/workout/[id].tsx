@@ -17,19 +17,28 @@ import Colors from "@/constants/colors";
 import {
   GeneratedWorkout,
   WorkoutExercise,
-  WORKOUT_TYPE_LABELS,
+  CircuitBlock,
+  TOP_CATEGORY_LABELS,
+  getSubTypeLabel,
 } from "@/lib/exercises";
 import { getWorkouts } from "@/lib/workout-storage";
 
-function ExerciseCard({ item, index }: { item: WorkoutExercise; index: number }) {
+const CATEGORY_COLORS: Record<string, string> = {
+  weight_lifting: Colors.primary,
+  circuit: Colors.circuit,
+  yoga: Colors.yoga,
+  cardio: Colors.cardio,
+};
+
+function ExerciseCard({ item, index, accentColor }: { item: WorkoutExercise; index: number; accentColor: string }) {
   const isCompound = item.exercise.category === "compound";
 
   return (
-    <Animated.View entering={FadeInDown.delay(100 + index * 80).duration(400)}>
+    <Animated.View entering={FadeInDown.delay(100 + index * 60).duration(400)}>
       <View style={styles.exerciseCard}>
         <View style={styles.exerciseHeader}>
-          <View style={styles.exerciseNumberBadge}>
-            <Text style={styles.exerciseNumber}>{index + 1}</Text>
+          <View style={[styles.exerciseNumberBadge, { backgroundColor: `${accentColor}18` }]}>
+            <Text style={[styles.exerciseNumber, { color: accentColor }]}>{index + 1}</Text>
           </View>
           <View style={styles.exerciseInfo}>
             <Text style={styles.exerciseName}>{item.exercise.name}</Text>
@@ -37,22 +46,8 @@ function ExerciseCard({ item, index }: { item: WorkoutExercise; index: number })
               <View style={styles.equipmentBadge}>
                 <Text style={styles.equipmentText}>{item.exercise.equipment}</Text>
               </View>
-              <View
-                style={[
-                  styles.categoryBadge,
-                  {
-                    backgroundColor: isCompound
-                      ? "rgba(255, 107, 53, 0.12)"
-                      : "rgba(0, 212, 170, 0.12)",
-                  },
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.categoryText,
-                    { color: isCompound ? Colors.primary : Colors.accent },
-                  ]}
-                >
+              <View style={[styles.categoryBadge, { backgroundColor: isCompound ? `${accentColor}18` : "rgba(0, 212, 170, 0.12)" }]}>
+                <Text style={[styles.categoryText, { color: isCompound ? accentColor : Colors.accent }]}>
                   {isCompound ? "Compound" : "Isolation"}
                 </Text>
               </View>
@@ -68,28 +63,73 @@ function ExerciseCard({ item, index }: { item: WorkoutExercise; index: number })
           <View style={styles.statDivider} />
           <View style={styles.statBox}>
             <Text style={styles.statValue}>{item.reps}</Text>
-            <Text style={styles.statLabel}>Reps</Text>
+            <Text style={styles.statLabel}>{item.reps.includes("min") || item.reps.includes("s") || item.reps.includes("km") || item.reps.includes("m") ? "Duration" : "Reps"}</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statBox}>
             <Text style={styles.statValue}>
-              {item.restSeconds >= 60
-                ? `${Math.floor(item.restSeconds / 60)}:${(item.restSeconds % 60).toString().padStart(2, "0")}`
-                : `${item.restSeconds}s`}
+              {item.restSeconds === 0 ? "--" :
+                item.restSeconds >= 60
+                  ? `${Math.floor(item.restSeconds / 60)}:${(item.restSeconds % 60).toString().padStart(2, "0")}`
+                  : `${item.restSeconds}s`}
             </Text>
             <Text style={styles.statLabel}>Rest</Text>
           </View>
         </View>
 
+        {item.notes && (
+          <View style={styles.notesRow}>
+            <Ionicons name="information-circle-outline" size={14} color={Colors.textMuted} />
+            <Text style={styles.notesText}>{item.notes}</Text>
+          </View>
+        )}
+
         <View style={styles.muscleRow}>
           {item.exercise.muscles.map((m) => (
-            <View key={m} style={styles.musclePill}>
-              <Text style={styles.musclePillText}>
-                {m.charAt(0).toUpperCase() + m.slice(1)}
+            <View key={m} style={[styles.musclePill, { backgroundColor: `${accentColor}12` }]}>
+              <Text style={[styles.musclePillText, { color: accentColor }]}>
+                {m === "full_body" ? "Full Body" : m.charAt(0).toUpperCase() + m.slice(1)}
               </Text>
             </View>
           ))}
         </View>
+      </View>
+    </Animated.View>
+  );
+}
+
+function CircuitBlockCard({ block, index, accentColor }: { block: CircuitBlock; index: number; accentColor: string }) {
+  return (
+    <Animated.View entering={FadeInDown.delay(100 + index * 80).duration(400)}>
+      <View style={[styles.circuitBlockCard, { borderLeftColor: accentColor }]}>
+        <View style={styles.circuitBlockHeader}>
+          <Text style={[styles.circuitBlockTitle, { color: accentColor }]}>{block.name}</Text>
+          <View style={styles.circuitBlockMeta}>
+            {block.timeCapMinutes && (
+              <View style={[styles.circuitMetaBadge, { backgroundColor: `${accentColor}18` }]}>
+                <Ionicons name="time-outline" size={12} color={accentColor} />
+                <Text style={[styles.circuitMetaText, { color: accentColor }]}>{block.timeCapMinutes} min</Text>
+              </View>
+            )}
+            {block.rounds && (
+              <View style={[styles.circuitMetaBadge, { backgroundColor: `${accentColor}18` }]}>
+                <Ionicons name="repeat-outline" size={12} color={accentColor} />
+                <Text style={[styles.circuitMetaText, { color: accentColor }]}>{block.rounds} rounds</Text>
+              </View>
+            )}
+          </View>
+        </View>
+
+        {block.exercises.map((ex, i) => (
+          <View key={`${ex.exercise.id}-${i}`} style={[styles.circuitExerciseRow, i > 0 && styles.circuitExerciseBorder]}>
+            <View style={[styles.circuitDot, { backgroundColor: accentColor }]} />
+            <View style={styles.circuitExerciseInfo}>
+              <Text style={styles.circuitExerciseName}>{ex.exercise.name}</Text>
+              <Text style={styles.circuitExerciseReps}>{ex.reps}</Text>
+            </View>
+            {ex.notes && <Text style={styles.circuitExerciseNote}>{ex.notes}</Text>}
+          </View>
+        ))}
       </View>
     </Animated.View>
   );
@@ -101,9 +141,7 @@ export default function WorkoutDetailScreen() {
   const [workout, setWorkout] = useState<GeneratedWorkout | null>(null);
   const webTopPad = Platform.OS === "web" ? 67 : 0;
 
-  useEffect(() => {
-    loadWorkout();
-  }, [id]);
+  useEffect(() => { loadWorkout(); }, [id]);
 
   const loadWorkout = async () => {
     const all = await getWorkouts();
@@ -119,26 +157,22 @@ export default function WorkoutDetailScreen() {
     );
   }
 
-  const isStrength = workout.style === "strength";
+  const accentColor = CATEGORY_COLORS[workout.topCategory] || Colors.primary;
   const totalSets = workout.exercises.reduce((sum, e) => sum + e.sets, 0);
-  const totalReps = workout.exercises.reduce((sum, e) => {
-    const avgRep = parseInt(e.reps.split("-")[0]);
-    return sum + avgRep * e.sets;
-  }, 0);
+  const hasCircuitBlocks = workout.circuitBlocks && workout.circuitBlocks.length > 0;
+  const categoryLabel = TOP_CATEGORY_LABELS[workout.topCategory] || "Workout";
+  const subLabel = getSubTypeLabel(workout.topCategory, workout.subType);
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + webTopPad }]}>
       <View style={styles.topBar}>
         <Pressable
-          onPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            router.back();
-          }}
+          onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.back(); }}
           style={styles.backButton}
         >
           <Ionicons name="chevron-back" size={24} color={Colors.text} />
         </Pressable>
-        <Text style={styles.topBarTitle}>Workout</Text>
+        <Text style={styles.topBarTitle}>{categoryLabel}</Text>
         <View style={{ width: 40 }} />
       </View>
 
@@ -148,22 +182,16 @@ export default function WorkoutDetailScreen() {
       >
         <Animated.View entering={FadeIn.duration(500)}>
           <LinearGradient
-            colors={
-              isStrength
-                ? ["rgba(92, 124, 250, 0.15)", "rgba(92, 124, 250, 0.03)"]
-                : ["rgba(255, 107, 53, 0.15)", "rgba(255, 107, 53, 0.03)"]
-            }
+            colors={[`${accentColor}22`, `${accentColor}05`]}
             style={styles.heroCard}
           >
             <Text style={styles.heroTitle}>{workout.name}</Text>
-            <Text style={styles.heroType}>
-              {WORKOUT_TYPE_LABELS[workout.workoutType]}
-            </Text>
+            <Text style={styles.heroType}>{subLabel}</Text>
 
             <View style={styles.heroStats}>
               <View style={styles.heroStatItem}>
                 <Text style={styles.heroStatValue}>{workout.exercises.length}</Text>
-                <Text style={styles.heroStatLabel}>Exercises</Text>
+                <Text style={styles.heroStatLabel}>{hasCircuitBlocks ? "Movements" : "Exercises"}</Text>
               </View>
               <View style={styles.heroStatDivider} />
               <View style={styles.heroStatItem}>
@@ -178,39 +206,45 @@ export default function WorkoutDetailScreen() {
             </View>
 
             <View style={styles.heroBadgeRow}>
-              <View
-                style={[
-                  styles.heroBadge,
-                  {
-                    backgroundColor: isStrength
-                      ? "rgba(92, 124, 250, 0.2)"
-                      : "rgba(255, 107, 53, 0.2)",
-                  },
-                ]}
-              >
-                <Ionicons
-                  name={isStrength ? "barbell" : "pulse"}
-                  size={14}
-                  color={isStrength ? Colors.strength : Colors.hypertrophy}
-                />
-                <Text
-                  style={[
-                    styles.heroBadgeText,
-                    { color: isStrength ? Colors.strength : Colors.hypertrophy },
-                  ]}
-                >
-                  {isStrength ? "Strength" : "Hypertrophy"}
+              <View style={[styles.heroBadge, { backgroundColor: `${accentColor}30` }]}>
+                <View style={[styles.heroBadgeDot, { backgroundColor: accentColor }]} />
+                <Text style={[styles.heroBadgeText, { color: accentColor }]}>
+                  {categoryLabel}
                 </Text>
               </View>
+              {workout.topCategory === "weight_lifting" && (
+                <View style={[styles.heroBadge, {
+                  backgroundColor: workout.style === "strength" ? "rgba(92,124,250,0.2)" : "rgba(255,107,53,0.2)"
+                }]}>
+                  <Ionicons
+                    name={workout.style === "strength" ? "barbell" : "pulse"}
+                    size={14}
+                    color={workout.style === "strength" ? Colors.strength : Colors.hypertrophy}
+                  />
+                  <Text style={[styles.heroBadgeText, {
+                    color: workout.style === "strength" ? Colors.strength : Colors.hypertrophy
+                  }]}>
+                    {workout.style === "strength" ? "Strength" : "Hypertrophy"}
+                  </Text>
+                </View>
+              )}
             </View>
           </LinearGradient>
         </Animated.View>
 
-        <Text style={styles.exercisesSectionTitle}>Exercises</Text>
+        <Text style={styles.exercisesSectionTitle}>
+          {hasCircuitBlocks ? "Workout Structure" : workout.topCategory === "yoga" ? "Poses" : "Exercises"}
+        </Text>
 
-        {workout.exercises.map((ex, i) => (
-          <ExerciseCard key={ex.exercise.id + i} item={ex} index={i} />
-        ))}
+        {hasCircuitBlocks ? (
+          workout.circuitBlocks!.map((block, i) => (
+            <CircuitBlockCard key={i} block={block} index={i} accentColor={accentColor} />
+          ))
+        ) : (
+          workout.exercises.map((ex, i) => (
+            <ExerciseCard key={ex.exercise.id + i} item={ex} index={i} accentColor={accentColor} />
+          ))
+        )}
       </ScrollView>
     </View>
   );
@@ -299,6 +333,7 @@ const styles = StyleSheet.create({
   heroBadgeRow: {
     flexDirection: "row",
     justifyContent: "center",
+    gap: 8,
   },
   heroBadge: {
     flexDirection: "row",
@@ -307,6 +342,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 20,
+  },
+  heroBadgeDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
   },
   heroBadgeText: {
     fontSize: 13,
@@ -338,14 +378,12 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 10,
-    backgroundColor: "rgba(255, 107, 53, 0.12)",
     alignItems: "center",
     justifyContent: "center",
   },
   exerciseNumber: {
     fontSize: 14,
     fontFamily: "Rubik_700Bold",
-    color: Colors.primary,
   },
   exerciseInfo: {
     flex: 1,
@@ -408,13 +446,25 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.border,
     alignSelf: "center",
   },
+  notesRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 10,
+    paddingHorizontal: 4,
+  },
+  notesText: {
+    fontSize: 12,
+    fontFamily: "Rubik_400Regular",
+    color: Colors.textMuted,
+    fontStyle: "italic",
+  },
   muscleRow: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 6,
   },
   musclePill: {
-    backgroundColor: "rgba(0, 212, 170, 0.1)",
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 8,
@@ -422,6 +472,74 @@ const styles = StyleSheet.create({
   musclePillText: {
     fontSize: 11,
     fontFamily: "Rubik_500Medium",
-    color: Colors.accent,
+  },
+  circuitBlockCard: {
+    backgroundColor: Colors.surface,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderLeftWidth: 4,
+  },
+  circuitBlockHeader: {
+    marginBottom: 14,
+  },
+  circuitBlockTitle: {
+    fontSize: 18,
+    fontFamily: "Rubik_700Bold",
+    marginBottom: 8,
+  },
+  circuitBlockMeta: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  circuitMetaBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 10,
+  },
+  circuitMetaText: {
+    fontSize: 12,
+    fontFamily: "Rubik_600SemiBold",
+  },
+  circuitExerciseRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 10,
+    gap: 10,
+  },
+  circuitExerciseBorder: {
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+  },
+  circuitDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  circuitExerciseInfo: {
+    flex: 1,
+  },
+  circuitExerciseName: {
+    fontSize: 15,
+    fontFamily: "Rubik_600SemiBold",
+    color: Colors.text,
+  },
+  circuitExerciseReps: {
+    fontSize: 13,
+    fontFamily: "Rubik_500Medium",
+    color: Colors.textSecondary,
+    marginTop: 2,
+  },
+  circuitExerciseNote: {
+    fontSize: 11,
+    fontFamily: "Rubik_400Regular",
+    color: Colors.textMuted,
+    maxWidth: 80,
+    textAlign: "right",
   },
 });

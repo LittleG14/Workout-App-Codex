@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from "react";
+import React, { useState, useCallback } from "react";
 import {
   StyleSheet,
   Text,
@@ -6,7 +6,6 @@ import {
   ScrollView,
   Pressable,
   Platform,
-  Dimensions,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
@@ -18,22 +17,34 @@ import Animated, {
   useAnimatedStyle,
   withSpring,
   withSequence,
-  withTiming,
   FadeIn,
 } from "react-native-reanimated";
 import Colors from "@/constants/colors";
 import {
-  WorkoutType,
+  TopCategory,
+  WeightLiftingType,
+  CircuitStyle,
+  YogaStyle,
+  CardioStyle,
   TrainingStyle,
-  WORKOUT_TYPE_LABELS,
+  WEIGHT_LIFTING_LABELS,
+  CIRCUIT_STYLE_LABELS,
+  YOGA_STYLE_LABELS,
+  CARDIO_STYLE_LABELS,
   DURATION_OPTIONS,
   generateWorkout,
+  getSubTypeLabel,
 } from "@/lib/exercises";
 import { saveWorkout } from "@/lib/workout-storage";
 
-const { width: SCREEN_WIDTH } = Dimensions.get("window");
+const CATEGORIES: { key: TopCategory; label: string; icon: string; iconSet: "ionicons" | "mci"; color: string; desc: string }[] = [
+  { key: "weight_lifting", label: "Weights", icon: "barbell", iconSet: "ionicons", color: Colors.primary, desc: "Traditional splits" },
+  { key: "circuit", label: "Circuit", icon: "flash", iconSet: "ionicons", color: Colors.circuit, desc: "CrossFit / Hyrox" },
+  { key: "yoga", label: "Yoga", icon: "meditation", iconSet: "mci", color: Colors.yoga, desc: "Core & Flexibility" },
+  { key: "cardio", label: "Cardio", icon: "heart", iconSet: "ionicons", color: Colors.cardio, desc: "Run & Mixed" },
+];
 
-const WORKOUT_TYPES: { key: WorkoutType; icon: string; iconSet: "ionicons" | "mci" }[] = [
+const WEIGHT_TYPES: { key: WeightLiftingType; icon: string; iconSet: "ionicons" | "mci" }[] = [
   { key: "chest_triceps", icon: "body", iconSet: "ionicons" },
   { key: "back_biceps", icon: "arm-flex", iconSet: "mci" },
   { key: "shoulders_abs", icon: "human-handsup", iconSet: "mci" },
@@ -43,58 +54,104 @@ const WORKOUT_TYPES: { key: WorkoutType; icon: string; iconSet: "ionicons" | "mc
   { key: "full_body", icon: "fitness", iconSet: "ionicons" },
 ];
 
-function TypeCard({ item, selected, onPress }: {
-  item: typeof WORKOUT_TYPES[0];
+function CategoryCard({ item, selected, onPress }: {
+  item: typeof CATEGORIES[0];
   selected: boolean;
   onPress: () => void;
 }) {
   const scale = useSharedValue(1);
-
-  const animStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-  }));
+  const animStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
 
   const handlePress = () => {
-    scale.value = withSequence(
-      withSpring(0.93, { damping: 15 }),
-      withSpring(1, { damping: 12 }),
-    );
+    scale.value = withSequence(withSpring(0.93, { damping: 15 }), withSpring(1, { damping: 12 }));
     onPress();
   };
 
   return (
-    <Pressable onPress={handlePress}>
-      <Animated.View
-        style={[
-          styles.typeCard,
-          selected && styles.typeCardSelected,
-          animStyle,
-        ]}
-      >
+    <Pressable onPress={handlePress} style={{ flex: 1 }}>
+      <Animated.View style={[styles.categoryCard, selected && { borderColor: item.color, backgroundColor: `${item.color}10` }, animStyle]}>
         {item.iconSet === "ionicons" ? (
-          <Ionicons
-            name={item.icon as any}
-            size={22}
-            color={selected ? Colors.primary : Colors.textSecondary}
-          />
+          <Ionicons name={item.icon as any} size={26} color={selected ? item.color : Colors.textSecondary} />
         ) : (
-          <MaterialCommunityIcons
-            name={item.icon as any}
-            size={22}
-            color={selected ? Colors.primary : Colors.textSecondary}
-          />
+          <MaterialCommunityIcons name={item.icon as any} size={26} color={selected ? item.color : Colors.textSecondary} />
         )}
-        <Text
-          style={[
-            styles.typeCardText,
-            selected && styles.typeCardTextSelected,
-          ]}
-          numberOfLines={2}
-        >
-          {WORKOUT_TYPE_LABELS[item.key]}
-        </Text>
+        <Text style={[styles.categoryLabel, selected && { color: item.color }]}>{item.label}</Text>
+        <Text style={[styles.categoryDesc, selected && { color: `${item.color}AA` }]}>{item.desc}</Text>
       </Animated.View>
     </Pressable>
+  );
+}
+
+function OptionPill({ label, selected, color, onPress }: {
+  label: string; selected: boolean; color: string; onPress: () => void;
+}) {
+  return (
+    <Pressable
+      onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onPress(); }}
+      style={[styles.optionPill, selected && { borderColor: color, backgroundColor: `${color}15` }]}
+    >
+      <Text style={[styles.optionPillText, selected && { color }]}>{label}</Text>
+    </Pressable>
+  );
+}
+
+function SubTypeSelector({ category, subType, onSelect, color }: {
+  category: TopCategory;
+  subType: string;
+  onSelect: (s: string) => void;
+  color: string;
+}) {
+  let options: { key: string; label: string; icon?: string; iconSet?: "ionicons" | "mci" }[] = [];
+
+  switch (category) {
+    case "weight_lifting":
+      return (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.typeRow}>
+          {WEIGHT_TYPES.map((item) => {
+            const selected = subType === item.key;
+            return (
+              <Pressable
+                key={item.key}
+                onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onSelect(item.key); }}
+              >
+                <View style={[styles.typeCard, selected && { borderColor: color, backgroundColor: `${color}10` }]}>
+                  {item.iconSet === "ionicons" ? (
+                    <Ionicons name={item.icon as any} size={20} color={selected ? color : Colors.textSecondary} />
+                  ) : (
+                    <MaterialCommunityIcons name={item.icon as any} size={20} color={selected ? color : Colors.textSecondary} />
+                  )}
+                  <Text style={[styles.typeCardText, selected && { color }]} numberOfLines={2}>
+                    {WEIGHT_LIFTING_LABELS[item.key]}
+                  </Text>
+                </View>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+      );
+    case "circuit":
+      options = Object.entries(CIRCUIT_STYLE_LABELS).map(([k, v]) => ({ key: k, label: v }));
+      break;
+    case "yoga":
+      options = Object.entries(YOGA_STYLE_LABELS).map(([k, v]) => ({ key: k, label: v }));
+      break;
+    case "cardio":
+      options = Object.entries(CARDIO_STYLE_LABELS).map(([k, v]) => ({ key: k, label: v }));
+      break;
+  }
+
+  return (
+    <View style={styles.pillRow}>
+      {options.map((opt) => (
+        <OptionPill
+          key={opt.key}
+          label={opt.label}
+          selected={subType === opt.key}
+          color={color}
+          onPress={() => onSelect(opt.key)}
+        />
+      ))}
+    </View>
   );
 }
 
@@ -103,54 +160,30 @@ function StyleToggle({ style, onToggle }: {
   onToggle: (s: TrainingStyle) => void;
 }) {
   const isStrength = style === "strength";
-
   return (
     <View style={styles.styleToggleContainer}>
       <Pressable
         style={[styles.styleToggleBtn, isStrength && styles.styleToggleBtnActive]}
-        onPress={() => {
-          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-          onToggle("strength");
-        }}
+        onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onToggle("strength"); }}
       >
-        <Ionicons
-          name="barbell"
-          size={18}
-          color={isStrength ? "#FFF" : Colors.textSecondary}
-        />
-        <Text style={[styles.styleToggleText, isStrength && styles.styleToggleTextActive]}>
-          Strength
-        </Text>
-        <Text style={[styles.styleToggleSubtext, isStrength && { color: "rgba(255,255,255,0.7)" }]}>
-          4-6 reps
-        </Text>
+        <Ionicons name="barbell" size={18} color={isStrength ? "#FFF" : Colors.textSecondary} />
+        <Text style={[styles.styleToggleText, isStrength && styles.styleToggleTextActive]}>Strength</Text>
+        <Text style={[styles.styleToggleSubtext, isStrength && { color: "rgba(255,255,255,0.7)" }]}>4-6 reps</Text>
       </Pressable>
       <Pressable
         style={[styles.styleToggleBtn, !isStrength && styles.styleToggleBtnHyper]}
-        onPress={() => {
-          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-          onToggle("hypertrophy");
-        }}
+        onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onToggle("hypertrophy"); }}
       >
-        <Ionicons
-          name="pulse"
-          size={18}
-          color={!isStrength ? "#FFF" : Colors.textSecondary}
-        />
-        <Text style={[styles.styleToggleText, !isStrength && styles.styleToggleTextActive]}>
-          Hypertrophy
-        </Text>
-        <Text style={[styles.styleToggleSubtext, !isStrength && { color: "rgba(255,255,255,0.7)" }]}>
-          8-12 reps
-        </Text>
+        <Ionicons name="pulse" size={18} color={!isStrength ? "#FFF" : Colors.textSecondary} />
+        <Text style={[styles.styleToggleText, !isStrength && styles.styleToggleTextActive]}>Hypertrophy</Text>
+        <Text style={[styles.styleToggleSubtext, !isStrength && { color: "rgba(255,255,255,0.7)" }]}>8-12 reps</Text>
       </Pressable>
     </View>
   );
 }
 
-function DurationPicker({ duration, onSelect }: {
-  duration: number;
-  onSelect: (d: number) => void;
+function DurationPicker({ duration, onSelect, color }: {
+  duration: number; onSelect: (d: number) => void; color: string;
 }) {
   return (
     <View style={styles.durationRow}>
@@ -159,18 +192,11 @@ function DurationPicker({ duration, onSelect }: {
         return (
           <Pressable
             key={d}
-            style={[styles.durationChip, selected && styles.durationChipSelected]}
-            onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              onSelect(d);
-            }}
+            style={[styles.durationChip, selected && { borderColor: color, backgroundColor: `${color}15` }]}
+            onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onSelect(d); }}
           >
-            <Text style={[styles.durationChipText, selected && styles.durationChipTextSelected]}>
-              {d}
-            </Text>
-            <Text style={[styles.durationChipLabel, selected && { color: "rgba(255,255,255,0.7)" }]}>
-              min
-            </Text>
+            <Text style={[styles.durationChipText, selected && { color }]}>{d}</Text>
+            <Text style={[styles.durationChipLabel, selected && { color: `${color}AA` }]}>min</Text>
           </Pressable>
         );
       })}
@@ -178,35 +204,49 @@ function DurationPicker({ duration, onSelect }: {
   );
 }
 
+const DEFAULT_SUB_TYPES: Record<TopCategory, string> = {
+  weight_lifting: "chest_triceps",
+  circuit: "amrap",
+  yoga: "core_strength",
+  cardio: "running",
+};
+
 export default function GenerateScreen() {
   const insets = useSafeAreaInsets();
-  const [selectedType, setSelectedType] = useState<WorkoutType>("chest_triceps");
-  const [selectedStyle, setSelectedStyle] = useState<TrainingStyle>("hypertrophy");
+  const [selectedCategory, setSelectedCategory] = useState<TopCategory>("weight_lifting");
+  const [subTypes, setSubTypes] = useState<Record<TopCategory, string>>(DEFAULT_SUB_TYPES);
+  const [trainingStyle, setTrainingStyle] = useState<TrainingStyle>("hypertrophy");
   const [selectedDuration, setSelectedDuration] = useState(45);
   const [generating, setGenerating] = useState(false);
   const buttonScale = useSharedValue(1);
+  const buttonAnimStyle = useAnimatedStyle(() => ({ transform: [{ scale: buttonScale.value }] }));
 
-  const buttonAnimStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: buttonScale.value }],
-  }));
+  const currentSubType = subTypes[selectedCategory];
+  const catColor = CATEGORIES.find(c => c.key === selectedCategory)?.color || Colors.primary;
+
+  const handleSubTypeChange = (val: string) => {
+    setSubTypes(prev => ({ ...prev, [selectedCategory]: val }));
+  };
 
   const handleGenerate = useCallback(async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-    buttonScale.value = withSequence(
-      withSpring(0.95, { damping: 15 }),
-      withSpring(1, { damping: 10 }),
-    );
+    buttonScale.value = withSequence(withSpring(0.95, { damping: 15 }), withSpring(1, { damping: 10 }));
     setGenerating(true);
 
     await new Promise(r => setTimeout(r, 400));
 
-    const workout = generateWorkout(selectedType, selectedStyle, selectedDuration);
+    const style = selectedCategory === "weight_lifting" ? trainingStyle : currentSubType;
+    const workout = generateWorkout(selectedCategory, currentSubType, style, selectedDuration);
     await saveWorkout(workout);
     setGenerating(false);
     router.push({ pathname: "/workout/[id]", params: { id: workout.id, fresh: "true" } });
-  }, [selectedType, selectedStyle, selectedDuration]);
+  }, [selectedCategory, currentSubType, trainingStyle, selectedDuration]);
 
   const webTopPad = Platform.OS === "web" ? 67 : 0;
+
+  const getSummaryLabel = (): string => {
+    return getSubTypeLabel(selectedCategory, currentSubType);
+  };
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + webTopPad }]}>
@@ -220,38 +260,50 @@ export default function GenerateScreen() {
         </View>
 
         <Animated.View entering={FadeIn.delay(100).duration(400)}>
-          <Text style={styles.sectionTitle}>Muscle Group</Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.typeRow}
-          >
-            {WORKOUT_TYPES.map((item) => (
-              <TypeCard
-                key={item.key}
-                item={item}
-                selected={selectedType === item.key}
+          <Text style={styles.sectionTitle}>Category</Text>
+          <View style={styles.categoryRow}>
+            {CATEGORIES.map((cat) => (
+              <CategoryCard
+                key={cat.key}
+                item={cat}
+                selected={selectedCategory === cat.key}
                 onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  setSelectedType(item.key);
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                  setSelectedCategory(cat.key);
                 }}
               />
             ))}
-          </ScrollView>
+          </View>
         </Animated.View>
 
         <Animated.View entering={FadeIn.delay(200).duration(400)}>
-          <Text style={styles.sectionTitle}>Training Style</Text>
-          <StyleToggle style={selectedStyle} onToggle={setSelectedStyle} />
+          <Text style={styles.sectionTitle}>
+            {selectedCategory === "weight_lifting" ? "Muscle Group" :
+             selectedCategory === "circuit" ? "Format" :
+             selectedCategory === "yoga" ? "Focus" : "Type"}
+          </Text>
+          <SubTypeSelector
+            category={selectedCategory}
+            subType={currentSubType}
+            onSelect={handleSubTypeChange}
+            color={catColor}
+          />
         </Animated.View>
+
+        {selectedCategory === "weight_lifting" && (
+          <Animated.View entering={FadeIn.delay(250).duration(400)}>
+            <Text style={styles.sectionTitle}>Training Style</Text>
+            <StyleToggle style={trainingStyle} onToggle={setTrainingStyle} />
+          </Animated.View>
+        )}
 
         <Animated.View entering={FadeIn.delay(300).duration(400)}>
           <Text style={styles.sectionTitle}>Duration</Text>
-          <DurationPicker duration={selectedDuration} onSelect={setSelectedDuration} />
+          <DurationPicker duration={selectedDuration} onSelect={setSelectedDuration} color={catColor} />
         </Animated.View>
 
         <Animated.View
-          entering={FadeIn.delay(400).duration(400)}
+          entering={FadeIn.delay(350).duration(400)}
           style={styles.summaryCard}
         >
           <LinearGradient
@@ -260,17 +312,19 @@ export default function GenerateScreen() {
           >
             <View style={styles.summaryRow}>
               <View style={styles.summaryItem}>
-                <Ionicons name="body" size={16} color={Colors.primary} />
-                <Text style={styles.summaryLabel}>{WORKOUT_TYPE_LABELS[selectedType]}</Text>
+                <View style={[styles.summaryDot, { backgroundColor: catColor }]} />
+                <Text style={styles.summaryLabel}>
+                  {CATEGORIES.find(c => c.key === selectedCategory)?.label}
+                </Text>
               </View>
               <View style={styles.summaryDivider} />
               <View style={styles.summaryItem}>
-                <Ionicons name={selectedStyle === "strength" ? "barbell" : "pulse"} size={16} color={selectedStyle === "strength" ? Colors.strength : Colors.hypertrophy} />
-                <Text style={styles.summaryLabel}>{selectedStyle === "strength" ? "Strength" : "Hypertrophy"}</Text>
+                <Ionicons name="options" size={14} color={catColor} />
+                <Text style={styles.summaryLabel}>{getSummaryLabel()}</Text>
               </View>
               <View style={styles.summaryDivider} />
               <View style={styles.summaryItem}>
-                <Ionicons name="time" size={16} color={Colors.accent} />
+                <Ionicons name="time" size={14} color={Colors.accent} />
                 <Text style={styles.summaryLabel}>{selectedDuration} min</Text>
               </View>
             </View>
@@ -284,7 +338,7 @@ export default function GenerateScreen() {
             disabled={generating}
           >
             <LinearGradient
-              colors={[Colors.primary, Colors.primaryDark]}
+              colors={[catColor, `${catColor}CC`]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={styles.generateGradient}
@@ -315,7 +369,7 @@ const styles = StyleSheet.create({
   },
   header: {
     marginTop: 12,
-    marginBottom: 28,
+    marginBottom: 24,
   },
   headerTitle: {
     fontSize: 32,
@@ -330,13 +384,59 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   sectionTitle: {
-    fontSize: 14,
+    fontSize: 13,
     fontFamily: "Rubik_600SemiBold",
     color: Colors.textSecondary,
     textTransform: "uppercase",
     letterSpacing: 1.2,
     marginBottom: 12,
-    marginTop: 8,
+    marginTop: 4,
+  },
+  categoryRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginBottom: 20,
+  },
+  categoryCard: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 14,
+    paddingHorizontal: 6,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: Colors.border,
+    backgroundColor: Colors.surface,
+    gap: 5,
+  },
+  categoryLabel: {
+    fontSize: 12,
+    fontFamily: "Rubik_600SemiBold",
+    color: Colors.textSecondary,
+  },
+  categoryDesc: {
+    fontSize: 9,
+    fontFamily: "Rubik_400Regular",
+    color: Colors.textMuted,
+    textAlign: "center",
+  },
+  pillRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+    marginBottom: 20,
+  },
+  optionPill: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: Colors.border,
+    backgroundColor: Colors.surface,
+  },
+  optionPillText: {
+    fontSize: 14,
+    fontFamily: "Rubik_600SemiBold",
+    color: Colors.textSecondary,
   },
   typeRow: {
     flexDirection: "row",
@@ -345,34 +445,27 @@ const styles = StyleSheet.create({
     paddingRight: 20,
   },
   typeCard: {
-    width: 100,
-    height: 90,
+    width: 95,
+    height: 80,
     backgroundColor: Colors.surface,
-    borderRadius: 16,
+    borderRadius: 14,
     alignItems: "center",
     justifyContent: "center",
-    gap: 8,
+    gap: 6,
     borderWidth: 1.5,
     borderColor: Colors.border,
   },
-  typeCardSelected: {
-    borderColor: Colors.primary,
-    backgroundColor: "rgba(255, 107, 53, 0.08)",
-  },
   typeCardText: {
-    fontSize: 12,
+    fontSize: 11,
     fontFamily: "Rubik_500Medium",
     color: Colors.textSecondary,
     textAlign: "center",
     paddingHorizontal: 4,
   },
-  typeCardTextSelected: {
-    color: Colors.primary,
-  },
   styleToggleContainer: {
     flexDirection: "row",
     gap: 12,
-    marginBottom: 24,
+    marginBottom: 20,
   },
   styleToggleBtn: {
     flex: 1,
@@ -409,7 +502,7 @@ const styles = StyleSheet.create({
   durationRow: {
     flexDirection: "row",
     gap: 12,
-    marginBottom: 24,
+    marginBottom: 20,
   },
   durationChip: {
     flex: 1,
@@ -420,17 +513,10 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: Colors.border,
   },
-  durationChipSelected: {
-    borderColor: Colors.accent,
-    backgroundColor: "rgba(0, 212, 170, 0.1)",
-  },
   durationChipText: {
     fontSize: 22,
     fontFamily: "Rubik_700Bold",
     color: Colors.textSecondary,
-  },
-  durationChipTextSelected: {
-    color: Colors.accent,
   },
   durationChipLabel: {
     fontSize: 11,
@@ -456,6 +542,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
+  },
+  summaryDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
   },
   summaryLabel: {
     fontSize: 13,
