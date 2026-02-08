@@ -217,6 +217,7 @@ export default function GenerateScreen() {
   const [subTypes, setSubTypes] = useState<Record<TopCategory, string>>(DEFAULT_SUB_TYPES);
   const [trainingStyle, setTrainingStyle] = useState<TrainingStyle>("hypertrophy");
   const [selectedDuration, setSelectedDuration] = useState(45);
+  const [includeSupersets, setIncludeSupersets] = useState(false);
   const [generating, setGenerating] = useState(false);
   const buttonScale = useSharedValue(1);
   const buttonAnimStyle = useAnimatedStyle(() => ({ transform: [{ scale: buttonScale.value }] }));
@@ -236,11 +237,11 @@ export default function GenerateScreen() {
     await new Promise(r => setTimeout(r, 400));
 
     const style = selectedCategory === "weight_lifting" ? trainingStyle : currentSubType;
-    const workout = generateWorkout(selectedCategory, currentSubType, style, selectedDuration);
+    const workout = generateWorkout(selectedCategory, currentSubType, style, selectedDuration, includeSupersets);
     await saveWorkout(workout);
     setGenerating(false);
     router.push({ pathname: "/workout/[id]", params: { id: workout.id, fresh: "true" } });
-  }, [selectedCategory, currentSubType, trainingStyle, selectedDuration]);
+  }, [selectedCategory, currentSubType, trainingStyle, selectedDuration, includeSupersets]);
 
   const webTopPad = Platform.OS === "web" ? 67 : 0;
 
@@ -294,6 +295,29 @@ export default function GenerateScreen() {
           <Animated.View entering={FadeIn.delay(250).duration(400)}>
             <Text style={styles.sectionTitle}>Training Style</Text>
             <StyleToggle style={trainingStyle} onToggle={setTrainingStyle} />
+
+            <Pressable
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                setIncludeSupersets(prev => !prev);
+              }}
+              style={[styles.supersetToggle, includeSupersets && styles.supersetToggleActive]}
+            >
+              <View style={styles.supersetToggleLeft}>
+                <View style={[styles.supersetIconWrap, includeSupersets && styles.supersetIconWrapActive]}>
+                  <Ionicons name="git-compare" size={18} color={includeSupersets ? "#FFF" : Colors.textSecondary} />
+                </View>
+                <View>
+                  <Text style={[styles.supersetToggleTitle, includeSupersets && { color: Colors.primary }]}>Supersets</Text>
+                  <Text style={styles.supersetToggleDesc}>
+                    {selectedDuration >= 60 ? "2 superset pairs" : "1 superset pair"}
+                  </Text>
+                </View>
+              </View>
+              <View style={[styles.supersetSwitch, includeSupersets && styles.supersetSwitchActive]}>
+                <Animated.View style={[styles.supersetSwitchThumb, includeSupersets && styles.supersetSwitchThumbActive]} />
+              </View>
+            </Pressable>
           </Animated.View>
         )}
 
@@ -579,5 +603,69 @@ const styles = StyleSheet.create({
     fontFamily: "Rubik_700Bold",
     color: "#FFF",
     letterSpacing: 0.3,
+  },
+  supersetToggle: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: Colors.surface,
+    borderRadius: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderWidth: 1.5,
+    borderColor: Colors.border,
+    marginBottom: 20,
+  },
+  supersetToggleActive: {
+    borderColor: Colors.primary,
+    backgroundColor: `${Colors.primary}08`,
+  },
+  supersetToggleLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  supersetIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: Colors.surfaceHighlight,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  supersetIconWrapActive: {
+    backgroundColor: Colors.primary,
+  },
+  supersetToggleTitle: {
+    fontSize: 15,
+    fontFamily: "Rubik_600SemiBold",
+    color: Colors.textSecondary,
+  },
+  supersetToggleDesc: {
+    fontSize: 11,
+    fontFamily: "Rubik_400Regular",
+    color: Colors.textMuted,
+    marginTop: 1,
+  },
+  supersetSwitch: {
+    width: 44,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: Colors.surfaceHighlight,
+    justifyContent: "center",
+    paddingHorizontal: 3,
+  },
+  supersetSwitchActive: {
+    backgroundColor: Colors.primary,
+  },
+  supersetSwitchThumb: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: Colors.textMuted,
+  },
+  supersetSwitchThumbActive: {
+    alignSelf: "flex-end" as const,
+    backgroundColor: "#FFF",
   },
 });
