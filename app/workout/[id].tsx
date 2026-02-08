@@ -18,6 +18,7 @@ import {
   GeneratedWorkout,
   WorkoutExercise,
   CircuitBlock,
+  SupersetPair,
   TOP_CATEGORY_LABELS,
   getSubTypeLabel,
 } from "@/lib/exercises";
@@ -135,6 +136,63 @@ function CircuitBlockCard({ block, index, accentColor }: { block: CircuitBlock; 
   );
 }
 
+function SupersetCard({ pair, index, accentColor }: { pair: SupersetPair; index: number; accentColor: string }) {
+  const renderMiniExercise = (item: WorkoutExercise, label: string) => (
+    <View style={styles.ssExercise}>
+      <View style={styles.ssExerciseHeader}>
+        <View style={[styles.ssLabel, { backgroundColor: `${accentColor}20` }]}>
+          <Text style={[styles.ssLabelText, { color: accentColor }]}>{label}</Text>
+        </View>
+        <Text style={styles.ssExerciseName}>{item.exercise.name}</Text>
+      </View>
+      <View style={styles.ssExerciseStats}>
+        <Text style={styles.ssStatText}>{item.sets} sets</Text>
+        <View style={styles.ssStatDot} />
+        <Text style={styles.ssStatText}>{item.reps} reps</Text>
+        <View style={styles.ssStatDot} />
+        <Text style={styles.ssStatText}>
+          {item.restSeconds === 0 ? "No rest" :
+            item.restSeconds >= 60
+              ? `${Math.floor(item.restSeconds / 60)}:${(item.restSeconds % 60).toString().padStart(2, "0")} rest`
+              : `${item.restSeconds}s rest`}
+        </Text>
+      </View>
+      <View style={styles.ssMuscleTags}>
+        {item.exercise.muscles.map((m) => (
+          <View key={m} style={[styles.ssMusclePill, { backgroundColor: `${accentColor}12` }]}>
+            <Text style={[styles.ssMusclePillText, { color: accentColor }]}>
+              {m === "full_body" ? "Full Body" : m.charAt(0).toUpperCase() + m.slice(1)}
+            </Text>
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+
+  return (
+    <Animated.View entering={FadeInDown.delay(100 + index * 80).duration(400)}>
+      <View style={[styles.supersetCard, { borderLeftColor: accentColor }]}>
+        <View style={[styles.supersetHeader, { backgroundColor: `${accentColor}12` }]}>
+          <Ionicons name="git-compare" size={16} color={accentColor} />
+          <Text style={[styles.supersetTitle, { color: accentColor }]}>Superset {index + 1}</Text>
+        </View>
+
+        {renderMiniExercise(pair.exerciseA, "A")}
+
+        <View style={styles.ssConnector}>
+          <View style={[styles.ssConnectorLine, { backgroundColor: `${accentColor}30` }]} />
+          <View style={[styles.ssConnectorIcon, { backgroundColor: accentColor }]}>
+            <Ionicons name="swap-vertical" size={14} color="#FFF" />
+          </View>
+          <View style={[styles.ssConnectorLine, { backgroundColor: `${accentColor}30` }]} />
+        </View>
+
+        {renderMiniExercise(pair.exerciseB, "B")}
+      </View>
+    </Animated.View>
+  );
+}
+
 export default function WorkoutDetailScreen() {
   const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -158,7 +216,10 @@ export default function WorkoutDetailScreen() {
   }
 
   const accentColor = CATEGORY_COLORS[workout.topCategory] || Colors.primary;
-  const totalSets = workout.exercises.reduce((sum, e) => sum + e.sets, 0);
+  const hasSupersets = workout.supersets && workout.supersets.length > 0;
+  const supersetExerciseCount = hasSupersets ? workout.supersets!.reduce((sum, ss) => sum + ss.exerciseA.sets + ss.exerciseB.sets, 0) : 0;
+  const totalSets = workout.exercises.reduce((sum, e) => sum + e.sets, 0) + supersetExerciseCount;
+  const totalExerciseCount = workout.exercises.length + (hasSupersets ? workout.supersets!.length * 2 : 0);
   const hasCircuitBlocks = workout.circuitBlocks && workout.circuitBlocks.length > 0;
   const categoryLabel = TOP_CATEGORY_LABELS[workout.topCategory] || "Workout";
   const subLabel = getSubTypeLabel(workout.topCategory, workout.subType);
@@ -190,7 +251,7 @@ export default function WorkoutDetailScreen() {
 
             <View style={styles.heroStats}>
               <View style={styles.heroStatItem}>
-                <Text style={styles.heroStatValue}>{workout.exercises.length}</Text>
+                <Text style={styles.heroStatValue}>{totalExerciseCount}</Text>
                 <Text style={styles.heroStatLabel}>{hasCircuitBlocks ? "Movements" : "Exercises"}</Text>
               </View>
               <View style={styles.heroStatDivider} />
@@ -241,9 +302,14 @@ export default function WorkoutDetailScreen() {
             <CircuitBlockCard key={i} block={block} index={i} accentColor={accentColor} />
           ))
         ) : (
-          workout.exercises.map((ex, i) => (
-            <ExerciseCard key={ex.exercise.id + i} item={ex} index={i} accentColor={accentColor} />
-          ))
+          <>
+            {hasSupersets && workout.supersets!.map((pair, i) => (
+              <SupersetCard key={`ss-${i}`} pair={pair} index={i} accentColor={accentColor} />
+            ))}
+            {workout.exercises.map((ex, i) => (
+              <ExerciseCard key={ex.exercise.id + i} item={ex} index={i + (hasSupersets ? workout.supersets!.length : 0)} accentColor={accentColor} />
+            ))}
+          </>
         )}
       </ScrollView>
     </View>
@@ -541,5 +607,103 @@ const styles = StyleSheet.create({
     color: Colors.textMuted,
     maxWidth: 80,
     textAlign: "right",
+  },
+  supersetCard: {
+    backgroundColor: Colors.surface,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderLeftWidth: 4,
+  },
+  supersetHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    marginBottom: 14,
+  },
+  supersetTitle: {
+    fontSize: 14,
+    fontFamily: "Rubik_700Bold",
+  },
+  ssExercise: {
+    gap: 8,
+  },
+  ssExerciseHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  ssLabel: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  ssLabelText: {
+    fontSize: 13,
+    fontFamily: "Rubik_700Bold",
+  },
+  ssExerciseName: {
+    fontSize: 15,
+    fontFamily: "Rubik_600SemiBold",
+    color: Colors.text,
+    flex: 1,
+  },
+  ssExerciseStats: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingLeft: 38,
+  },
+  ssStatText: {
+    fontSize: 12,
+    fontFamily: "Rubik_500Medium",
+    color: Colors.textSecondary,
+  },
+  ssStatDot: {
+    width: 3,
+    height: 3,
+    borderRadius: 1.5,
+    backgroundColor: Colors.textMuted,
+  },
+  ssMuscleTags: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 4,
+    paddingLeft: 38,
+  },
+  ssMusclePill: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  ssMusclePillText: {
+    fontSize: 10,
+    fontFamily: "Rubik_500Medium",
+  },
+  ssConnector: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    marginVertical: 10,
+    gap: 0,
+  },
+  ssConnectorLine: {
+    flex: 1,
+    height: 1,
+  },
+  ssConnectorIcon: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    marginHorizontal: 8,
   },
 });
