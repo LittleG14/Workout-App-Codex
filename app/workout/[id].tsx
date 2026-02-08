@@ -302,14 +302,29 @@ export default function WorkoutDetailScreen() {
             <CircuitBlockCard key={i} block={block} index={i} accentColor={accentColor} />
           ))
         ) : (
-          <>
-            {hasSupersets && workout.supersets!.map((pair, i) => (
-              <SupersetCard key={`ss-${i}`} pair={pair} index={i} accentColor={accentColor} />
-            ))}
-            {workout.exercises.map((ex, i) => (
-              <ExerciseCard key={ex.exercise.id + i} item={ex} index={i + (hasSupersets ? workout.supersets!.length : 0)} accentColor={accentColor} />
-            ))}
-          </>
+          (() => {
+            if (hasSupersets) {
+              const compounds = workout.exercises.filter(e => e.exercise.category === 'compound');
+              const rest = workout.exercises.filter(e => e.exercise.category !== 'compound');
+              let idx = 0;
+              return (
+                <>
+                  {compounds.map((ex) => (
+                    <ExerciseCard key={ex.exercise.id + idx} item={ex} index={++idx} accentColor={accentColor} />
+                  ))}
+                  {workout.supersets!.map((pair, i) => (
+                    <SupersetCard key={`ss-${i}`} pair={pair} index={i} accentColor={accentColor} />
+                  ))}
+                  {rest.map((ex) => (
+                    <ExerciseCard key={ex.exercise.id + idx} item={ex} index={++idx} accentColor={accentColor} />
+                  ))}
+                </>
+              );
+            }
+            return workout.exercises.map((ex, i) => (
+              <ExerciseCard key={ex.exercise.id + i} item={ex} index={i + 1} accentColor={accentColor} />
+            ));
+          })()
         )}
       </ScrollView>
     </View>
