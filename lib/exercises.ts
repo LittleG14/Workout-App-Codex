@@ -34,6 +34,11 @@ export interface CircuitBlock {
   exercises: WorkoutExercise[];
 }
 
+export interface SupersetPair {
+  exerciseA: WorkoutExercise;
+  exerciseB: WorkoutExercise;
+}
+
 export interface GeneratedWorkout {
   id: string;
   name: string;
@@ -43,6 +48,7 @@ export interface GeneratedWorkout {
   durationMinutes: number;
   exercises: WorkoutExercise[];
   circuitBlocks?: CircuitBlock[];
+  supersets?: SupersetPair[];
   createdAt: string;
 }
 
@@ -284,7 +290,7 @@ function randomAdj(): string {
   return a[Math.floor(Math.random() * a.length)];
 }
 
-function generateWeightLifting(subType: WeightLiftingType, style: TrainingStyle, duration: number): GeneratedWorkout {
+function generateWeightLifting(subType: WeightLiftingType, style: TrainingStyle, duration: number, includeSupersets: boolean = false): GeneratedWorkout {
   const muscles = WORKOUT_TYPE_MUSCLES[subType];
   const available = WEIGHT_EXERCISES.filter(e => e.muscles.some(m => muscles.includes(m)));
   const config = getStyleConfig(style);
@@ -298,6 +304,65 @@ function generateWeightLifting(subType: WeightLiftingType, style: TrainingStyle,
     ...isolations.map(exercise => ({ exercise, sets: config.isolationSets, reps: config.isolationReps, restSeconds: config.isolationRest })),
   ];
 
+  let supersets: SupersetPair[] | undefined;
+
+  if (includeSupersets && exercises.length >= 4) {
+    const supersetCount = duration >= 60 ? 2 : 1;
+    supersets = [];
+
+    const usedIndices = new Set<number>();
+
+    for (let s = 0; s < supersetCount && usedIndices.size < exercises.length - 1; s++) {
+      let aIdx = -1;
+      let bIdx = -1;
+
+      for (let i = 0; i < exercises.length; i++) {
+        if (usedIndices.has(i)) continue;
+        for (let j = i + 1; j < exercises.length; j++) {
+          if (usedIndices.has(j)) continue;
+          const aMuscles = exercises[i].exercise.muscles;
+          const bMuscles = exercises[j].exercise.muscles;
+          const overlaps = aMuscles.some(m => bMuscles.includes(m));
+          if (!overlaps) {
+            aIdx = i;
+            bIdx = j;
+            break;
+          }
+        }
+        if (aIdx >= 0) break;
+      }
+
+      if (aIdx < 0) {
+        for (let i = 0; i < exercises.length; i++) {
+          if (usedIndices.has(i)) continue;
+          for (let j = i + 1; j < exercises.length; j++) {
+            if (usedIndices.has(j)) continue;
+            aIdx = i;
+            bIdx = j;
+            break;
+          }
+          if (aIdx >= 0) break;
+        }
+      }
+
+      if (aIdx >= 0 && bIdx >= 0) {
+        usedIndices.add(aIdx);
+        usedIndices.add(bIdx);
+
+        const ssRest = style === 'strength' ? 120 : 60;
+        supersets.push({
+          exerciseA: { ...exercises[aIdx], restSeconds: 0, notes: 'Superset - go straight to next exercise' },
+          exerciseB: { ...exercises[bIdx], restSeconds: ssRest, notes: `Superset - rest ${ssRest}s after both exercises` },
+        });
+
+        exercises.splice(Math.max(aIdx, bIdx), 1);
+        exercises.splice(Math.min(aIdx, bIdx), 1);
+      }
+    }
+
+    if (supersets.length === 0) supersets = undefined;
+  }
+
   return {
     id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
     name: `${randomAdj()} ${WEIGHT_LIFTING_LABELS[subType]}`,
@@ -306,6 +371,7 @@ function generateWeightLifting(subType: WeightLiftingType, style: TrainingStyle,
     style,
     durationMinutes: duration,
     exercises,
+    supersets,
     createdAt: new Date().toISOString(),
   };
 }
@@ -528,10 +594,11 @@ export function generateWorkout(
   subType: string,
   style: string,
   durationMinutes: number,
+  includeSupersets: boolean = false,
 ): GeneratedWorkout {
   switch (topCategory) {
     case 'weight_lifting':
-      return generateWeightLifting(subType as WeightLiftingType, style as TrainingStyle, durationMinutes);
+      return generateWeightLifting(subType as WeightLiftingType, style as TrainingStyle, durationMinutes, includeSupersets);
     case 'circuit':
       return generateCircuit(subType as CircuitStyle, durationMinutes);
     case 'yoga':
