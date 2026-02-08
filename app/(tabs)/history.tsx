@@ -25,7 +25,9 @@ import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Colors from "@/constants/colors";
 import {
   GeneratedWorkout,
-  WORKOUT_TYPE_LABELS,
+  TOP_CATEGORY_LABELS,
+  getSubTypeLabel,
+  TopCategory,
 } from "@/lib/exercises";
 import { getWorkouts, deleteWorkout } from "@/lib/workout-storage";
 
@@ -54,7 +56,15 @@ function SwipeableWorkoutItem({ item, index, onDelete }: {
   });
 
   const totalSets = item.exercises.reduce((sum, e) => sum + e.sets, 0);
-  const isStrength = item.style === "strength";
+
+  const CATEGORY_COLORS: Record<string, string> = {
+    weight_lifting: Colors.primary,
+    circuit: Colors.circuit,
+    yoga: Colors.yoga,
+    cardio: Colors.cardio,
+  };
+  const catColor = CATEGORY_COLORS[item.topCategory] || Colors.primary;
+  const catLabel = TOP_CATEGORY_LABELS[item.topCategory] || "Workout";
 
   const triggerDelete = useCallback(() => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -154,28 +164,14 @@ function SwipeableWorkoutItem({ item, index, onDelete }: {
                 <Text style={styles.historyCardTitle} numberOfLines={1}>
                   {item.name}
                 </Text>
-                <View
-                  style={[
-                    styles.styleBadge,
-                    {
-                      backgroundColor: isStrength
-                        ? "rgba(92, 124, 250, 0.15)"
-                        : "rgba(255, 107, 53, 0.15)",
-                    },
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.styleBadgeText,
-                      { color: isStrength ? Colors.strength : Colors.hypertrophy },
-                    ]}
-                  >
-                    {isStrength ? "STR" : "HYP"}
+                <View style={[styles.styleBadge, { backgroundColor: `${catColor}20` }]}>
+                  <Text style={[styles.styleBadgeText, { color: catColor }]}>
+                    {catLabel}
                   </Text>
                 </View>
               </View>
               <Text style={styles.historyCardType}>
-                {WORKOUT_TYPE_LABELS[item.workoutType]}
+                {getSubTypeLabel(item.topCategory, item.subType)}
               </Text>
             </View>
 

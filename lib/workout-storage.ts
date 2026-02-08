@@ -3,6 +3,18 @@ import { GeneratedWorkout } from './exercises';
 
 const STORAGE_KEY = 'ironforge_workouts';
 
+function migrateWorkout(w: any): GeneratedWorkout {
+  if (!w.topCategory) {
+    return {
+      ...w,
+      topCategory: 'weight_lifting',
+      subType: w.workoutType || 'chest_triceps',
+      style: w.style || 'hypertrophy',
+    };
+  }
+  return w;
+}
+
 export async function saveWorkout(workout: GeneratedWorkout): Promise<void> {
   const existing = await getWorkouts();
   existing.unshift(workout);
@@ -12,7 +24,8 @@ export async function saveWorkout(workout: GeneratedWorkout): Promise<void> {
 export async function getWorkouts(): Promise<GeneratedWorkout[]> {
   const data = await AsyncStorage.getItem(STORAGE_KEY);
   if (!data) return [];
-  return JSON.parse(data);
+  const parsed = JSON.parse(data);
+  return parsed.map(migrateWorkout);
 }
 
 export async function deleteWorkout(id: string): Promise<void> {
