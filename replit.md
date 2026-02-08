@@ -2,7 +2,7 @@
 
 ## Overview
 
-IronForge is a React Native mobile application built with Expo that generates workout routines. Users can select workout types (chest & triceps, back & biceps, legs, push, pull, full body, etc.), choose a training style (strength or hypertrophy), set a duration, and get a generated workout plan. Workouts are saved locally and can be viewed in a history tab. The app has a dark-themed UI with orange accent colors and uses the Rubik font family.
+IronForge is a React Native mobile application built with Expo that generates workout routines across four major categories: Weight Lifting (traditional splits with strength/hypertrophy styles), Circuit Training (AMRAP, EMOM, Rounds for Time, Hyrox simulation), Yoga (core strength or flexibility routines), and Cardio (running or mixed cardio). Users select a category, pick sub-options specific to that category, set a duration (30/45/60/90 min), and get a generated workout plan. Workouts are saved locally and can be viewed/deleted in a history tab. The app has a dark-themed UI with category-specific accent colors and uses the Rubik font family.
 
 The project follows a full-stack architecture with an Express backend server and an Expo/React Native frontend, designed to run on Replit with support for iOS, Android, and web platforms.
 
