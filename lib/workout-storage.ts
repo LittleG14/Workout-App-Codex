@@ -28,6 +28,15 @@ export async function getWorkouts(): Promise<GeneratedWorkout[]> {
   return parsed.map(migrateWorkout);
 }
 
+export async function updateWorkout(workout: GeneratedWorkout): Promise<void> {
+  const existing = await getWorkouts();
+  const idx = existing.findIndex(w => w.id === workout.id);
+  if (idx !== -1) {
+    existing[idx] = workout;
+    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(existing));
+  }
+}
+
 export async function deleteWorkout(id: string): Promise<void> {
   const existing = await getWorkouts();
   const filtered = existing.filter(w => w.id !== id);

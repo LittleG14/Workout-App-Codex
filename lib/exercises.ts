@@ -93,6 +93,53 @@ export const CARDIO_STYLE_LABELS: Record<CardioStyle, string> = {
   mixed_cardio: 'Mixed Cardio',
 };
 
+function getExercisePool(topCategory: TopCategory, subType: string): Exercise[] {
+  switch (topCategory) {
+    case 'weight_lifting':
+      return WEIGHT_EXERCISES;
+    case 'circuit':
+      return CIRCUIT_EXERCISES;
+    case 'yoga':
+      return subType === 'flexibility' ? YOGA_FLEX_POSES : YOGA_CORE_POSES;
+    case 'cardio':
+      return subType === 'running' ? CARDIO_RUNNING : CARDIO_MIXED;
+    default:
+      return [];
+  }
+}
+
+export function findReplacementExercise(
+  current: Exercise,
+  topCategory: TopCategory,
+  subType: string,
+  usedIds: string[]
+): Exercise | null {
+  const pool = getExercisePool(topCategory, subType);
+
+  const candidates = pool.filter(e =>
+    e.id !== current.id &&
+    !usedIds.includes(e.id) &&
+    e.category === current.category &&
+    e.muscles.some(m => current.muscles.includes(m))
+  );
+
+  if (candidates.length > 0) {
+    return candidates[Math.floor(Math.random() * candidates.length)];
+  }
+
+  const looseCandidates = pool.filter(e =>
+    e.id !== current.id &&
+    !usedIds.includes(e.id) &&
+    e.category === current.category
+  );
+
+  if (looseCandidates.length > 0) {
+    return looseCandidates[Math.floor(Math.random() * looseCandidates.length)];
+  }
+
+  return null;
+}
+
 export const WORKOUT_TYPE_MUSCLES: Record<WeightLiftingType, MuscleGroup[]> = {
   chest_triceps: ['chest', 'triceps'],
   back_biceps: ['back', 'biceps'],
