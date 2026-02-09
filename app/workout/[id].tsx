@@ -21,8 +21,9 @@ import {
   SupersetPair,
   TOP_CATEGORY_LABELS,
   getSubTypeLabel,
+  findReplacementExercise,
 } from "@/lib/exercises";
-import { getWorkouts } from "@/lib/workout-storage";
+import { getWorkouts, updateWorkout } from "@/lib/workout-storage";
 
 const CATEGORY_COLORS: Record<string, string> = {
   weight_lifting: Colors.primary,
@@ -31,7 +32,7 @@ const CATEGORY_COLORS: Record<string, string> = {
   cardio: Colors.cardio,
 };
 
-function ExerciseCard({ item, index, accentColor }: { item: WorkoutExercise; index: number; accentColor: string }) {
+function ExerciseCard({ item, index, accentColor, onRefresh }: { item: WorkoutExercise; index: number; accentColor: string; onRefresh?: () => void }) {
   const isCompound = item.exercise.category === "compound";
 
   return (
@@ -54,6 +55,11 @@ function ExerciseCard({ item, index, accentColor }: { item: WorkoutExercise; ind
               </View>
             </View>
           </View>
+          {onRefresh && (
+            <Pressable onPress={onRefresh} hitSlop={8} testID="refresh-exercise">
+              <Ionicons name="refresh" size={20} color={Colors.textMuted} />
+            </Pressable>
+          )}
         </View>
 
         <View style={styles.exerciseStats}>
@@ -136,14 +142,19 @@ function CircuitBlockCard({ block, index, accentColor }: { block: CircuitBlock; 
   );
 }
 
-function SupersetCard({ pair, index, accentColor }: { pair: SupersetPair; index: number; accentColor: string }) {
-  const renderMiniExercise = (item: WorkoutExercise, label: string) => (
+function SupersetCard({ pair, index, accentColor, onRefreshA, onRefreshB }: { pair: SupersetPair; index: number; accentColor: string; onRefreshA?: () => void; onRefreshB?: () => void }) {
+  const renderMiniExercise = (item: WorkoutExercise, label: string, onRefresh?: () => void) => (
     <View style={styles.ssExercise}>
       <View style={styles.ssExerciseHeader}>
         <View style={[styles.ssLabel, { backgroundColor: `${accentColor}20` }]}>
           <Text style={[styles.ssLabelText, { color: accentColor }]}>{label}</Text>
         </View>
         <Text style={styles.ssExerciseName}>{item.exercise.name}</Text>
+        {onRefresh && (
+          <Pressable onPress={onRefresh} hitSlop={8} testID={`refresh-superset-${label}`}>
+            <Ionicons name="refresh" size={16} color={Colors.textMuted} />
+          </Pressable>
+        )}
       </View>
       <View style={styles.ssExerciseStats}>
         <Text style={styles.ssStatText}>{item.sets} sets</Text>
@@ -177,7 +188,7 @@ function SupersetCard({ pair, index, accentColor }: { pair: SupersetPair; index:
           <Text style={[styles.supersetTitle, { color: accentColor }]}>Superset {index + 1}</Text>
         </View>
 
-        {renderMiniExercise(pair.exerciseA, "A")}
+        {renderMiniExercise(pair.exerciseA, "A", onRefreshA)}
 
         <View style={styles.ssConnector}>
           <View style={[styles.ssConnectorLine, { backgroundColor: `${accentColor}30` }]} />
@@ -187,7 +198,7 @@ function SupersetCard({ pair, index, accentColor }: { pair: SupersetPair; index:
           <View style={[styles.ssConnectorLine, { backgroundColor: `${accentColor}30` }]} />
         </View>
 
-        {renderMiniExercise(pair.exerciseB, "B")}
+        {renderMiniExercise(pair.exerciseB, "B", onRefreshB)}
       </View>
     </Animated.View>
   );
@@ -205,6 +216,50 @@ export default function WorkoutDetailScreen() {
     const all = await getWorkouts();
     const found = all.find((w) => w.id === id);
     if (found) setWorkout(found);
+  };
+
+  const getAllUsedIds = (w: GeneratedWorkout): string[] => {
+    const ids = w.exercises.map(e => e.exercise.id);
+    if (w.supersets) {
+      w.supersets.forEach(ss => {
+        ids.push(ss.exerciseA.exercise.id, ss.exerciseB.exercise.id);
+      });
+    }
+    if (w.circuitBlocks) {
+      w.circuitBlocks.forEach(b => b.exercises.forEach(e => ids.push(e.exercise.id)));
+    }
+    return ids;
+  };
+
+  const handleRefreshExercise = async (exerciseIndex: number) => {
+    if (!workout) return;
+    const target = workout.exercises[exerciseIndex];
+    const usedIds = getAllUsedIds(workout);
+    const replacement = findReplacementExercise(target.exercise, workout.topCategory, workout.subType, usedIds);
+    if (!replacement) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    const updated = { ...workout, exercises: [...workout.exercises] };
+    updated.exercises[exerciseIndex] = { ...target, exercise: replacement };
+    setWorkout(updated);
+    await updateWorkout(updated);
+  };
+
+  const handleRefreshSuperset = async (supersetIndex: number, slot: 'A' | 'B') => {
+    if (!workout || !workout.supersets) return;
+    const pair = workout.supersets[supersetIndex];
+    const target = slot === 'A' ? pair.exerciseA : pair.exerciseB;
+    const usedIds = getAllUsedIds(workout);
+    const replacement = findReplacementExercise(target.exercise, workout.topCategory, workout.subType, usedIds);
+    if (!replacement) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    const updatedSupersets = [...workout.supersets];
+    updatedSupersets[supersetIndex] = {
+      ...pair,
+      [slot === 'A' ? 'exerciseA' : 'exerciseB']: { ...target, exercise: replacement },
+    };
+    const updated = { ...workout, supersets: updatedSupersets };
+    setWorkout(updated);
+    await updateWorkout(updated);
   };
 
   if (!workout) {
@@ -304,25 +359,29 @@ export default function WorkoutDetailScreen() {
         ) : (
           (() => {
             if (hasSupersets) {
-              const compounds = workout.exercises.filter(e => e.exercise.category === 'compound');
-              const rest = workout.exercises.filter(e => e.exercise.category !== 'compound');
+              const compounds: { ex: WorkoutExercise; origIdx: number }[] = [];
+              const rest: { ex: WorkoutExercise; origIdx: number }[] = [];
+              workout.exercises.forEach((ex, i) => {
+                if (ex.exercise.category === 'compound') compounds.push({ ex, origIdx: i });
+                else rest.push({ ex, origIdx: i });
+              });
               let idx = 0;
               return (
                 <>
-                  {compounds.map((ex) => (
-                    <ExerciseCard key={ex.exercise.id + idx} item={ex} index={++idx} accentColor={accentColor} />
+                  {compounds.map(({ ex, origIdx }) => (
+                    <ExerciseCard key={ex.exercise.id + origIdx} item={ex} index={++idx} accentColor={accentColor} onRefresh={() => handleRefreshExercise(origIdx)} />
                   ))}
                   {workout.supersets!.map((pair, i) => (
-                    <SupersetCard key={`ss-${i}`} pair={pair} index={i} accentColor={accentColor} />
+                    <SupersetCard key={`ss-${i}`} pair={pair} index={i} accentColor={accentColor} onRefreshA={() => handleRefreshSuperset(i, 'A')} onRefreshB={() => handleRefreshSuperset(i, 'B')} />
                   ))}
-                  {rest.map((ex) => (
-                    <ExerciseCard key={ex.exercise.id + idx} item={ex} index={++idx} accentColor={accentColor} />
+                  {rest.map(({ ex, origIdx }) => (
+                    <ExerciseCard key={ex.exercise.id + origIdx} item={ex} index={++idx} accentColor={accentColor} onRefresh={() => handleRefreshExercise(origIdx)} />
                   ))}
                 </>
               );
             }
             return workout.exercises.map((ex, i) => (
-              <ExerciseCard key={ex.exercise.id + i} item={ex} index={i + 1} accentColor={accentColor} />
+              <ExerciseCard key={ex.exercise.id + i} item={ex} index={i + 1} accentColor={accentColor} onRefresh={() => handleRefreshExercise(i)} />
             ));
           })()
         )}
