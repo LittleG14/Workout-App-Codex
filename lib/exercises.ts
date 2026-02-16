@@ -216,6 +216,9 @@ const WEIGHT_EXERCISES: Exercise[] = [
   { id: 'e63', name: 'Cable Kickback', muscles: ['glutes'], category: 'isolation', equipment: 'Cable' },
   { id: 'e64', name: 'Standing Calf Raise', muscles: ['calves'], category: 'isolation', equipment: 'Machine' },
   { id: 'e65', name: 'Seated Calf Raise', muscles: ['calves'], category: 'isolation', equipment: 'Machine' },
+  { id: 'e66', name: 'Lineman Press', muscles: ['chest', 'triceps'], category: 'isolation', equipment: 'Dumbbells' },
+  { id: 'e67', name: 'Dead Bench Press', muscles: ['chest', 'triceps'], category: 'compound', equipment: 'Barbell' },
+  { id: 'e68', name: 'Wide Grip Bench Press', muscles: ['chest', 'triceps'], category: 'compound', equipment: 'Barbell' },
 ];
 
 const CIRCUIT_EXERCISES: Exercise[] = [
