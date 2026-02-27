@@ -76,7 +76,7 @@ function CategoryCard({ item, selected, onPress }: {
           <MaterialCommunityIcons name={item.icon as any} size={26} color={selected ? item.color : Colors.textSecondary} />
         )}
         <Text style={[styles.categoryLabel, selected && { color: item.color }]}>{item.label}</Text>
-        <Text style={[styles.categoryDesc, selected && { color: `${item.color}AA` }]}>{item.desc}</Text>
+        <Text style={[styles.categoryDesc, selected && { color: `${item.color}AA` }]} numberOfLines={1}>{item.desc}</Text>
       </Animated.View>
     </Pressable>
   );
@@ -424,13 +424,14 @@ const styles = StyleSheet.create({
   categoryCard: {
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 14,
-    paddingHorizontal: 6,
+    paddingVertical: 12,
+    paddingHorizontal: 4,
     borderRadius: 16,
     borderWidth: 1.5,
     borderColor: Colors.border,
     backgroundColor: Colors.surface,
-    gap: 5,
+    gap: 4,
+    aspectRatio: 1,
   },
   categoryLabel: {
     fontSize: 12,
