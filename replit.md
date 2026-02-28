@@ -15,12 +15,12 @@ Preferred communication style: Simple, everyday language.
 ### Frontend (Expo / React Native)
 
 - **Framework**: Expo SDK 54 with expo-router for file-based routing
-- **Navigation**: Tab-based layout with two main tabs — "Generate" (workout creation) and "History" (saved workouts). A detail screen at `workout/[id]` shows individual workout details.
+- **Navigation**: Tab-based layout with three main tabs — "Generate" (workout creation), "History" (saved workouts), and "Profile" (user data & PRs). A detail screen at `workout/[id]` shows individual workout details.
 - **State Management**: TanStack React Query for server state; React's built-in useState for local UI state
 - **Animations**: react-native-reanimated for smooth animations (fade-ins, swipe-to-delete gestures in history)
 - **Gesture Handling**: react-native-gesture-handler for swipeable list items
 - **Fonts**: Rubik font family (Regular, Medium, SemiBold, Bold) loaded via @expo-google-fonts
-- **Local Storage**: AsyncStorage for persisting generated workouts on-device (see `lib/workout-storage.ts`)
+- **Local Storage**: AsyncStorage for persisting generated workouts (`lib/workout-storage.ts`) and user profile (`lib/profile-storage.ts`)
 - **Styling**: Dark theme with StyleSheet-based styling; colors defined in `constants/colors.ts`
 - **Error Handling**: Class-based ErrorBoundary component wrapping the app
 

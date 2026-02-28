@@ -152,7 +152,7 @@ export const WORKOUT_TYPE_MUSCLES: Record<WeightLiftingType, MuscleGroup[]> = {
   pull: ['back', 'biceps'],
 };
 
-const WEIGHT_EXERCISES: Exercise[] = [
+export const WEIGHT_EXERCISES: Exercise[] = [
   { id: 'e1', name: 'Barbell Bench Press', muscles: ['chest', 'triceps'], category: 'compound', equipment: 'Barbell' },
   { id: 'e2', name: 'Incline Dumbbell Press', muscles: ['chest', 'triceps'], category: 'compound', equipment: 'Dumbbells' },
   { id: 'e3', name: 'Dumbbell Flyes', muscles: ['chest'], category: 'isolation', equipment: 'Dumbbells' },
@@ -223,7 +223,7 @@ const WEIGHT_EXERCISES: Exercise[] = [
   { id: 'e68', name: 'Wide Grip Bench Press', muscles: ['chest', 'triceps'], category: 'compound', equipment: 'Barbell' },
 ];
 
-const CIRCUIT_EXERCISES: Exercise[] = [
+export const CIRCUIT_EXERCISES: Exercise[] = [
   { id: 'c1', name: 'Wall Balls', muscles: ['quads', 'shoulders'], category: 'compound', equipment: 'Medicine Ball' },
   { id: 'c2', name: 'Box Jumps', muscles: ['quads', 'glutes'], category: 'compound', equipment: 'Plyo Box' },
   { id: 'c3', name: 'Burpees', muscles: ['full_body'], category: 'compound', equipment: 'Bodyweight' },
