@@ -59,6 +59,21 @@ Preferred communication style: Simple, everyday language.
 - Works on regular exercises, superset exercises (A/B), and circuit block exercises
 - Once logged, the icon is replaced by a colored badge showing the weight (e.g., "135 lbs")
 
+### Notes Logging
+
+- Yoga and Cardio exercises have a notes logging icon (paper+plus) on each exercise card
+- Tapping opens a modal dialog with a multiline text input for free-form notes
+- Logged notes are saved to `WorkoutExercise.userNotes` field
+- Notes persist to AsyncStorage via `updateWorkout()` and are displayed inline below the exercise card
+- Once logged, the icon is replaced by a colored badge showing "Notes ✓"
+
+### PRs & Last Modal (Profile Tab)
+
+- Profile tab has a "PRs and Last" button that opens a modal with 4 category tabs: Weights, Circuit, Yoga, Cardio
+- Weights/Circuit tabs show exercise lists with PR weight badges and detail views showing Personal Record (trophy) and Last Performed stats
+- Yoga/Cardio tabs show exercise lists with last-performed date badges and detail views showing Last Performed date and Last Note (saved user notes)
+- The `computePRs` function in `profile.tsx` supports all 4 categories, tracking `lastNotes` for yoga/cardio
+
 ### Build & Development
 
 - **Dev Mode**: Two processes — `expo:dev` for the Expo bundler and `server:dev` for the Express API

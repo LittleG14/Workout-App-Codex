@@ -23,6 +23,10 @@ import {
   GeneratedWorkout,
   WEIGHT_EXERCISES,
   CIRCUIT_EXERCISES,
+  YOGA_CORE_POSES,
+  YOGA_FLEX_POSES,
+  CARDIO_RUNNING,
+  CARDIO_MIXED,
 } from "@/lib/exercises";
 import { getWorkouts } from "@/lib/workout-storage";
 
@@ -51,12 +55,31 @@ interface ExercisePR {
   lastWeightUnit?: string;
   lastReps?: string;
   lastDate?: string;
+  lastNotes?: string;
+}
+
+type PRCategory = "weight_lifting" | "circuit" | "yoga" | "cardio";
+
+const PR_CATEGORY_TABS: { key: PRCategory; label: string; icon: string; color: string }[] = [
+  { key: "weight_lifting", label: "Weights", icon: "barbell", color: Colors.primary },
+  { key: "circuit", label: "Circuit", icon: "flash", color: Colors.circuit },
+  { key: "yoga", label: "Yoga", icon: "leaf", color: Colors.yoga },
+  { key: "cardio", label: "Cardio", icon: "heart", color: Colors.cardio },
+];
+
+function getExerciseListForCategory(cat: PRCategory): Exercise[] {
+  switch (cat) {
+    case "weight_lifting": return WEIGHT_EXERCISES;
+    case "circuit": return CIRCUIT_EXERCISES;
+    case "yoga": return [...YOGA_CORE_POSES, ...YOGA_FLEX_POSES];
+    case "cardio": return [...CARDIO_RUNNING, ...CARDIO_MIXED];
+  }
 }
 
 function computePRs(
   workouts: GeneratedWorkout[],
   exerciseList: Exercise[],
-  category: "weight_lifting" | "circuit"
+  category: PRCategory
 ): ExercisePR[] {
   const prMap = new Map<string, ExercisePR>();
 
@@ -106,6 +129,7 @@ function computePRs(
         entry.lastWeightUnit = ex.weightUnit || "lbs";
         entry.lastReps = ex.reps;
         entry.lastDate = date;
+        entry.lastNotes = ex.userNotes;
       }
     });
   });
@@ -129,7 +153,7 @@ export default function ProfileScreen() {
 
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [showPRModal, setShowPRModal] = useState(false);
-  const [prCategory, setPrCategory] = useState<"weight_lifting" | "circuit">("weight_lifting");
+  const [prCategory, setPrCategory] = useState<PRCategory>("weight_lifting");
   const [prData, setPrData] = useState<ExercisePR[]>([]);
   const [selectedExercise, setSelectedExercise] = useState<ExercisePR | null>(null);
 
@@ -158,19 +182,22 @@ export default function ProfileScreen() {
   const openPRModal = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     const workouts = await getWorkouts();
-    const data = computePRs(workouts, prCategory === "weight_lifting" ? WEIGHT_EXERCISES : CIRCUIT_EXERCISES, prCategory);
+    const data = computePRs(workouts, getExerciseListForCategory(prCategory), prCategory);
     setPrData(data);
     setSelectedExercise(null);
     setShowPRModal(true);
   };
 
-  const switchPRCategory = async (cat: "weight_lifting" | "circuit") => {
+  const switchPRCategory = async (cat: PRCategory) => {
     setPrCategory(cat);
     setSelectedExercise(null);
     const workouts = await getWorkouts();
-    const data = computePRs(workouts, cat === "weight_lifting" ? WEIGHT_EXERCISES : CIRCUIT_EXERCISES, cat);
+    const data = computePRs(workouts, getExerciseListForCategory(cat), cat);
     setPrData(data);
   };
+
+  const isWeightCategory = prCategory === "weight_lifting" || prCategory === "circuit";
+  const activeCatColor = PR_CATEGORY_TABS.find((t) => t.key === prCategory)?.color || Colors.primary;
 
   if (!profile) return null;
 
@@ -351,20 +378,19 @@ export default function ProfileScreen() {
           </View>
 
           <View style={styles.prCategoryTabs}>
-            <Pressable
-              style={[styles.prCategoryTab, prCategory === "weight_lifting" && styles.prCategoryTabActive]}
-              onPress={() => switchPRCategory("weight_lifting")}
-            >
-              <Ionicons name="barbell" size={16} color={prCategory === "weight_lifting" ? Colors.primary : Colors.textMuted} />
-              <Text style={[styles.prCategoryTabText, prCategory === "weight_lifting" && styles.prCategoryTabTextActive]}>Weights</Text>
-            </Pressable>
-            <Pressable
-              style={[styles.prCategoryTab, prCategory === "circuit" && styles.prCategoryTabActive]}
-              onPress={() => switchPRCategory("circuit")}
-            >
-              <Ionicons name="flash" size={16} color={prCategory === "circuit" ? Colors.circuit : Colors.textMuted} />
-              <Text style={[styles.prCategoryTabText, prCategory === "circuit" && { color: Colors.circuit }]}>Circuit</Text>
-            </Pressable>
+            {PR_CATEGORY_TABS.map((tab) => {
+              const isActive = prCategory === tab.key;
+              return (
+                <Pressable
+                  key={tab.key}
+                  style={[styles.prCategoryTab, isActive && { backgroundColor: `${tab.color}15`, borderBottomWidth: 2, borderBottomColor: tab.color }]}
+                  onPress={() => switchPRCategory(tab.key)}
+                >
+                  <Ionicons name={tab.icon as any} size={14} color={isActive ? tab.color : Colors.textMuted} />
+                  <Text style={[styles.prCategoryTabText, isActive && { color: tab.color }]}>{tab.label}</Text>
+                </Pressable>
+              );
+            })}
           </View>
 
           {selectedExercise ? (
@@ -381,33 +407,35 @@ export default function ProfileScreen() {
                     <Text style={styles.prDetailMetaText}>{selectedExercise.exercise.equipment}</Text>
                   </View>
                   {selectedExercise.exercise.muscles.map((m) => (
-                    <View key={m} style={[styles.prDetailMetaBadge, { backgroundColor: `${prCategory === "weight_lifting" ? Colors.primary : Colors.circuit}15` }]}>
-                      <Text style={[styles.prDetailMetaText, { color: prCategory === "weight_lifting" ? Colors.primary : Colors.circuit }]}>
+                    <View key={m} style={[styles.prDetailMetaBadge, { backgroundColor: `${activeCatColor}15` }]}>
+                      <Text style={[styles.prDetailMetaText, { color: activeCatColor }]}>
                         {m === "full_body" ? "Full Body" : m.charAt(0).toUpperCase() + m.slice(1)}
                       </Text>
                     </View>
                   ))}
                 </View>
 
-                <View style={styles.prStatRow}>
-                  <View style={styles.prStatCard}>
-                    <View style={styles.prStatHeader}>
-                      <Ionicons name="trophy" size={18} color="#FFD700" />
-                      <Text style={styles.prStatTitle}>Personal Record</Text>
+                {isWeightCategory && (
+                  <View style={styles.prStatRow}>
+                    <View style={styles.prStatCard}>
+                      <View style={styles.prStatHeader}>
+                        <Ionicons name="trophy" size={18} color="#FFD700" />
+                        <Text style={styles.prStatTitle}>Personal Record</Text>
+                      </View>
+                      {selectedExercise.prWeight ? (
+                        <>
+                          <Text style={styles.prStatWeight}>{selectedExercise.prWeight} {selectedExercise.prWeightUnit}</Text>
+                          <Text style={styles.prStatDetail}>{selectedExercise.prReps} reps</Text>
+                          {selectedExercise.prDate && (
+                            <Text style={styles.prStatDate}>{formatDate(selectedExercise.prDate)}</Text>
+                          )}
+                        </>
+                      ) : (
+                        <Text style={styles.prStatEmpty}>No data yet</Text>
+                      )}
                     </View>
-                    {selectedExercise.prWeight ? (
-                      <>
-                        <Text style={styles.prStatWeight}>{selectedExercise.prWeight} {selectedExercise.prWeightUnit}</Text>
-                        <Text style={styles.prStatDetail}>{selectedExercise.prReps} reps</Text>
-                        {selectedExercise.prDate && (
-                          <Text style={styles.prStatDate}>{formatDate(selectedExercise.prDate)}</Text>
-                        )}
-                      </>
-                    ) : (
-                      <Text style={styles.prStatEmpty}>No data yet</Text>
-                    )}
                   </View>
-                </View>
+                )}
 
                 <View style={styles.prStatRow}>
                   <View style={styles.prStatCard}>
@@ -417,12 +445,12 @@ export default function ProfileScreen() {
                     </View>
                     {selectedExercise.lastDate ? (
                       <>
-                        {selectedExercise.lastWeight ? (
+                        {isWeightCategory && selectedExercise.lastWeight ? (
                           <Text style={styles.prStatWeight}>{selectedExercise.lastWeight} {selectedExercise.lastWeightUnit}</Text>
-                        ) : (
+                        ) : isWeightCategory ? (
                           <Text style={styles.prStatWeight}>Bodyweight</Text>
-                        )}
-                        <Text style={styles.prStatDetail}>{selectedExercise.lastReps} reps</Text>
+                        ) : null}
+                        <Text style={styles.prStatDetail}>{selectedExercise.lastReps}</Text>
                         <Text style={styles.prStatDate}>{formatDate(selectedExercise.lastDate)}</Text>
                       </>
                     ) : (
@@ -430,6 +458,22 @@ export default function ProfileScreen() {
                     )}
                   </View>
                 </View>
+
+                {!isWeightCategory && (
+                  <View style={styles.prStatRow}>
+                    <View style={styles.prStatCard}>
+                      <View style={styles.prStatHeader}>
+                        <Ionicons name="document-text" size={18} color={activeCatColor} />
+                        <Text style={styles.prStatTitle}>Last Note</Text>
+                      </View>
+                      {selectedExercise.lastNotes ? (
+                        <Text style={styles.prStatDetail}>{selectedExercise.lastNotes}</Text>
+                      ) : (
+                        <Text style={styles.prStatEmpty}>No notes saved</Text>
+                      )}
+                    </View>
+                  </View>
+                )}
               </View>
             </View>
           ) : (
@@ -446,13 +490,24 @@ export default function ProfileScreen() {
                     <Text style={styles.prExerciseName}>{item.exercise.name}</Text>
                     <Text style={styles.prExerciseEquipment}>{item.exercise.equipment}</Text>
                   </View>
-                  {item.prWeight ? (
-                    <View style={[styles.prWeightBadge, { backgroundColor: `${prCategory === "weight_lifting" ? Colors.primary : Colors.circuit}18` }]}>
-                      <Ionicons name="trophy" size={12} color="#FFD700" />
-                      <Text style={[styles.prWeightBadgeText, { color: prCategory === "weight_lifting" ? Colors.primary : Colors.circuit }]}>{item.prWeight} {item.prWeightUnit}</Text>
-                    </View>
+                  {isWeightCategory ? (
+                    item.prWeight ? (
+                      <View style={[styles.prWeightBadge, { backgroundColor: `${activeCatColor}18` }]}>
+                        <Ionicons name="trophy" size={12} color="#FFD700" />
+                        <Text style={[styles.prWeightBadgeText, { color: activeCatColor }]}>{item.prWeight} {item.prWeightUnit}</Text>
+                      </View>
+                    ) : (
+                      <Text style={styles.prNoData}>--</Text>
+                    )
                   ) : (
-                    <Text style={styles.prNoData}>--</Text>
+                    item.lastDate ? (
+                      <View style={[styles.prWeightBadge, { backgroundColor: `${activeCatColor}18` }]}>
+                        <Ionicons name="checkmark-circle" size={12} color={activeCatColor} />
+                        <Text style={[styles.prWeightBadgeText, { color: activeCatColor }]}>{formatDate(item.lastDate)}</Text>
+                      </View>
+                    ) : (
+                      <Text style={styles.prNoData}>--</Text>
+                    )
                   )}
                   <Ionicons name="chevron-forward" size={18} color={Colors.textMuted} />
                 </Pressable>
@@ -649,22 +704,14 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 6,
+    gap: 4,
     paddingVertical: 10,
     backgroundColor: Colors.surface,
   },
-  prCategoryTabActive: {
-    backgroundColor: `${Colors.primary}15`,
-    borderBottomWidth: 2,
-    borderBottomColor: Colors.primary,
-  },
   prCategoryTabText: {
-    fontSize: 14,
+    fontSize: 12,
     fontFamily: "Rubik_600SemiBold",
     color: Colors.textMuted,
-  },
-  prCategoryTabTextActive: {
-    color: Colors.primary,
   },
   prListContent: {
     paddingHorizontal: 20,

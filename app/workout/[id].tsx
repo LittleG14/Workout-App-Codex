@@ -35,7 +35,7 @@ const CATEGORY_COLORS: Record<string, string> = {
   cardio: Colors.cardio,
 };
 
-function ExerciseCard({ item, index, accentColor, onRefresh, onLogWeight, showWeightLog }: { item: WorkoutExercise; index: number; accentColor: string; onRefresh?: () => void; onLogWeight?: () => void; showWeightLog?: boolean }) {
+function ExerciseCard({ item, index, accentColor, onRefresh, onLogWeight, showWeightLog, onLogNotes, showNotesLog }: { item: WorkoutExercise; index: number; accentColor: string; onRefresh?: () => void; onLogWeight?: () => void; showWeightLog?: boolean; onLogNotes?: () => void; showNotesLog?: boolean }) {
   const isCompound = item.exercise.category === "compound";
 
   return (
@@ -65,6 +65,23 @@ function ExerciseCard({ item, index, accentColor, onRefresh, onLogWeight, showWe
                   <View style={[styles.weightBadge, { backgroundColor: `${accentColor}18` }]}>
                     <Ionicons name="barbell-outline" size={12} color={accentColor} />
                     <Text style={[styles.weightBadgeText, { color: accentColor }]}>{item.weight} {item.weightUnit || 'lbs'}</Text>
+                  </View>
+                ) : (
+                  <View style={styles.weightLogIcon}>
+                    <Ionicons name="document-text-outline" size={18} color={Colors.textMuted} />
+                    <View style={styles.weightLogPlus}>
+                      <Ionicons name="add" size={10} color="#FFF" />
+                    </View>
+                  </View>
+                )}
+              </Pressable>
+            )}
+            {showNotesLog && (
+              <Pressable onPress={onLogNotes} hitSlop={8} testID="log-notes" style={styles.weightLogBtn}>
+                {item.userNotes ? (
+                  <View style={[styles.weightBadge, { backgroundColor: `${accentColor}18` }]}>
+                    <Ionicons name="document-text" size={12} color={accentColor} />
+                    <Text style={[styles.weightBadgeText, { color: accentColor }]} numberOfLines={1}>Notes ✓</Text>
                   </View>
                 ) : (
                   <View style={styles.weightLogIcon}>
@@ -110,6 +127,13 @@ function ExerciseCard({ item, index, accentColor, onRefresh, onLogWeight, showWe
           <View style={styles.notesRow}>
             <Ionicons name="information-circle-outline" size={14} color={Colors.textMuted} />
             <Text style={styles.notesText}>{item.notes}</Text>
+          </View>
+        )}
+
+        {item.userNotes && (
+          <View style={[styles.notesRow, { backgroundColor: `${accentColor}08`, borderRadius: 8, padding: 8 }]}>
+            <Ionicons name="document-text" size={14} color={accentColor} />
+            <Text style={[styles.notesText, { color: accentColor }]}>{item.userNotes}</Text>
           </View>
         )}
 
@@ -392,6 +416,34 @@ export default function WorkoutDetailScreen() {
     setWeightModal(prev => ({ ...prev, visible: false }));
   };
 
+  const [notesModal, setNotesModal] = useState<{
+    visible: boolean;
+    exerciseName: string;
+    location: { type: 'exercise'; index: number };
+    currentNotes?: string;
+  }>({ visible: false, exerciseName: '', location: { type: 'exercise', index: 0 } });
+  const [notesInput, setNotesInput] = useState('');
+
+  const openNotesModal = (exerciseName: string, location: typeof notesModal.location, currentNotes?: string) => {
+    setNotesInput(currentNotes || '');
+    setNotesModal({ visible: true, exerciseName, location, currentNotes });
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  };
+
+  const saveNotes = async () => {
+    if (!workout) return;
+    const updated = { ...workout, exercises: [...workout.exercises] };
+    const idx = notesModal.location.index;
+    updated.exercises[idx] = {
+      ...updated.exercises[idx],
+      userNotes: notesInput.trim() || undefined,
+    };
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    setWorkout(updated);
+    await updateWorkout(updated);
+    setNotesModal(prev => ({ ...prev, visible: false }));
+  };
+
   if (!workout) {
     return (
       <View style={[styles.container, styles.loadingContainer]}>
@@ -407,6 +459,7 @@ export default function WorkoutDetailScreen() {
   const totalExerciseCount = workout.exercises.length + (hasSupersets ? workout.supersets!.length * 2 : 0);
   const hasCircuitBlocks = workout.circuitBlocks && workout.circuitBlocks.length > 0;
   const showWeightLog = workout.topCategory === 'weight_lifting' || workout.topCategory === 'circuit';
+  const showNotesLog = workout.topCategory === 'yoga' || workout.topCategory === 'cardio';
   const categoryLabel = TOP_CATEGORY_LABELS[workout.topCategory] || "Workout";
   const subLabel = getSubTypeLabel(workout.topCategory, workout.subType);
 
@@ -524,7 +577,7 @@ export default function WorkoutDetailScreen() {
               );
             }
             return workout.exercises.map((ex, i) => (
-              <ExerciseCard key={ex.exercise.id + i} item={ex} index={i + 1} accentColor={accentColor} onRefresh={() => handleRefreshExercise(i)} showWeightLog={showWeightLog} onLogWeight={() => openWeightModal(ex.exercise.name, { type: 'exercise', index: i }, ex.weight, ex.weightUnit)} />
+              <ExerciseCard key={ex.exercise.id + i} item={ex} index={i + 1} accentColor={accentColor} onRefresh={() => handleRefreshExercise(i)} showWeightLog={showWeightLog} onLogWeight={() => openWeightModal(ex.exercise.name, { type: 'exercise', index: i }, ex.weight, ex.weightUnit)} showNotesLog={showNotesLog} onLogNotes={() => openNotesModal(ex.exercise.name, { type: 'exercise', index: i }, ex.userNotes)} />
             ));
           })()
         )}
@@ -594,6 +647,62 @@ export default function WorkoutDetailScreen() {
                   style={[styles.weightSaveBtn, { backgroundColor: accentColor }]}
                   onPress={saveWeight}
                   testID="save-weight"
+                >
+                  <Text style={styles.weightSaveText}>Save</Text>
+                </Pressable>
+              </View>
+            </Pressable>
+          </Pressable>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      <Modal
+        visible={notesModal.visible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setNotesModal(prev => ({ ...prev, visible: false }))}
+      >
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.modalOverlay}>
+          <Pressable style={styles.modalOverlay} onPress={() => setNotesModal(prev => ({ ...prev, visible: false }))}>
+            <Pressable style={styles.weightModalContent} onPress={(e) => e.stopPropagation()}>
+              <View style={styles.weightModalHeader}>
+                <Ionicons name="document-text-outline" size={22} color={accentColor} />
+                <Text style={styles.weightModalTitle}>Add Note</Text>
+              </View>
+              <Text style={styles.weightModalExercise}>{notesModal.exerciseName}</Text>
+
+              <TextInput
+                style={styles.notesTextInput}
+                value={notesInput}
+                onChangeText={setNotesInput}
+                placeholder="Write a short note..."
+                placeholderTextColor={Colors.textMuted}
+                multiline
+                numberOfLines={3}
+                autoFocus
+                testID="notes-input"
+              />
+
+              <View style={styles.weightModalActions}>
+                {notesModal.currentNotes && (
+                  <Pressable
+                    style={styles.weightClearBtn}
+                    onPress={() => setNotesInput('')}
+                  >
+                    <Text style={styles.weightClearText}>Clear</Text>
+                  </Pressable>
+                )}
+                <View style={{ flex: 1 }} />
+                <Pressable
+                  style={styles.weightCancelBtn}
+                  onPress={() => setNotesModal(prev => ({ ...prev, visible: false }))}
+                >
+                  <Text style={styles.weightCancelText}>Cancel</Text>
+                </Pressable>
+                <Pressable
+                  style={[styles.weightSaveBtn, { backgroundColor: accentColor }]}
+                  onPress={saveNotes}
+                  testID="save-notes"
                 >
                   <Text style={styles.weightSaveText}>Save</Text>
                 </Pressable>
@@ -1174,5 +1283,19 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: "Rubik_600SemiBold",
     color: "#FFF",
+  },
+  notesTextInput: {
+    backgroundColor: Colors.background,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 15,
+    fontFamily: "Rubik_400Regular",
+    color: Colors.text,
+    minHeight: 80,
+    textAlignVertical: "top",
+    marginBottom: 20,
   },
 });

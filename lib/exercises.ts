@@ -26,6 +26,7 @@ export interface WorkoutExercise {
   notes?: string;
   weight?: number;
   weightUnit?: 'lbs' | 'kg';
+  userNotes?: string;
 }
 
 export interface CircuitBlock {
@@ -250,7 +251,7 @@ export const CIRCUIT_EXERCISES: Exercise[] = [
   { id: 'c24', name: 'Clean & Jerk', muscles: ['full_body'], category: 'compound', equipment: 'Barbell' },
 ];
 
-const YOGA_CORE_POSES: Exercise[] = [
+export const YOGA_CORE_POSES: Exercise[] = [
   { id: 'y1', name: 'Boat Pose (Navasana)', muscles: ['abs'], category: 'isolation', equipment: 'Mat' },
   { id: 'y2', name: 'Plank Pose', muscles: ['abs', 'shoulders'], category: 'compound', equipment: 'Mat' },
   { id: 'y3', name: 'Side Plank (Vasisthasana)', muscles: ['abs', 'shoulders'], category: 'compound', equipment: 'Mat' },
@@ -267,7 +268,7 @@ const YOGA_CORE_POSES: Exercise[] = [
   { id: 'y14', name: 'Leg Lifts', muscles: ['abs'], category: 'isolation', equipment: 'Mat' },
 ];
 
-const YOGA_FLEX_POSES: Exercise[] = [
+export const YOGA_FLEX_POSES: Exercise[] = [
   { id: 'yf1', name: 'Downward Dog (Adho Mukha Svanasana)', muscles: ['hamstrings', 'shoulders'], category: 'compound', equipment: 'Mat' },
   { id: 'yf2', name: 'Pigeon Pose (Eka Pada Rajakapotasana)', muscles: ['glutes', 'hamstrings'], category: 'isolation', equipment: 'Mat' },
   { id: 'yf3', name: 'Forward Fold (Uttanasana)', muscles: ['hamstrings'], category: 'isolation', equipment: 'Mat' },
@@ -286,7 +287,7 @@ const YOGA_FLEX_POSES: Exercise[] = [
   { id: 'yf16', name: 'Happy Baby Pose', muscles: ['glutes', 'hamstrings'], category: 'isolation', equipment: 'Mat' },
 ];
 
-const CARDIO_RUNNING: Exercise[] = [
+export const CARDIO_RUNNING: Exercise[] = [
   { id: 'r1', name: 'Easy Pace Run', muscles: ['quads', 'hamstrings'], category: 'compound', equipment: 'None' },
   { id: 'r2', name: 'Tempo Run', muscles: ['quads', 'hamstrings'], category: 'compound', equipment: 'None' },
   { id: 'r3', name: '400m Intervals', muscles: ['quads'], category: 'compound', equipment: 'Track' },
@@ -299,7 +300,7 @@ const CARDIO_RUNNING: Exercise[] = [
   { id: 'r10', name: 'Strides', muscles: ['quads', 'hamstrings'], category: 'compound', equipment: 'None' },
 ];
 
-const CARDIO_MIXED: Exercise[] = [
+export const CARDIO_MIXED: Exercise[] = [
   { id: 'cm1', name: 'Rowing Machine', muscles: ['back', 'quads'], category: 'compound', equipment: 'Rower' },
   { id: 'cm2', name: 'Cycling / Spin Bike', muscles: ['quads', 'hamstrings'], category: 'compound', equipment: 'Bike' },
   { id: 'cm3', name: 'Stairmaster', muscles: ['quads', 'glutes'], category: 'compound', equipment: 'Machine' },
