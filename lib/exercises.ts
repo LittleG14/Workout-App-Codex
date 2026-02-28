@@ -24,6 +24,8 @@ export interface WorkoutExercise {
   reps: string;
   restSeconds: number;
   notes?: string;
+  weight?: number;
+  weightUnit?: 'lbs' | 'kg';
 }
 
 export interface CircuitBlock {

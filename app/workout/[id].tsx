@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   StyleSheet,
   Text,
@@ -6,6 +6,9 @@ import {
   ScrollView,
   Pressable,
   Platform,
+  Modal,
+  TextInput,
+  KeyboardAvoidingView,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLocalSearchParams, router } from "expo-router";
@@ -32,7 +35,7 @@ const CATEGORY_COLORS: Record<string, string> = {
   cardio: Colors.cardio,
 };
 
-function ExerciseCard({ item, index, accentColor, onRefresh }: { item: WorkoutExercise; index: number; accentColor: string; onRefresh?: () => void }) {
+function ExerciseCard({ item, index, accentColor, onRefresh, onLogWeight, showWeightLog }: { item: WorkoutExercise; index: number; accentColor: string; onRefresh?: () => void; onLogWeight?: () => void; showWeightLog?: boolean }) {
   const isCompound = item.exercise.category === "compound";
 
   return (
@@ -55,11 +58,30 @@ function ExerciseCard({ item, index, accentColor, onRefresh }: { item: WorkoutEx
               </View>
             </View>
           </View>
-          {onRefresh && (
-            <Pressable onPress={onRefresh} hitSlop={8} testID="refresh-exercise">
-              <Ionicons name="refresh" size={20} color={Colors.textMuted} />
-            </Pressable>
-          )}
+          <View style={styles.exerciseActions}>
+            {showWeightLog && (
+              <Pressable onPress={onLogWeight} hitSlop={8} testID="log-weight" style={styles.weightLogBtn}>
+                {item.weight ? (
+                  <View style={[styles.weightBadge, { backgroundColor: `${accentColor}18` }]}>
+                    <Ionicons name="barbell-outline" size={12} color={accentColor} />
+                    <Text style={[styles.weightBadgeText, { color: accentColor }]}>{item.weight} {item.weightUnit || 'lbs'}</Text>
+                  </View>
+                ) : (
+                  <View style={styles.weightLogIcon}>
+                    <Ionicons name="document-text-outline" size={18} color={Colors.textMuted} />
+                    <View style={styles.weightLogPlus}>
+                      <Ionicons name="add" size={10} color="#FFF" />
+                    </View>
+                  </View>
+                )}
+              </Pressable>
+            )}
+            {onRefresh && (
+              <Pressable onPress={onRefresh} hitSlop={8} testID="refresh-exercise">
+                <Ionicons name="refresh" size={20} color={Colors.textMuted} />
+              </Pressable>
+            )}
+          </View>
         </View>
 
         <View style={styles.exerciseStats}>
@@ -105,7 +127,7 @@ function ExerciseCard({ item, index, accentColor, onRefresh }: { item: WorkoutEx
   );
 }
 
-function CircuitBlockCard({ block, index, accentColor }: { block: CircuitBlock; index: number; accentColor: string }) {
+function CircuitBlockCard({ block, index, accentColor, showWeightLog, onLogWeight }: { block: CircuitBlock; index: number; accentColor: string; showWeightLog?: boolean; onLogWeight?: (exIndex: number) => void }) {
   return (
     <Animated.View entering={FadeInDown.delay(100 + index * 80).duration(400)}>
       <View style={[styles.circuitBlockCard, { borderLeftColor: accentColor }]}>
@@ -134,6 +156,26 @@ function CircuitBlockCard({ block, index, accentColor }: { block: CircuitBlock; 
               <Text style={styles.circuitExerciseName}>{ex.exercise.name}</Text>
               <Text style={styles.circuitExerciseReps}>{ex.reps}</Text>
             </View>
+            {ex.weight && (
+              <View style={[styles.weightBadgeSm, { backgroundColor: `${accentColor}18`, marginRight: 6 }]}>
+                <Ionicons name="barbell-outline" size={10} color={accentColor} />
+                <Text style={[styles.weightBadgeSmText, { color: accentColor }]}>{ex.weight} {ex.weightUnit || 'lbs'}</Text>
+              </View>
+            )}
+            {showWeightLog && onLogWeight && (
+              <Pressable onPress={() => onLogWeight(i)} hitSlop={6}>
+                {!ex.weight ? (
+                  <View style={styles.weightLogIconSm}>
+                    <Ionicons name="document-text-outline" size={14} color={Colors.textMuted} />
+                    <View style={styles.weightLogPlusSm}>
+                      <Ionicons name="add" size={8} color="#FFF" />
+                    </View>
+                  </View>
+                ) : (
+                  <Ionicons name="create-outline" size={16} color={Colors.textMuted} />
+                )}
+              </Pressable>
+            )}
             {ex.notes && <Text style={styles.circuitExerciseNote}>{ex.notes}</Text>}
           </View>
         ))}
@@ -142,19 +184,38 @@ function CircuitBlockCard({ block, index, accentColor }: { block: CircuitBlock; 
   );
 }
 
-function SupersetCard({ pair, index, accentColor, onRefreshA, onRefreshB }: { pair: SupersetPair; index: number; accentColor: string; onRefreshA?: () => void; onRefreshB?: () => void }) {
-  const renderMiniExercise = (item: WorkoutExercise, label: string, onRefresh?: () => void) => (
+function SupersetCard({ pair, index, accentColor, onRefreshA, onRefreshB, onLogWeightA, onLogWeightB }: { pair: SupersetPair; index: number; accentColor: string; onRefreshA?: () => void; onRefreshB?: () => void; onLogWeightA?: () => void; onLogWeightB?: () => void }) {
+  const renderMiniExercise = (item: WorkoutExercise, label: string, onRefresh?: () => void, onLogWeight?: () => void) => (
     <View style={styles.ssExercise}>
       <View style={styles.ssExerciseHeader}>
         <View style={[styles.ssLabel, { backgroundColor: `${accentColor}20` }]}>
           <Text style={[styles.ssLabelText, { color: accentColor }]}>{label}</Text>
         </View>
         <Text style={styles.ssExerciseName}>{item.exercise.name}</Text>
-        {onRefresh && (
-          <Pressable onPress={onRefresh} hitSlop={8} testID={`refresh-superset-${label}`}>
-            <Ionicons name="refresh" size={16} color={Colors.textMuted} />
-          </Pressable>
-        )}
+        <View style={styles.ssExerciseActions}>
+          {onLogWeight && (
+            <Pressable onPress={onLogWeight} hitSlop={6} testID={`log-weight-superset-${label}`}>
+              {item.weight ? (
+                <View style={[styles.weightBadgeSm, { backgroundColor: `${accentColor}18` }]}>
+                  <Ionicons name="barbell-outline" size={10} color={accentColor} />
+                  <Text style={[styles.weightBadgeSmText, { color: accentColor }]}>{item.weight} {item.weightUnit || 'lbs'}</Text>
+                </View>
+              ) : (
+                <View style={styles.weightLogIconSm}>
+                  <Ionicons name="document-text-outline" size={14} color={Colors.textMuted} />
+                  <View style={styles.weightLogPlusSm}>
+                    <Ionicons name="add" size={8} color="#FFF" />
+                  </View>
+                </View>
+              )}
+            </Pressable>
+          )}
+          {onRefresh && (
+            <Pressable onPress={onRefresh} hitSlop={8} testID={`refresh-superset-${label}`}>
+              <Ionicons name="refresh" size={16} color={Colors.textMuted} />
+            </Pressable>
+          )}
+        </View>
       </View>
       <View style={styles.ssExerciseStats}>
         <Text style={styles.ssStatText}>{item.sets} sets</Text>
@@ -188,7 +249,7 @@ function SupersetCard({ pair, index, accentColor, onRefreshA, onRefreshB }: { pa
           <Text style={[styles.supersetTitle, { color: accentColor }]}>Superset {index + 1}</Text>
         </View>
 
-        {renderMiniExercise(pair.exerciseA, "A", onRefreshA)}
+        {renderMiniExercise(pair.exerciseA, "A", onRefreshA, onLogWeightA)}
 
         <View style={styles.ssConnector}>
           <View style={[styles.ssConnectorLine, { backgroundColor: `${accentColor}30` }]} />
@@ -198,7 +259,7 @@ function SupersetCard({ pair, index, accentColor, onRefreshA, onRefreshB }: { pa
           <View style={[styles.ssConnectorLine, { backgroundColor: `${accentColor}30` }]} />
         </View>
 
-        {renderMiniExercise(pair.exerciseB, "B", onRefreshB)}
+        {renderMiniExercise(pair.exerciseB, "B", onRefreshB, onLogWeightB)}
       </View>
     </Animated.View>
   );
@@ -262,6 +323,75 @@ export default function WorkoutDetailScreen() {
     await updateWorkout(updated);
   };
 
+  const [weightModal, setWeightModal] = useState<{
+    visible: boolean;
+    exerciseName: string;
+    location: { type: 'exercise'; index: number } | { type: 'superset'; index: number; slot: 'A' | 'B' } | { type: 'circuit'; blockIndex: number; exIndex: number };
+    currentWeight?: number;
+    currentUnit?: 'lbs' | 'kg';
+  }>({ visible: false, exerciseName: '', location: { type: 'exercise', index: 0 } });
+  const [weightInput, setWeightInput] = useState('');
+  const [weightUnit, setWeightUnit] = useState<'lbs' | 'kg'>('lbs');
+  const weightInputRef = useRef<TextInput>(null);
+
+  const openWeightModal = (
+    exerciseName: string,
+    location: typeof weightModal.location,
+    currentWeight?: number,
+    currentUnit?: 'lbs' | 'kg'
+  ) => {
+    setWeightInput(currentWeight ? String(currentWeight) : '');
+    setWeightUnit(currentUnit || 'lbs');
+    setWeightModal({ visible: true, exerciseName, location, currentWeight, currentUnit });
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  };
+
+  const saveWeight = async () => {
+    if (!workout) return;
+    const numWeight = parseFloat(weightInput);
+    const updated = { ...workout };
+
+    if (weightModal.location.type === 'exercise') {
+      const idx = weightModal.location.index;
+      updated.exercises = [...workout.exercises];
+      updated.exercises[idx] = {
+        ...updated.exercises[idx],
+        weight: numWeight > 0 ? numWeight : undefined,
+        weightUnit: numWeight > 0 ? weightUnit : undefined,
+      };
+    } else if (weightModal.location.type === 'superset' && updated.supersets) {
+      const { index, slot } = weightModal.location;
+      const updatedSupersets = [...updated.supersets];
+      const pair = updatedSupersets[index];
+      const key = slot === 'A' ? 'exerciseA' : 'exerciseB';
+      updatedSupersets[index] = {
+        ...pair,
+        [key]: {
+          ...pair[key],
+          weight: numWeight > 0 ? numWeight : undefined,
+          weightUnit: numWeight > 0 ? weightUnit : undefined,
+        },
+      };
+      updated.supersets = updatedSupersets;
+    } else if (weightModal.location.type === 'circuit' && updated.circuitBlocks) {
+      const { blockIndex, exIndex } = weightModal.location;
+      const updatedBlocks = [...updated.circuitBlocks];
+      const block = { ...updatedBlocks[blockIndex], exercises: [...updatedBlocks[blockIndex].exercises] };
+      block.exercises[exIndex] = {
+        ...block.exercises[exIndex],
+        weight: numWeight > 0 ? numWeight : undefined,
+        weightUnit: numWeight > 0 ? weightUnit : undefined,
+      };
+      updatedBlocks[blockIndex] = block;
+      updated.circuitBlocks = updatedBlocks;
+    }
+
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    setWorkout(updated);
+    await updateWorkout(updated);
+    setWeightModal(prev => ({ ...prev, visible: false }));
+  };
+
   if (!workout) {
     return (
       <View style={[styles.container, styles.loadingContainer]}>
@@ -276,6 +406,7 @@ export default function WorkoutDetailScreen() {
   const totalSets = workout.exercises.reduce((sum, e) => sum + e.sets, 0) + supersetExerciseCount;
   const totalExerciseCount = workout.exercises.length + (hasSupersets ? workout.supersets!.length * 2 : 0);
   const hasCircuitBlocks = workout.circuitBlocks && workout.circuitBlocks.length > 0;
+  const showWeightLog = workout.topCategory === 'weight_lifting' || workout.topCategory === 'circuit';
   const categoryLabel = TOP_CATEGORY_LABELS[workout.topCategory] || "Workout";
   const subLabel = getSubTypeLabel(workout.topCategory, workout.subType);
 
@@ -353,8 +484,20 @@ export default function WorkoutDetailScreen() {
         </Text>
 
         {hasCircuitBlocks ? (
-          workout.circuitBlocks!.map((block, i) => (
-            <CircuitBlockCard key={i} block={block} index={i} accentColor={accentColor} />
+          workout.circuitBlocks!.map((block, bi) => (
+            <CircuitBlockCard
+              key={bi}
+              block={block}
+              index={bi}
+              accentColor={accentColor}
+              showWeightLog={showWeightLog}
+              onLogWeight={(exIndex) => openWeightModal(
+                block.exercises[exIndex].exercise.name,
+                { type: 'circuit', blockIndex: bi, exIndex },
+                block.exercises[exIndex].weight,
+                block.exercises[exIndex].weightUnit
+              )}
+            />
           ))
         ) : (
           (() => {
@@ -369,23 +512,96 @@ export default function WorkoutDetailScreen() {
               return (
                 <>
                   {compounds.map(({ ex, origIdx }) => (
-                    <ExerciseCard key={ex.exercise.id + origIdx} item={ex} index={++idx} accentColor={accentColor} onRefresh={() => handleRefreshExercise(origIdx)} />
+                    <ExerciseCard key={ex.exercise.id + origIdx} item={ex} index={++idx} accentColor={accentColor} onRefresh={() => handleRefreshExercise(origIdx)} showWeightLog={showWeightLog} onLogWeight={() => openWeightModal(ex.exercise.name, { type: 'exercise', index: origIdx }, ex.weight, ex.weightUnit)} />
                   ))}
                   {workout.supersets!.map((pair, i) => (
-                    <SupersetCard key={`ss-${i}`} pair={pair} index={i} accentColor={accentColor} onRefreshA={() => handleRefreshSuperset(i, 'A')} onRefreshB={() => handleRefreshSuperset(i, 'B')} />
+                    <SupersetCard key={`ss-${i}`} pair={pair} index={i} accentColor={accentColor} onRefreshA={() => handleRefreshSuperset(i, 'A')} onRefreshB={() => handleRefreshSuperset(i, 'B')} onLogWeightA={() => openWeightModal(pair.exerciseA.exercise.name, { type: 'superset', index: i, slot: 'A' }, pair.exerciseA.weight, pair.exerciseA.weightUnit)} onLogWeightB={() => openWeightModal(pair.exerciseB.exercise.name, { type: 'superset', index: i, slot: 'B' }, pair.exerciseB.weight, pair.exerciseB.weightUnit)} />
                   ))}
                   {rest.map(({ ex, origIdx }) => (
-                    <ExerciseCard key={ex.exercise.id + origIdx} item={ex} index={++idx} accentColor={accentColor} onRefresh={() => handleRefreshExercise(origIdx)} />
+                    <ExerciseCard key={ex.exercise.id + origIdx} item={ex} index={++idx} accentColor={accentColor} onRefresh={() => handleRefreshExercise(origIdx)} showWeightLog={showWeightLog} onLogWeight={() => openWeightModal(ex.exercise.name, { type: 'exercise', index: origIdx }, ex.weight, ex.weightUnit)} />
                   ))}
                 </>
               );
             }
             return workout.exercises.map((ex, i) => (
-              <ExerciseCard key={ex.exercise.id + i} item={ex} index={i + 1} accentColor={accentColor} onRefresh={() => handleRefreshExercise(i)} />
+              <ExerciseCard key={ex.exercise.id + i} item={ex} index={i + 1} accentColor={accentColor} onRefresh={() => handleRefreshExercise(i)} showWeightLog={showWeightLog} onLogWeight={() => openWeightModal(ex.exercise.name, { type: 'exercise', index: i }, ex.weight, ex.weightUnit)} />
             ));
           })()
         )}
       </ScrollView>
+
+      <Modal
+        visible={weightModal.visible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setWeightModal(prev => ({ ...prev, visible: false }))}
+      >
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.modalOverlay}>
+          <Pressable style={styles.modalOverlay} onPress={() => setWeightModal(prev => ({ ...prev, visible: false }))}>
+            <Pressable style={styles.weightModalContent} onPress={(e) => e.stopPropagation()}>
+              <View style={styles.weightModalHeader}>
+                <Ionicons name="barbell-outline" size={22} color={accentColor} />
+                <Text style={styles.weightModalTitle}>Log Weight</Text>
+              </View>
+              <Text style={styles.weightModalExercise}>{weightModal.exerciseName}</Text>
+
+              <View style={styles.weightInputRow}>
+                <TextInput
+                  ref={weightInputRef}
+                  style={styles.weightTextInput}
+                  value={weightInput}
+                  onChangeText={setWeightInput}
+                  keyboardType="numeric"
+                  placeholder="0"
+                  placeholderTextColor={Colors.textMuted}
+                  autoFocus
+                  selectTextOnFocus
+                  testID="weight-input"
+                />
+                <View style={styles.unitToggle}>
+                  <Pressable
+                    style={[styles.unitBtn, weightUnit === 'lbs' && { backgroundColor: accentColor }]}
+                    onPress={() => setWeightUnit('lbs')}
+                  >
+                    <Text style={[styles.unitBtnText, weightUnit === 'lbs' && styles.unitBtnTextActive]}>lbs</Text>
+                  </Pressable>
+                  <Pressable
+                    style={[styles.unitBtn, weightUnit === 'kg' && { backgroundColor: accentColor }]}
+                    onPress={() => setWeightUnit('kg')}
+                  >
+                    <Text style={[styles.unitBtnText, weightUnit === 'kg' && styles.unitBtnTextActive]}>kg</Text>
+                  </Pressable>
+                </View>
+              </View>
+
+              <View style={styles.weightModalActions}>
+                {weightModal.currentWeight && (
+                  <Pressable
+                    style={styles.weightClearBtn}
+                    onPress={() => { setWeightInput(''); }}
+                  >
+                    <Text style={styles.weightClearText}>Clear</Text>
+                  </Pressable>
+                )}
+                <View style={{ flex: 1 }} />
+                <Pressable
+                  style={styles.weightCancelBtn}
+                  onPress={() => setWeightModal(prev => ({ ...prev, visible: false }))}
+                >
+                  <Text style={styles.weightCancelText}>Cancel</Text>
+                </Pressable>
+                <Pressable
+                  style={[styles.weightSaveBtn, { backgroundColor: accentColor }]}
+                  onPress={saveWeight}
+                  testID="save-weight"
+                >
+                  <Text style={styles.weightSaveText}>Save</Text>
+                </Pressable>
+              </View>
+            </Pressable>
+          </Pressable>
+        </KeyboardAvoidingView>
+      </Modal>
     </View>
   );
 }
@@ -779,5 +995,184 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginHorizontal: 8,
+  },
+  ssExerciseActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginLeft: "auto",
+  },
+  exerciseActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  weightLogBtn: {
+    padding: 2,
+  },
+  weightLogIcon: {
+    position: "relative",
+    width: 22,
+    height: 22,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  weightLogPlus: {
+    position: "absolute",
+    bottom: -2,
+    right: -4,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: Colors.accent,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  weightLogIconSm: {
+    position: "relative",
+    width: 18,
+    height: 18,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  weightLogPlusSm: {
+    position: "absolute",
+    bottom: -2,
+    right: -4,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: Colors.accent,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  weightBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  weightBadgeText: {
+    fontSize: 12,
+    fontFamily: "Rubik_600SemiBold",
+  },
+  weightBadgeSm: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  weightBadgeSmText: {
+    fontSize: 10,
+    fontFamily: "Rubik_600SemiBold",
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.6)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  weightModalContent: {
+    width: "85%",
+    maxWidth: 340,
+    backgroundColor: Colors.surface,
+    borderRadius: 20,
+    padding: 24,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  weightModalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginBottom: 4,
+  },
+  weightModalTitle: {
+    fontSize: 18,
+    fontFamily: "Rubik_700Bold",
+    color: Colors.text,
+  },
+  weightModalExercise: {
+    fontSize: 14,
+    fontFamily: "Rubik_500Medium",
+    color: Colors.textSecondary,
+    marginBottom: 20,
+    marginTop: 4,
+  },
+  weightInputRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginBottom: 20,
+  },
+  weightTextInput: {
+    flex: 1,
+    height: 50,
+    backgroundColor: Colors.background,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    paddingHorizontal: 16,
+    fontSize: 22,
+    fontFamily: "Rubik_600SemiBold",
+    color: Colors.text,
+    textAlign: "center",
+  },
+  unitToggle: {
+    flexDirection: "row",
+    borderRadius: 10,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  unitBtn: {
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    backgroundColor: Colors.background,
+  },
+  unitBtnText: {
+    fontSize: 14,
+    fontFamily: "Rubik_600SemiBold",
+    color: Colors.textSecondary,
+  },
+  unitBtnTextActive: {
+    color: "#FFF",
+  },
+  weightModalActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  weightClearBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  weightClearText: {
+    fontSize: 14,
+    fontFamily: "Rubik_500Medium",
+    color: Colors.textMuted,
+  },
+  weightCancelBtn: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+  },
+  weightCancelText: {
+    fontSize: 14,
+    fontFamily: "Rubik_600SemiBold",
+    color: Colors.textSecondary,
+  },
+  weightSaveBtn: {
+    paddingHorizontal: 24,
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
+  weightSaveText: {
+    fontSize: 14,
+    fontFamily: "Rubik_600SemiBold",
+    color: "#FFF",
   },
 });

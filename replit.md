@@ -47,6 +47,17 @@ Preferred communication style: Simple, everyday language.
 - Exercises are categorized by muscle group, equipment, and category (compound/isolation)
 - The `generateWorkout()` function creates workout plans based on selected type, style, and duration
 - Generated workouts are saved to AsyncStorage and displayed in the history tab
+- Per-exercise refresh button swaps a single exercise for another from the same pool (`findReplacementExercise`)
+- Weight Lifting supports supersets: 1 pair for 30/45 min, 2 pairs for 60/90 min
+
+### Weight Logging
+
+- Weight Lifting and Circuit exercises have a weight logging icon (paper+plus) on each exercise card
+- Tapping opens a modal dialog to enter weight used (numeric input with lbs/kg toggle)
+- Logged weight is saved to `WorkoutExercise.weight` and `WorkoutExercise.weightUnit` fields
+- Weight persists to AsyncStorage via `updateWorkout()` and is visible in workout history
+- Works on regular exercises, superset exercises (A/B), and circuit block exercises
+- Once logged, the icon is replaced by a colored badge showing the weight (e.g., "135 lbs")
 
 ### Build & Development
 
