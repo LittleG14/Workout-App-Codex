@@ -153,7 +153,7 @@ function ExerciseCard({ item, index, accentColor, onRefresh, onLogWeight, showWe
   );
 }
 
-function CircuitBlockCard({ block, index, accentColor, showWeightLog, onLogWeight }: { block: CircuitBlock; index: number; accentColor: string; showWeightLog?: boolean; onLogWeight?: (exIndex: number) => void }) {
+function CircuitBlockCard({ block, index, accentColor, showWeightLog, onLogWeight, onRefreshExercise }: { block: CircuitBlock; index: number; accentColor: string; showWeightLog?: boolean; onLogWeight?: (exIndex: number) => void; onRefreshExercise?: (exIndex: number) => void }) {
   return (
     <Animated.View entering={FadeInDown.delay(100 + index * 80).duration(400)}>
       <View style={[styles.circuitBlockCard, { borderLeftColor: accentColor }]}>
@@ -200,6 +200,11 @@ function CircuitBlockCard({ block, index, accentColor, showWeightLog, onLogWeigh
                 ) : (
                   <Ionicons name="create-outline" size={16} color={Colors.textMuted} />
                 )}
+              </Pressable>
+            )}
+            {onRefreshExercise && (
+              <Pressable onPress={() => onRefreshExercise(i)} hitSlop={6} testID={`refresh-circuit-${i}`}>
+                <Ionicons name="refresh" size={16} color={Colors.textMuted} />
               </Pressable>
             )}
             {ex.notes && <Text style={styles.circuitExerciseNote}>{ex.notes}</Text>}
@@ -345,6 +350,27 @@ export default function WorkoutDetailScreen() {
       [slot === 'A' ? 'exerciseA' : 'exerciseB']: { ...target, exercise: replacement },
     };
     const updated = { ...workout, supersets: updatedSupersets };
+    setWorkout(updated);
+    await updateWorkout(updated);
+  };
+
+  const handleRefreshCircuitExercise = async (blockIndex: number, exIndex: number) => {
+    if (!workout || !workout.circuitBlocks) return;
+    const block = workout.circuitBlocks[blockIndex];
+    const target = block.exercises[exIndex];
+    const usedIds = getAllUsedIds(workout);
+    const replacement = findReplacementExercise(target.exercise, workout.topCategory, workout.subType, usedIds);
+    if (!replacement) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    const updatedBlocks = [...workout.circuitBlocks];
+    const updatedExercises = [...block.exercises];
+    updatedExercises[exIndex] = { ...target, exercise: replacement };
+    updatedBlocks[blockIndex] = { ...block, exercises: updatedExercises };
+    const updatedFlatExercises = [...workout.exercises];
+    if (exIndex < updatedFlatExercises.length) {
+      updatedFlatExercises[exIndex] = { ...target, exercise: replacement };
+    }
+    const updated = { ...workout, circuitBlocks: updatedBlocks, exercises: updatedFlatExercises };
     setWorkout(updated);
     await updateWorkout(updated);
   };
@@ -593,6 +619,7 @@ export default function WorkoutDetailScreen() {
                 block.exercises[exIndex].weight,
                 block.exercises[exIndex].weightUnit
               )}
+              onRefreshExercise={(exIndex) => handleRefreshCircuitExercise(bi, exIndex)}
             />
           ))
         ) : (
@@ -864,6 +891,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 6,
     marginTop: 14,
+    marginHorizontal: -8,
   },
   balanceBtn: {
     flex: 1,
