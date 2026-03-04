@@ -178,6 +178,7 @@ export default function ProfileScreen() {
   const [prCategory, setPrCategory] = useState<PRCategory>("weight_lifting");
   const [prData, setPrData] = useState<ExercisePR[]>([]);
   const [selectedExercise, setSelectedExercise] = useState<ExercisePR | null>(null);
+  const [prSearch, setPrSearch] = useState("");
 
   useEffect(() => {
     loadProfile();
@@ -207,12 +208,14 @@ export default function ProfileScreen() {
     const data = computePRs(workouts, getExerciseListForCategory(prCategory), prCategory);
     setPrData(data);
     setSelectedExercise(null);
+    setPrSearch("");
     setShowPRModal(true);
   };
 
   const switchPRCategory = async (cat: PRCategory) => {
     setPrCategory(cat);
     setSelectedExercise(null);
+    setPrSearch("");
     const workouts = await getWorkouts();
     const data = computePRs(workouts, getExerciseListForCategory(cat), cat);
     setPrData(data);
@@ -546,9 +549,31 @@ export default function ProfileScreen() {
             </View>
           ) : (
             <FlatList
-              data={prData}
+              data={prData.filter(item =>
+                item.exercise.name.toLowerCase().includes(prSearch.toLowerCase()) ||
+                item.exercise.equipment.toLowerCase().includes(prSearch.toLowerCase())
+              )}
               keyExtractor={(item) => item.exercise.id}
               contentContainerStyle={styles.prListContent}
+              ListHeaderComponent={
+                <View style={styles.prSearchContainer}>
+                  <Ionicons name="search" size={16} color={Colors.textMuted} />
+                  <TextInput
+                    style={styles.prSearchInput}
+                    value={prSearch}
+                    onChangeText={setPrSearch}
+                    placeholder="Search exercises..."
+                    placeholderTextColor={Colors.textMuted}
+                    returnKeyType="search"
+                    autoCorrect={false}
+                  />
+                  {prSearch.length > 0 && (
+                    <Pressable onPress={() => setPrSearch("")} hitSlop={8}>
+                      <Ionicons name="close-circle" size={16} color={Colors.textMuted} />
+                    </Pressable>
+                  )}
+                </View>
+              }
               renderItem={({ item }) => (
                 <Pressable
                   style={styles.prExerciseRow}
@@ -818,6 +843,25 @@ const styles = StyleSheet.create({
   prListContent: {
     paddingHorizontal: 20,
     paddingBottom: 40,
+  },
+  prSearchContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: Colors.surface,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginBottom: 12,
+  },
+  prSearchInput: {
+    flex: 1,
+    fontSize: 14,
+    fontFamily: "Rubik_400Regular",
+    color: Colors.text,
+    paddingVertical: 0,
   },
   prExerciseRow: {
     flexDirection: "row",
