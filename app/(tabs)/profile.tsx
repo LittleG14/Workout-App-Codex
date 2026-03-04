@@ -146,6 +146,27 @@ function formatDate(iso: string): string {
   });
 }
 
+function computeBMR(profile: UserProfile): number | null {
+  if (!profile.weight || !profile.age) return null;
+
+  const weightKg = profile.weightUnit === "lbs" ? profile.weight * 0.453592 : profile.weight;
+
+  let heightCm: number | undefined;
+  if (profile.heightUnit === "imperial") {
+    if (profile.heightFeet) {
+      heightCm = (profile.heightFeet * 12 + (profile.heightInches || 0)) * 2.54;
+    }
+  } else {
+    heightCm = profile.heightCm;
+  }
+  if (!heightCm) return null;
+
+  const base = 10 * weightKg + 6.25 * heightCm - 5 * profile.age;
+  if (profile.gender === "male") return Math.round(base + 5);
+  if (profile.gender === "female") return Math.round(base - 161);
+  return Math.round(base - 78);
+}
+
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const webTopPad = Platform.OS === "web" ? 67 : 0;
@@ -331,6 +352,24 @@ export default function ProfileScreen() {
           </View>
         </Animated.View>
 
+        <Animated.View entering={FadeInDown.delay(350).duration(400)}>
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Age</Text>
+            <View style={styles.inputGroup}>
+              <TextInput
+                style={[styles.numberInput, { width: 70 }]}
+                value={profile.age ? String(profile.age) : ""}
+                onChangeText={(v) => updateField("age", parseInt(v) || undefined)}
+                keyboardType="numeric"
+                placeholder="25"
+                placeholderTextColor={Colors.textMuted}
+                maxLength={3}
+              />
+              <Text style={styles.inputSuffix}>yrs</Text>
+            </View>
+          </View>
+        </Animated.View>
+
         <Animated.View entering={FadeInDown.delay(400).duration(400)}>
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Goal</Text>
@@ -353,6 +392,25 @@ export default function ProfileScreen() {
               ))}
             </View>
           </View>
+        </Animated.View>
+
+        <Animated.View entering={FadeInDown.delay(450).duration(400)}>
+          {(() => {
+            const bmr = computeBMR(profile);
+            return (
+              <View style={styles.bmrCard}>
+                <View style={styles.bmrHeader}>
+                  <Ionicons name="flame" size={18} color={Colors.primary} />
+                  <Text style={styles.bmrLabel}>Estimated BMR</Text>
+                </View>
+                {bmr ? (
+                  <Text style={styles.bmrValue}>{bmr.toLocaleString()} <Text style={styles.bmrUnit}>cal/day</Text></Text>
+                ) : (
+                  <Text style={styles.bmrPlaceholder}>Enter gender, height, weight & age above</Text>
+                )}
+              </View>
+            );
+          })()}
         </Animated.View>
 
         <Animated.View entering={FadeInDown.delay(500).duration(400)}>
@@ -526,30 +584,30 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background,
   },
   screenTitle: {
-    fontSize: 28,
+    fontSize: 24,
     fontFamily: "Rubik_700Bold",
     color: Colors.text,
     paddingHorizontal: 20,
-    paddingTop: 8,
-    paddingBottom: 16,
+    paddingTop: 4,
+    paddingBottom: 10,
   },
   scrollContent: {
     paddingHorizontal: 20,
   },
   section: {
-    marginBottom: 24,
+    marginBottom: 16,
   },
   sectionHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 12,
+    marginBottom: 8,
   },
   sectionTitle: {
-    fontSize: 16,
+    fontSize: 14,
     fontFamily: "Rubik_600SemiBold",
     color: Colors.text,
-    marginBottom: 12,
+    marginBottom: 8,
   },
   optionRow: {
     flexDirection: "row",
@@ -559,12 +617,12 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 16,
+    paddingVertical: 12,
     borderRadius: 14,
     borderWidth: 1.5,
     borderColor: Colors.border,
     backgroundColor: Colors.surface,
-    gap: 6,
+    gap: 4,
   },
   optionCardActive: {
     borderColor: Colors.primary,
@@ -613,13 +671,13 @@ const styles = StyleSheet.create({
   },
   numberInput: {
     width: 60,
-    height: 48,
+    height: 42,
     backgroundColor: Colors.surface,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: Colors.border,
     paddingHorizontal: 12,
-    fontSize: 20,
+    fontSize: 18,
     fontFamily: "Rubik_600SemiBold",
     color: Colors.text,
     textAlign: "center",
@@ -637,7 +695,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 14,
+    paddingVertical: 10,
     paddingHorizontal: 6,
     borderRadius: 14,
     borderWidth: 1.5,
@@ -659,6 +717,40 @@ const styles = StyleSheet.create({
     color: Colors.primary,
     fontFamily: "Rubik_600SemiBold",
   },
+  bmrCard: {
+    backgroundColor: Colors.surface,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    padding: 14,
+    marginBottom: 16,
+  },
+  bmrHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 6,
+  },
+  bmrLabel: {
+    fontSize: 13,
+    fontFamily: "Rubik_600SemiBold",
+    color: Colors.textSecondary,
+  },
+  bmrValue: {
+    fontSize: 26,
+    fontFamily: "Rubik_700Bold",
+    color: Colors.text,
+  },
+  bmrUnit: {
+    fontSize: 14,
+    fontFamily: "Rubik_500Medium",
+    color: Colors.textMuted,
+  },
+  bmrPlaceholder: {
+    fontSize: 13,
+    fontFamily: "Rubik_400Regular",
+    color: Colors.textMuted,
+  },
   prButton: {
     flexDirection: "row",
     alignItems: "center",
@@ -667,7 +759,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primary,
     paddingVertical: 16,
     borderRadius: 14,
-    marginTop: 8,
+    marginTop: 4,
   },
   prButtonText: {
     fontSize: 16,

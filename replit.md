@@ -67,6 +67,13 @@ Preferred communication style: Simple, everyday language.
 - Notes persist to AsyncStorage via `updateWorkout()` and are displayed inline below the exercise card
 - Once logged, the icon is replaced by a colored badge showing "Notes ✓"
 
+### BMR Estimation
+
+- Profile tab shows an estimated BMR card between the Goal section and the PRs button
+- Uses the Mifflin-St Jeor equation with gender-specific constants: Male (+5), Female (-161), N/A (-78)
+- Converts imperial inputs to metric before calculation: lbs→kg (×0.453592), ft/in→cm (×2.54)
+- Requires gender, height, weight, and age to display a result; shows placeholder text if any are missing
+
 ### PRs & Last Modal (Profile Tab)
 
 - Profile tab has a "PRs and Last" button that opens a modal with 4 category tabs: Weights, Circuit, Yoga, Cardio
