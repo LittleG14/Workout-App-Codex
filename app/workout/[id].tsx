@@ -22,9 +22,11 @@ import {
   WorkoutExercise,
   CircuitBlock,
   SupersetPair,
+  CircuitBalance,
   TOP_CATEGORY_LABELS,
   getSubTypeLabel,
   findReplacementExercise,
+  rebalanceCircuit,
 } from "@/lib/exercises";
 import { getWorkouts, updateWorkout } from "@/lib/workout-storage";
 
@@ -462,6 +464,17 @@ export default function WorkoutDetailScreen() {
   const showNotesLog = workout.topCategory === 'yoga' || workout.topCategory === 'cardio';
   const categoryLabel = TOP_CATEGORY_LABELS[workout.topCategory] || "Workout";
   const subLabel = getSubTypeLabel(workout.topCategory, workout.subType);
+  const circuitFormat = hasCircuitBlocks ? workout.circuitBlocks![0].format : null;
+  const supportsBalance = circuitFormat === 'EMOM' || circuitFormat === 'Rounds for Time';
+  const currentBalance: CircuitBalance = workout.circuitBalance || 'default';
+
+  const handleBalance = async (balance: CircuitBalance) => {
+    if (!workout || balance === currentBalance) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    const rebalanced = rebalanceCircuit(workout, balance);
+    setWorkout(rebalanced);
+    await updateWorkout(rebalanced);
+  };
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + webTopPad }]}>
@@ -495,8 +508,12 @@ export default function WorkoutDetailScreen() {
               </View>
               <View style={styles.heroStatDivider} />
               <View style={styles.heroStatItem}>
-                <Text style={styles.heroStatValue}>{totalSets}</Text>
-                <Text style={styles.heroStatLabel}>Total Sets</Text>
+                <Text style={styles.heroStatValue}>
+                  {supportsBalance && hasCircuitBlocks ? workout.circuitBlocks![0].rounds : totalSets}
+                </Text>
+                <Text style={styles.heroStatLabel}>
+                  {supportsBalance ? "Rounds" : "Total Sets"}
+                </Text>
               </View>
               <View style={styles.heroStatDivider} />
               <View style={styles.heroStatItem}>
@@ -529,6 +546,25 @@ export default function WorkoutDetailScreen() {
                 </View>
               )}
             </View>
+
+            {supportsBalance && (
+              <View style={styles.balanceRow}>
+                <Pressable
+                  style={[styles.balanceBtn, currentBalance === 'more_movements' && styles.balanceBtnActive]}
+                  onPress={() => handleBalance(currentBalance === 'more_movements' ? 'default' : 'more_movements')}
+                >
+                  <Ionicons name="list" size={14} color={currentBalance === 'more_movements' ? '#FFF' : Colors.textSecondary} />
+                  <Text style={[styles.balanceBtnText, currentBalance === 'more_movements' && styles.balanceBtnTextActive]}>More Movements</Text>
+                </Pressable>
+                <Pressable
+                  style={[styles.balanceBtn, currentBalance === 'more_rounds' && styles.balanceBtnActive]}
+                  onPress={() => handleBalance(currentBalance === 'more_rounds' ? 'default' : 'more_rounds')}
+                >
+                  <Ionicons name="repeat" size={14} color={currentBalance === 'more_rounds' ? '#FFF' : Colors.textSecondary} />
+                  <Text style={[styles.balanceBtnText, currentBalance === 'more_rounds' && styles.balanceBtnTextActive]}>More Rounds</Text>
+                </Pressable>
+              </View>
+            )}
           </LinearGradient>
         </Animated.View>
 
@@ -816,6 +852,35 @@ const styles = StyleSheet.create({
   heroBadgeText: {
     fontSize: 13,
     fontFamily: "Rubik_600SemiBold",
+  },
+  balanceRow: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    gap: 8,
+    marginTop: 14,
+  },
+  balanceBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    backgroundColor: Colors.surface,
+  },
+  balanceBtnActive: {
+    backgroundColor: Colors.circuit,
+    borderColor: Colors.circuit,
+  },
+  balanceBtnText: {
+    fontSize: 11,
+    fontFamily: "Rubik_600SemiBold",
+    color: Colors.textSecondary,
+  },
+  balanceBtnTextActive: {
+    color: "#FFF",
   },
   exercisesSectionTitle: {
     fontSize: 14,

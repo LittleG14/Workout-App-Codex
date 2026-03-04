@@ -49,6 +49,9 @@ Preferred communication style: Simple, everyday language.
 - Generated workouts are saved to AsyncStorage and displayed in the history tab
 - Per-exercise refresh button swaps a single exercise for another from the same pool (`findReplacementExercise`)
 - Weight Lifting supports supersets: 1 pair for 30/45 min, 2 pairs for 60/90 min
+- EMOM and Rounds for Time circuits support "More Movements" / "More Rounds" balance toggles in the hero card
+- `rebalanceCircuit()` adjusts exercise count and round count based on selected balance and duration
+- Balance preference is persisted to `GeneratedWorkout.circuitBalance` via AsyncStorage
 
 ### Weight Logging
 

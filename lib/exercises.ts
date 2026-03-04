@@ -42,6 +42,8 @@ export interface SupersetPair {
   exerciseB: WorkoutExercise;
 }
 
+export type CircuitBalance = 'default' | 'more_movements' | 'more_rounds';
+
 export interface GeneratedWorkout {
   id: string;
   name: string;
@@ -52,6 +54,7 @@ export interface GeneratedWorkout {
   exercises: WorkoutExercise[];
   circuitBlocks?: CircuitBlock[];
   supersets?: SupersetPair[];
+  circuitBalance?: CircuitBalance;
   createdAt: string;
 }
 
@@ -672,3 +675,97 @@ export function getSubTypeLabel(topCategory: TopCategory, subType: string): stri
 }
 
 export const DURATION_OPTIONS = [30, 45, 60, 90];
+
+function getEmomConfig(duration: number, balance: CircuitBalance): { exCount: number; rounds: number } {
+  if (balance === 'more_movements') {
+    const exCount = duration <= 30 ? 6 : duration <= 45 ? 7 : duration <= 60 ? 8 : 9;
+    return { exCount, rounds: Math.floor(duration / exCount) };
+  }
+  if (balance === 'more_rounds') {
+    const exCount = duration <= 30 ? 3 : duration <= 45 ? 3 : duration <= 60 ? 4 : 5;
+    return { exCount, rounds: Math.floor(duration / exCount) };
+  }
+  const exCount = duration <= 30 ? 4 : duration <= 45 ? 5 : 6;
+  return { exCount, rounds: Math.floor(duration / exCount) };
+}
+
+function getRftConfig(duration: number, balance: CircuitBalance): { exCount: number; rounds: number } {
+  if (balance === 'more_movements') {
+    return duration <= 30 ? { exCount: 7, rounds: 2 }
+      : duration <= 45 ? { exCount: 8, rounds: 3 }
+      : duration <= 60 ? { exCount: 8, rounds: 3 }
+      : { exCount: 9, rounds: 4 };
+  }
+  if (balance === 'more_rounds') {
+    return duration <= 30 ? { exCount: 3, rounds: 5 }
+      : duration <= 45 ? { exCount: 4, rounds: 6 }
+      : duration <= 60 ? { exCount: 4, rounds: 7 }
+      : { exCount: 5, rounds: 8 };
+  }
+  return duration <= 30 ? { exCount: 5, rounds: 3 }
+    : duration <= 45 ? { exCount: 6, rounds: 4 }
+    : duration <= 60 ? { exCount: 6, rounds: 5 }
+    : { exCount: 6, rounds: 5 };
+}
+
+export function rebalanceCircuit(workout: GeneratedWorkout, balance: CircuitBalance): GeneratedWorkout {
+  if (!workout.circuitBlocks || workout.circuitBlocks.length === 0) return workout;
+
+  const block = workout.circuitBlocks[0];
+  const format = block.format;
+  if (format !== 'EMOM' && format !== 'Rounds for Time') return workout;
+
+  const duration = workout.durationMinutes;
+  const config = format === 'EMOM'
+    ? getEmomConfig(duration, balance)
+    : getRftConfig(duration, balance);
+
+  const currentExercises = block.exercises;
+  let newExercises: WorkoutExercise[];
+
+  if (config.exCount <= currentExercises.length) {
+    newExercises = currentExercises.slice(0, config.exCount);
+  } else {
+    const pool = shuffle([...CIRCUIT_EXERCISES]);
+    const usedIds = new Set(currentExercises.map(e => e.exercise.id));
+    const extras = pool.filter(e => !usedIds.has(e.id));
+    newExercises = [...currentExercises];
+    for (let i = 0; newExercises.length < config.exCount && i < extras.length; i++) {
+      const e = extras[i];
+      newExercises.push({
+        exercise: e,
+        sets: 1,
+        reps: format === 'EMOM'
+          ? (e.category === 'compound' ? '8-10' : '12-15')
+          : (e.category === 'compound' ? '12' : '15'),
+        restSeconds: 0,
+        notes: format === 'EMOM'
+          ? `Minute ${newExercises.length + 1} of each round`
+          : 'Complete all rounds for time',
+      });
+    }
+  }
+
+  if (format === 'EMOM') {
+    newExercises = newExercises.map((ex, i) => ({
+      ...ex,
+      notes: `Minute ${i + 1} of each round`,
+    }));
+  }
+
+  const newBlock: CircuitBlock = {
+    ...block,
+    rounds: config.rounds,
+    exercises: newExercises,
+    name: format === 'EMOM'
+      ? `EMOM ${duration} min`
+      : `${config.rounds} Rounds for Time`,
+  };
+
+  return {
+    ...workout,
+    circuitBlocks: [newBlock],
+    exercises: newExercises,
+    circuitBalance: balance,
+  };
+}
