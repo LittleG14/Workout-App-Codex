@@ -551,16 +551,23 @@ export default function WorkoutDetailScreen() {
               <View style={styles.balanceRow}>
                 <Pressable
                   style={[styles.balanceBtn, currentBalance === 'more_movements' && styles.balanceBtnActive]}
-                  onPress={() => handleBalance(currentBalance === 'more_movements' ? 'default' : 'more_movements')}
+                  onPress={() => handleBalance('more_movements')}
                 >
-                  <Ionicons name="list" size={14} color={currentBalance === 'more_movements' ? '#FFF' : Colors.textSecondary} />
+                  <Ionicons name="list" size={13} color={currentBalance === 'more_movements' ? '#FFF' : Colors.textSecondary} />
                   <Text style={[styles.balanceBtnText, currentBalance === 'more_movements' && styles.balanceBtnTextActive]}>More Movements</Text>
                 </Pressable>
                 <Pressable
-                  style={[styles.balanceBtn, currentBalance === 'more_rounds' && styles.balanceBtnActive]}
-                  onPress={() => handleBalance(currentBalance === 'more_rounds' ? 'default' : 'more_rounds')}
+                  style={[styles.balanceBtn, currentBalance === 'default' && styles.balanceBtnActive]}
+                  onPress={() => handleBalance('default')}
                 >
-                  <Ionicons name="repeat" size={14} color={currentBalance === 'more_rounds' ? '#FFF' : Colors.textSecondary} />
+                  <Ionicons name="barbell" size={13} color={currentBalance === 'default' ? '#FFF' : Colors.textSecondary} />
+                  <Text style={[styles.balanceBtnText, currentBalance === 'default' && styles.balanceBtnTextActive]}>Normal Lift</Text>
+                </Pressable>
+                <Pressable
+                  style={[styles.balanceBtn, currentBalance === 'more_rounds' && styles.balanceBtnActive]}
+                  onPress={() => handleBalance('more_rounds')}
+                >
+                  <Ionicons name="repeat" size={13} color={currentBalance === 'more_rounds' ? '#FFF' : Colors.textSecondary} />
                   <Text style={[styles.balanceBtnText, currentBalance === 'more_rounds' && styles.balanceBtnTextActive]}>More Rounds</Text>
                 </Pressable>
               </View>
@@ -855,16 +862,16 @@ const styles = StyleSheet.create({
   },
   balanceRow: {
     flexDirection: "row",
-    justifyContent: "flex-end",
-    gap: 8,
+    gap: 6,
     marginTop: 14,
   },
   balanceBtn: {
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
-    gap: 5,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    justifyContent: "center",
+    gap: 4,
+    paddingVertical: 7,
     borderRadius: 8,
     borderWidth: 1,
     borderColor: Colors.border,
@@ -875,7 +882,7 @@ const styles = StyleSheet.create({
     borderColor: Colors.circuit,
   },
   balanceBtnText: {
-    fontSize: 11,
+    fontSize: 10,
     fontFamily: "Rubik_600SemiBold",
     color: Colors.textSecondary,
   },
