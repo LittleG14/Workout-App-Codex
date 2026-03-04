@@ -10,6 +10,7 @@ export interface UserProfile {
   heightUnit: 'imperial' | 'metric';
   weight?: number;
   weightUnit: 'lbs' | 'kg';
+  age?: number;
   goal: 'build_muscle' | 'lose_weight' | 'maintain_weight';
 }
 
