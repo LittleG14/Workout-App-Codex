@@ -9,6 +9,7 @@ import {
   Modal,
   TextInput,
   FlatList,
+  Alert,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect } from "expo-router";
@@ -402,6 +403,15 @@ export default function ProfileScreen() {
                 <View style={styles.bmrHeader}>
                   <Ionicons name="flame" size={18} color={Colors.primary} />
                   <Text style={styles.bmrLabel}>Estimated BMR</Text>
+                  <Pressable
+                    hitSlop={10}
+                    onPress={() => Alert.alert(
+                      "About BMR",
+                      "This value is a rough estimate of your BMR (basal metabolic rate) which is the number of calories your body needs each day to keep you alive and functioning at complete rest. Consult a physician for more accurate info."
+                    )}
+                  >
+                    <Ionicons name="information-circle-outline" size={16} color={Colors.textMuted} />
+                  </Pressable>
                 </View>
                 {bmr ? (
                   <Text style={styles.bmrValue}>{bmr.toLocaleString()} <Text style={styles.bmrUnit}>cal/day</Text></Text>
