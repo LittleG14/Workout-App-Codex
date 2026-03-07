@@ -218,6 +218,7 @@ export default function GenerateScreen() {
   const [trainingStyle, setTrainingStyle] = useState<TrainingStyle>("hypertrophy");
   const [selectedDuration, setSelectedDuration] = useState(45);
   const [includeSupersets, setIncludeSupersets] = useState(false);
+  const [includeCore, setIncludeCore] = useState(false);
   const [generating, setGenerating] = useState(false);
   const buttonScale = useSharedValue(1);
   const buttonAnimStyle = useAnimatedStyle(() => ({ transform: [{ scale: buttonScale.value }] }));
@@ -237,11 +238,11 @@ export default function GenerateScreen() {
     await new Promise(r => setTimeout(r, 400));
 
     const style = selectedCategory === "weight_lifting" ? trainingStyle : currentSubType;
-    const workout = generateWorkout(selectedCategory, currentSubType, style, selectedDuration, includeSupersets);
+    const workout = generateWorkout(selectedCategory, currentSubType, style, selectedDuration, includeSupersets, includeCore);
     await saveWorkout(workout);
     setGenerating(false);
     router.push({ pathname: "/workout/[id]", params: { id: workout.id, fresh: "true" } });
-  }, [selectedCategory, currentSubType, trainingStyle, selectedDuration, includeSupersets]);
+  }, [selectedCategory, currentSubType, trainingStyle, selectedDuration, includeSupersets, includeCore]);
 
   const webTopPad = Platform.OS === "web" ? 67 : 0;
 
@@ -296,28 +297,47 @@ export default function GenerateScreen() {
             <Text style={styles.sectionTitle}>Training Style</Text>
             <StyleToggle style={trainingStyle} onToggle={setTrainingStyle} />
 
-            <Pressable
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                setIncludeSupersets(prev => !prev);
-              }}
-              style={[styles.supersetToggle, includeSupersets && styles.supersetToggleActive]}
-            >
-              <View style={styles.supersetToggleLeft}>
-                <View style={[styles.supersetIconWrap, includeSupersets && styles.supersetIconWrapActive]}>
-                  <Ionicons name="git-compare" size={18} color={includeSupersets ? "#FFF" : Colors.textSecondary} />
+            <View style={styles.toggleRow}>
+              <Pressable
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  setIncludeSupersets(prev => !prev);
+                }}
+                style={[styles.supersetToggle, includeSupersets && styles.supersetToggleActive]}
+              >
+                <View style={styles.supersetToggleTop}>
+                  <View style={[styles.supersetIconWrap, includeSupersets && styles.supersetIconWrapActive]}>
+                    <Ionicons name="git-compare" size={18} color={includeSupersets ? "#FFF" : Colors.textSecondary} />
+                  </View>
+                  <View style={[styles.supersetSwitch, includeSupersets && styles.supersetSwitchActive]}>
+                    <Animated.View style={[styles.supersetSwitchThumb, includeSupersets && styles.supersetSwitchThumbActive]} />
+                  </View>
                 </View>
-                <View>
-                  <Text style={[styles.supersetToggleTitle, includeSupersets && { color: Colors.primary }]}>Supersets</Text>
-                  <Text style={styles.supersetToggleDesc}>
-                    {selectedDuration >= 60 ? "2 superset pairs" : "1 superset pair"}
-                  </Text>
+                <Text style={[styles.supersetToggleTitle, includeSupersets && { color: Colors.primary }]}>Supersets</Text>
+                <Text style={styles.supersetToggleDesc}>
+                  {selectedDuration >= 60 ? "2 pairs" : "1 pair"}
+                </Text>
+              </Pressable>
+
+              <Pressable
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  setIncludeCore(prev => !prev);
+                }}
+                style={[styles.supersetToggle, includeCore && styles.supersetToggleActive]}
+              >
+                <View style={styles.supersetToggleTop}>
+                  <View style={[styles.supersetIconWrap, includeCore && styles.supersetIconWrapActive]}>
+                    <Ionicons name="fitness" size={18} color={includeCore ? "#FFF" : Colors.textSecondary} />
+                  </View>
+                  <View style={[styles.supersetSwitch, includeCore && styles.supersetSwitchActive]}>
+                    <Animated.View style={[styles.supersetSwitchThumb, includeCore && styles.supersetSwitchThumbActive]} />
+                  </View>
                 </View>
-              </View>
-              <View style={[styles.supersetSwitch, includeSupersets && styles.supersetSwitchActive]}>
-                <Animated.View style={[styles.supersetSwitchThumb, includeSupersets && styles.supersetSwitchThumbActive]} />
-              </View>
-            </Pressable>
+                <Text style={[styles.supersetToggleTitle, includeCore && { color: Colors.primary }]}>Core</Text>
+                <Text style={styles.supersetToggleDesc}>Add ab finisher</Text>
+              </Pressable>
+            </View>
           </Animated.View>
         )}
 
@@ -605,26 +625,29 @@ const styles = StyleSheet.create({
     color: "#FFF",
     letterSpacing: 0.3,
   },
-  supersetToggle: {
+  toggleRow: {
     flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    gap: 12,
+    marginBottom: 20,
+  },
+  supersetToggle: {
+    flex: 1,
     backgroundColor: Colors.surface,
     borderRadius: 16,
     paddingVertical: 14,
-    paddingHorizontal: 16,
+    paddingHorizontal: 14,
     borderWidth: 1.5,
     borderColor: Colors.border,
-    marginBottom: 20,
   },
   supersetToggleActive: {
     borderColor: Colors.primary,
     backgroundColor: `${Colors.primary}08`,
   },
-  supersetToggleLeft: {
+  supersetToggleTop: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
+    justifyContent: "space-between",
+    marginBottom: 10,
   },
   supersetIconWrap: {
     width: 36,

@@ -26,6 +26,7 @@ import {
   TOP_CATEGORY_LABELS,
   getSubTypeLabel,
   findReplacementExercise,
+  findCoreReplacementExercise,
   rebalanceCircuit,
 } from "@/lib/exercises";
 import { getWorkouts, updateWorkout } from "@/lib/workout-storage";
@@ -327,7 +328,11 @@ export default function WorkoutDetailScreen() {
     if (!workout) return;
     const target = workout.exercises[exerciseIndex];
     const usedIds = getAllUsedIds(workout);
-    const replacement = findReplacementExercise(target.exercise, workout.topCategory, workout.subType, usedIds);
+    const isLastExercise = exerciseIndex === workout.exercises.length - 1;
+    const isCoreSlot = isLastExercise && workout.includeCore;
+    const replacement = isCoreSlot
+      ? findCoreReplacementExercise(target.exercise, usedIds)
+      : findReplacementExercise(target.exercise, workout.topCategory, workout.subType, usedIds);
     if (!replacement) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     const updated = { ...workout, exercises: [...workout.exercises] };

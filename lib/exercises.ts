@@ -55,6 +55,7 @@ export interface GeneratedWorkout {
   circuitBlocks?: CircuitBlock[];
   supersets?: SupersetPair[];
   circuitBalance?: CircuitBalance;
+  includeCore?: boolean;
   createdAt: string;
 }
 
@@ -148,6 +149,21 @@ export function findReplacementExercise(
     return looseCandidates[Math.floor(Math.random() * looseCandidates.length)];
   }
 
+  return null;
+}
+
+export function findCoreReplacementExercise(
+  current: Exercise,
+  usedIds: string[]
+): Exercise | null {
+  const candidates = WEIGHT_EXERCISES.filter(e =>
+    e.id !== current.id &&
+    !usedIds.includes(e.id) &&
+    e.muscles.includes('abs')
+  );
+  if (candidates.length > 0) {
+    return candidates[Math.floor(Math.random() * candidates.length)];
+  }
   return null;
 }
 
@@ -351,7 +367,7 @@ function randomAdj(): string {
   return a[Math.floor(Math.random() * a.length)];
 }
 
-function generateWeightLifting(subType: WeightLiftingType, style: TrainingStyle, duration: number, includeSupersets: boolean = false): GeneratedWorkout {
+function generateWeightLifting(subType: WeightLiftingType, style: TrainingStyle, duration: number, includeSupersets: boolean = false, includeCore: boolean = false): GeneratedWorkout {
   const muscles = WORKOUT_TYPE_MUSCLES[subType];
   const available = WEIGHT_EXERCISES.filter(e => e.muscles.some(m => muscles.includes(m)));
   const config = getStyleConfig(style);
@@ -365,6 +381,22 @@ function generateWeightLifting(subType: WeightLiftingType, style: TrainingStyle,
     ...isolations.map(exercise => ({ exercise, sets: config.isolationSets, reps: config.isolationReps, restSeconds: config.isolationRest })),
   ];
 
+  if (includeCore && exercises.length > 0) {
+    const usedIds = exercises.map(e => e.exercise.id);
+    const abExercises = WEIGHT_EXERCISES.filter(e =>
+      e.muscles.includes('abs') && !usedIds.includes(e.id)
+    );
+    if (abExercises.length > 0) {
+      const coreExercise = abExercises[Math.floor(Math.random() * abExercises.length)];
+      exercises[exercises.length - 1] = {
+        exercise: coreExercise,
+        sets: config.isolationSets,
+        reps: config.isolationReps,
+        restSeconds: config.isolationRest,
+      };
+    }
+  }
+
   let supersets: SupersetPair[] | undefined;
 
   if (includeSupersets && exercises.length >= 4) {
@@ -372,15 +404,16 @@ function generateWeightLifting(subType: WeightLiftingType, style: TrainingStyle,
     supersets = [];
 
     const usedIndices = new Set<number>();
+    const coreIdx = includeCore ? exercises.length - 1 : -1;
 
     for (let s = 0; s < supersetCount && usedIndices.size < exercises.length - 1; s++) {
       let aIdx = -1;
       let bIdx = -1;
 
       for (let i = 0; i < exercises.length; i++) {
-        if (usedIndices.has(i)) continue;
+        if (usedIndices.has(i) || i === coreIdx) continue;
         for (let j = i + 1; j < exercises.length; j++) {
-          if (usedIndices.has(j)) continue;
+          if (usedIndices.has(j) || j === coreIdx) continue;
           const aMuscles = exercises[i].exercise.muscles;
           const bMuscles = exercises[j].exercise.muscles;
           const overlaps = aMuscles.some(m => bMuscles.includes(m));
@@ -395,9 +428,9 @@ function generateWeightLifting(subType: WeightLiftingType, style: TrainingStyle,
 
       if (aIdx < 0) {
         for (let i = 0; i < exercises.length; i++) {
-          if (usedIndices.has(i)) continue;
+          if (usedIndices.has(i) || i === coreIdx) continue;
           for (let j = i + 1; j < exercises.length; j++) {
-            if (usedIndices.has(j)) continue;
+            if (usedIndices.has(j) || j === coreIdx) continue;
             aIdx = i;
             bIdx = j;
             break;
@@ -433,6 +466,7 @@ function generateWeightLifting(subType: WeightLiftingType, style: TrainingStyle,
     durationMinutes: duration,
     exercises,
     supersets,
+    includeCore: includeCore || undefined,
     createdAt: new Date().toISOString(),
   };
 }
@@ -656,10 +690,11 @@ export function generateWorkout(
   style: string,
   durationMinutes: number,
   includeSupersets: boolean = false,
+  includeCore: boolean = false,
 ): GeneratedWorkout {
   switch (topCategory) {
     case 'weight_lifting':
-      return generateWeightLifting(subType as WeightLiftingType, style as TrainingStyle, durationMinutes, includeSupersets);
+      return generateWeightLifting(subType as WeightLiftingType, style as TrainingStyle, durationMinutes, includeSupersets, includeCore);
     case 'circuit':
       return generateCircuit(subType as CircuitStyle, durationMinutes);
     case 'yoga':
