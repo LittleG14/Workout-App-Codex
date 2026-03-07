@@ -101,8 +101,13 @@ export const CARDIO_STYLE_LABELS: Record<CardioStyle, string> = {
 
 function getExercisePool(topCategory: TopCategory, subType: string): Exercise[] {
   switch (topCategory) {
-    case 'weight_lifting':
+    case 'weight_lifting': {
+      const muscles = WORKOUT_TYPE_MUSCLES[subType as WeightLiftingType];
+      if (muscles) {
+        return WEIGHT_EXERCISES.filter(e => e.muscles.some(m => muscles.includes(m)));
+      }
       return WEIGHT_EXERCISES;
+    }
     case 'circuit':
       return CIRCUIT_EXERCISES;
     case 'yoga':
