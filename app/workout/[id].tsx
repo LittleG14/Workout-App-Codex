@@ -371,10 +371,7 @@ export default function WorkoutDetailScreen() {
     const updatedExercises = [...block.exercises];
     updatedExercises[exIndex] = { ...target, exercise: replacement };
     updatedBlocks[blockIndex] = { ...block, exercises: updatedExercises };
-    const updatedFlatExercises = [...workout.exercises];
-    if (exIndex < updatedFlatExercises.length) {
-      updatedFlatExercises[exIndex] = { ...target, exercise: replacement };
-    }
+    const updatedFlatExercises = updatedBlocks.flatMap(b => b.exercises);
     const updated = { ...workout, circuitBlocks: updatedBlocks, exercises: updatedFlatExercises };
     setWorkout(updated);
     await updateWorkout(updated);
@@ -540,7 +537,11 @@ export default function WorkoutDetailScreen() {
               <View style={styles.heroStatDivider} />
               <View style={styles.heroStatItem}>
                 <Text style={styles.heroStatValue}>
-                  {supportsBalance && hasCircuitBlocks ? workout.circuitBlocks![0].rounds : totalSets}
+                  {supportsBalance && hasCircuitBlocks
+                    ? (workout.circuitBlocks!.length > 1
+                        ? workout.circuitBlocks!.map(b => b.rounds || 0).join('/')
+                        : workout.circuitBlocks![0].rounds)
+                    : totalSets}
                 </Text>
                 <Text style={styles.heroStatLabel}>
                   {supportsBalance ? "Rounds" : "Total Sets"}

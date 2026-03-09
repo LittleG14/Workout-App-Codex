@@ -51,8 +51,9 @@ Preferred communication style: Simple, everyday language.
 - Weight Lifting supports supersets: 1 pair for 30/45 min, 2 pairs for 60/90 min (core exercise excluded from superset pairing)
 - Weight Lifting supports a "Core" toggle: when enabled, the last exercise is replaced with an ab exercise; refreshing uses `findCoreReplacementExercise` from the abs pool
 - Supersets and Core tiles are displayed side-by-side at half width on the generate screen
+- AMRAP and EMOM circuits at 60/90 min are split into 2 separate circuit blocks with different exercises and independent time caps
 - EMOM and Rounds for Time circuits support "More Movements" / "More Rounds" balance toggles in the hero card
-- `rebalanceCircuit()` adjusts exercise count and round count based on selected balance and duration
+- `rebalanceCircuit()` adjusts exercise count and round count based on selected balance and duration; supports multi-block circuits
 - Balance preference is persisted to `GeneratedWorkout.circuitBalance` via AsyncStorage
 
 ### Weight Logging

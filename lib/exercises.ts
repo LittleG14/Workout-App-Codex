@@ -477,42 +477,85 @@ function generateCircuit(circuitStyle: CircuitStyle, duration: number): Generate
   let flatExercises: WorkoutExercise[] = [];
 
   if (circuitStyle === 'amrap') {
-    const exCount = duration <= 30 ? 5 : duration <= 45 ? 6 : 8;
-    const selected = allExercises.slice(0, exCount);
-    const blockExercises = selected.map(e => ({
-      exercise: e,
-      sets: 1,
-      reps: e.category === 'compound' ? '10-15' : '15-20',
-      restSeconds: 0,
-      notes: 'As many rounds as possible',
-    }));
-    circuitBlocks = [{
-      name: `${duration}-Minute AMRAP`,
-      format: 'AMRAP',
-      timeCapMinutes: duration,
-      exercises: blockExercises,
-    }];
-    flatExercises = blockExercises;
+    if (duration >= 60) {
+      const halfDuration = Math.floor(duration / 2);
+      const exCountPerBlock = duration >= 90 ? 5 : 4;
+      const selected1 = allExercises.slice(0, exCountPerBlock);
+      const selected2 = allExercises.slice(exCountPerBlock, exCountPerBlock * 2);
+      const makeAmrapBlock = (sel: Exercise[], blockNum: number, timeCap: number) => {
+        const exs = sel.map(e => ({
+          exercise: e,
+          sets: 1,
+          reps: e.category === 'compound' ? '10-15' : '15-20',
+          restSeconds: 0,
+          notes: 'As many rounds as possible',
+        }));
+        return { name: `AMRAP ${blockNum} — ${timeCap} min`, format: 'AMRAP' as const, timeCapMinutes: timeCap, exercises: exs };
+      };
+      const block1 = makeAmrapBlock(selected1, 1, halfDuration);
+      const block2 = makeAmrapBlock(selected2, 2, duration - halfDuration);
+      circuitBlocks = [block1, block2];
+      flatExercises = [...block1.exercises, ...block2.exercises];
+    } else {
+      const exCount = duration <= 30 ? 5 : 6;
+      const selected = allExercises.slice(0, exCount);
+      const blockExercises = selected.map(e => ({
+        exercise: e,
+        sets: 1,
+        reps: e.category === 'compound' ? '10-15' : '15-20',
+        restSeconds: 0,
+        notes: 'As many rounds as possible',
+      }));
+      circuitBlocks = [{
+        name: `${duration}-Minute AMRAP`,
+        format: 'AMRAP',
+        timeCapMinutes: duration,
+        exercises: blockExercises,
+      }];
+      flatExercises = blockExercises;
+    }
   } else if (circuitStyle === 'emom') {
-    const minutes = duration;
-    const exCount = duration <= 30 ? 4 : duration <= 45 ? 5 : 6;
-    const selected = allExercises.slice(0, exCount);
-    const blockExercises = selected.map((e, i) => ({
-      exercise: e,
-      sets: 1,
-      reps: e.category === 'compound' ? '8-10' : '12-15',
-      restSeconds: 0,
-      notes: `Minute ${i + 1} of each round`,
-    }));
-    const rounds = Math.floor(minutes / exCount);
-    circuitBlocks = [{
-      name: `EMOM ${minutes} min`,
-      format: 'EMOM',
-      timeCapMinutes: minutes,
-      rounds,
-      exercises: blockExercises,
-    }];
-    flatExercises = blockExercises;
+    if (duration >= 60) {
+      const halfDuration = Math.floor(duration / 2);
+      const exCountPerBlock = duration >= 90 ? 4 : 3;
+      const selected1 = allExercises.slice(0, exCountPerBlock);
+      const selected2 = allExercises.slice(exCountPerBlock, exCountPerBlock * 2);
+      const makeEmomBlock = (sel: Exercise[], blockNum: number, timeCap: number) => {
+        const exs = sel.map((e, i) => ({
+          exercise: e,
+          sets: 1,
+          reps: e.category === 'compound' ? '8-10' : '12-15',
+          restSeconds: 0,
+          notes: `Minute ${i + 1} of each round`,
+        }));
+        const rounds = Math.floor(timeCap / sel.length);
+        return { name: `EMOM ${blockNum} — ${timeCap} min`, format: 'EMOM' as const, timeCapMinutes: timeCap, rounds, exercises: exs };
+      };
+      const block1 = makeEmomBlock(selected1, 1, halfDuration);
+      const block2 = makeEmomBlock(selected2, 2, duration - halfDuration);
+      circuitBlocks = [block1, block2];
+      flatExercises = [...block1.exercises, ...block2.exercises];
+    } else {
+      const minutes = duration;
+      const exCount = duration <= 30 ? 4 : 5;
+      const selected = allExercises.slice(0, exCount);
+      const blockExercises = selected.map((e, i) => ({
+        exercise: e,
+        sets: 1,
+        reps: e.category === 'compound' ? '8-10' : '12-15',
+        restSeconds: 0,
+        notes: `Minute ${i + 1} of each round`,
+      }));
+      const rounds = Math.floor(minutes / exCount);
+      circuitBlocks = [{
+        name: `EMOM ${minutes} min`,
+        format: 'EMOM',
+        timeCapMinutes: minutes,
+        rounds,
+        exercises: blockExercises,
+      }];
+      flatExercises = blockExercises;
+    }
   } else if (circuitStyle === 'rounds_for_time') {
     const exCount = duration <= 30 ? 5 : 6;
     const rounds = duration <= 30 ? 3 : duration <= 45 ? 4 : 5;
@@ -748,17 +791,11 @@ function getRftConfig(duration: number, balance: CircuitBalance): { exCount: num
     : { exCount: 6, rounds: 5 };
 }
 
-export function rebalanceCircuit(workout: GeneratedWorkout, balance: CircuitBalance): GeneratedWorkout {
-  if (!workout.circuitBlocks || workout.circuitBlocks.length === 0) return workout;
-
-  const block = workout.circuitBlocks[0];
+function rebalanceSingleBlock(block: CircuitBlock, blockDuration: number, balance: CircuitBalance, allUsedIds: Set<string>, blockNum?: number): CircuitBlock {
   const format = block.format;
-  if (format !== 'EMOM' && format !== 'Rounds for Time') return workout;
-
-  const duration = workout.durationMinutes;
   const config = format === 'EMOM'
-    ? getEmomConfig(duration, balance)
-    : getRftConfig(duration, balance);
+    ? getEmomConfig(blockDuration, balance)
+    : getRftConfig(blockDuration, balance);
 
   const currentExercises = block.exercises;
   let newExercises: WorkoutExercise[];
@@ -767,8 +804,7 @@ export function rebalanceCircuit(workout: GeneratedWorkout, balance: CircuitBala
     newExercises = currentExercises.slice(0, config.exCount);
   } else {
     const pool = shuffle([...CIRCUIT_EXERCISES]);
-    const usedIds = new Set(currentExercises.map(e => e.exercise.id));
-    const extras = pool.filter(e => !usedIds.has(e.id));
+    const extras = pool.filter(e => !allUsedIds.has(e.id));
     newExercises = [...currentExercises];
     for (let i = 0; newExercises.length < config.exCount && i < extras.length; i++) {
       const e = extras[i];
@@ -793,19 +829,45 @@ export function rebalanceCircuit(workout: GeneratedWorkout, balance: CircuitBala
     }));
   }
 
-  const newBlock: CircuitBlock = {
+  newExercises.forEach(e => allUsedIds.add(e.exercise.id));
+
+  const blockLabel = blockNum ? ` ${blockNum} —` : '';
+  return {
     ...block,
     rounds: config.rounds,
     exercises: newExercises,
+    timeCapMinutes: blockDuration,
     name: format === 'EMOM'
-      ? `EMOM ${duration} min`
+      ? `EMOM${blockLabel} ${blockDuration} min`
       : `${config.rounds} Rounds for Time`,
   };
+}
+
+export function rebalanceCircuit(workout: GeneratedWorkout, balance: CircuitBalance): GeneratedWorkout {
+  if (!workout.circuitBlocks || workout.circuitBlocks.length === 0) return workout;
+
+  const format = workout.circuitBlocks[0].format;
+  if (format !== 'EMOM' && format !== 'Rounds for Time') return workout;
+
+  const allUsedIds = new Set<string>();
+  const newBlocks: CircuitBlock[] = [];
+
+  if (workout.circuitBlocks.length > 1) {
+    for (let i = 0; i < workout.circuitBlocks.length; i++) {
+      const block = workout.circuitBlocks[i];
+      const blockDuration = block.timeCapMinutes || Math.floor(workout.durationMinutes / workout.circuitBlocks.length);
+      newBlocks.push(rebalanceSingleBlock(block, blockDuration, balance, allUsedIds, i + 1));
+    }
+  } else {
+    newBlocks.push(rebalanceSingleBlock(workout.circuitBlocks[0], workout.durationMinutes, balance, allUsedIds));
+  }
+
+  const allExercises = newBlocks.flatMap(b => b.exercises);
 
   return {
     ...workout,
-    circuitBlocks: [newBlock],
-    exercises: newExercises,
+    circuitBlocks: newBlocks,
+    exercises: allExercises,
     circuitBalance: balance,
   };
 }
