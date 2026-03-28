@@ -28,6 +28,7 @@ import {
   YOGA_FLEX_POSES,
   CARDIO_RUNNING,
   CARDIO_MIXED,
+  MOBILITY_EXERCISES,
 } from "@/lib/exercises";
 import { getWorkouts } from "@/lib/workout-storage";
 
@@ -59,13 +60,14 @@ interface ExercisePR {
   lastNotes?: string;
 }
 
-type PRCategory = "weight_lifting" | "circuit" | "yoga" | "cardio";
+type PRCategory = "weight_lifting" | "circuit" | "yoga" | "cardio" | "mobility";
 
 const PR_CATEGORY_TABS: { key: PRCategory; label: string; icon: string; color: string }[] = [
   { key: "weight_lifting", label: "Weights", icon: "barbell", color: Colors.primary },
   { key: "circuit", label: "Circuit", icon: "flash", color: Colors.circuit },
   { key: "yoga", label: "Yoga", icon: "leaf", color: Colors.yoga },
   { key: "cardio", label: "Cardio", icon: "heart", color: Colors.cardio },
+  { key: "mobility", label: "Mobility", icon: "body", color: Colors.mobility },
 ];
 
 function getExerciseListForCategory(cat: PRCategory): Exercise[] {
@@ -74,6 +76,7 @@ function getExerciseListForCategory(cat: PRCategory): Exercise[] {
     case "circuit": return CIRCUIT_EXERCISES;
     case "yoga": return [...YOGA_CORE_POSES, ...YOGA_FLEX_POSES];
     case "cardio": return [...CARDIO_RUNNING, ...CARDIO_MIXED];
+    case "mobility": return MOBILITY_EXERCISES;
   }
 }
 

@@ -2,7 +2,7 @@
 
 ## Overview
 
-IronForge is a React Native mobile application built with Expo that generates workout routines across four major categories: Weight Lifting (traditional splits with strength/hypertrophy styles), Circuit Training (AMRAP, EMOM, Rounds for Time, Hyrox simulation), Yoga (core strength or flexibility routines), and Cardio (running or mixed cardio). Users select a category, pick sub-options specific to that category, set a duration (30/45/60/90 min), and get a generated workout plan. Workouts are saved locally and can be viewed/deleted in a history tab. The app has a dark-themed UI with category-specific accent colors and uses the Rubik font family.
+IronForge is a React Native mobile application built with Expo that generates workout routines across five major categories: Weight Lifting (traditional splits with strength/hypertrophy styles), Circuit Training (AMRAP, EMOM, Rounds for Time, Hyrox simulation), Yoga (core strength or flexibility routines), Cardio (running or mixed cardio), and Mobility (full body/lower body/upper body/hips & spine routines with a cyan color scheme). Users select a category, pick sub-options specific to that category, set a duration, and get a generated workout plan. Mobility uses its own duration options (10/20/30/45 min) while all other categories use 30/45/60/90 min. Workouts are saved locally and can be viewed/deleted in a history tab. The app has a dark-themed UI with category-specific accent colors and uses the Rubik font family.
 
 The project follows a full-stack architecture with an Express backend server and an Expo/React Native frontend, designed to run on Replit with support for iOS, Android, and web platforms.
 
@@ -72,6 +72,16 @@ Preferred communication style: Simple, everyday language.
 - Logged notes are saved to `WorkoutExercise.userNotes` field
 - Notes persist to AsyncStorage via `updateWorkout()` and are displayed inline below the exercise card
 - Once logged, the icon is replaced by a colored badge showing "Notes ✓"
+
+### Mobility Category
+
+- Mobility sub-types: `full_body`, `lower_body`, `upper_body`, `hips_and_spine` — displayed as scrollable tiles (like Weight Lifting muscle group selector)
+- Duration options: `[10, 20, 30, 45]` min — different from other categories' `[30, 45, 60, 90]`
+- Duration resets automatically when switching to/from Mobility (20 min default for mobility, 45 min for others)
+- Accent color: `#06B6D4` (cyan) defined as `Colors.mobility`
+- Exercises show notes log (like Yoga/Cardio), not weight log
+- `MOBILITY_EXERCISES` (24 exercises) and `MOBILITY_EXERCISES_BY_SUBTYPE` (sub-type pools) in `lib/exercises.ts`
+- PRs & Last modal has a "Mobility" tab showing last-performed date + last note (same as Yoga/Cardio view)
 
 ### BMR Estimation
 

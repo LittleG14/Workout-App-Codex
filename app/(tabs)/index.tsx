@@ -26,12 +26,15 @@ import {
   CircuitStyle,
   YogaStyle,
   CardioStyle,
+  MobilityStyle,
   TrainingStyle,
   WEIGHT_LIFTING_LABELS,
   CIRCUIT_STYLE_LABELS,
   YOGA_STYLE_LABELS,
   CARDIO_STYLE_LABELS,
+  MOBILITY_STYLE_LABELS,
   DURATION_OPTIONS,
+  MOBILITY_DURATION_OPTIONS,
   generateWorkout,
   getSubTypeLabel,
 } from "@/lib/exercises";
@@ -42,6 +45,14 @@ const CATEGORIES: { key: TopCategory; label: string; icon: string; iconSet: "ion
   { key: "circuit", label: "Circuit", icon: "flash", iconSet: "ionicons", color: Colors.circuit, desc: "CrossFit / Hyrox" },
   { key: "yoga", label: "Yoga", icon: "meditation", iconSet: "mci", color: Colors.yoga, desc: "Core & Flexibility" },
   { key: "cardio", label: "Cardio", icon: "heart", iconSet: "ionicons", color: Colors.cardio, desc: "Run & Mixed" },
+  { key: "mobility", label: "Mobility", icon: "body", iconSet: "ionicons", color: Colors.mobility, desc: "Move & Restore" },
+];
+
+const MOBILITY_TYPES: { key: MobilityStyle; icon: string; iconSet: "ionicons" | "mci" }[] = [
+  { key: "full_body", icon: "body", iconSet: "ionicons" },
+  { key: "lower_body", icon: "walk", iconSet: "ionicons" },
+  { key: "upper_body", icon: "hand-left", iconSet: "ionicons" },
+  { key: "hips_and_spine", icon: "git-compare", iconSet: "ionicons" },
 ];
 
 const WEIGHT_TYPES: { key: WeightLiftingType; icon: string; iconSet: "ionicons" | "mci" }[] = [
@@ -138,6 +149,31 @@ function SubTypeSelector({ category, subType, onSelect, color }: {
     case "cardio":
       options = Object.entries(CARDIO_STYLE_LABELS).map(([k, v]) => ({ key: k, label: v }));
       break;
+    case "mobility":
+      return (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.typeRow}>
+          {MOBILITY_TYPES.map((item) => {
+            const selected = subType === item.key;
+            return (
+              <Pressable
+                key={item.key}
+                onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onSelect(item.key); }}
+              >
+                <View style={[styles.typeCard, selected && { borderColor: color, backgroundColor: `${color}10` }]}>
+                  {item.iconSet === "ionicons" ? (
+                    <Ionicons name={item.icon as any} size={20} color={selected ? color : Colors.textSecondary} />
+                  ) : (
+                    <MaterialCommunityIcons name={item.icon as any} size={20} color={selected ? color : Colors.textSecondary} />
+                  )}
+                  <Text style={[styles.typeCardText, selected && { color }]} numberOfLines={2}>
+                    {MOBILITY_STYLE_LABELS[item.key]}
+                  </Text>
+                </View>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+      );
   }
 
   return (
@@ -182,12 +218,13 @@ function StyleToggle({ style, onToggle }: {
   );
 }
 
-function DurationPicker({ duration, onSelect, color }: {
-  duration: number; onSelect: (d: number) => void; color: string;
+function DurationPicker({ duration, onSelect, color, options }: {
+  duration: number; onSelect: (d: number) => void; color: string; options?: number[];
 }) {
+  const durations = options || DURATION_OPTIONS;
   return (
     <View style={styles.durationRow}>
-      {DURATION_OPTIONS.map((d) => {
+      {durations.map((d) => {
         const selected = d === duration;
         return (
           <Pressable
@@ -209,6 +246,7 @@ const DEFAULT_SUB_TYPES: Record<TopCategory, string> = {
   circuit: "amrap",
   yoga: "core_strength",
   cardio: "running",
+  mobility: "full_body",
 };
 
 export default function GenerateScreen() {
@@ -272,6 +310,15 @@ export default function GenerateScreen() {
                 onPress={() => {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                   setSelectedCategory(cat.key);
+                  if (cat.key === "mobility") {
+                    if (!MOBILITY_DURATION_OPTIONS.includes(selectedDuration)) {
+                      setSelectedDuration(20);
+                    }
+                  } else {
+                    if (!DURATION_OPTIONS.includes(selectedDuration)) {
+                      setSelectedDuration(45);
+                    }
+                  }
                 }}
               />
             ))}
@@ -282,7 +329,8 @@ export default function GenerateScreen() {
           <Text style={styles.sectionTitle}>
             {selectedCategory === "weight_lifting" ? "Muscle Group" :
              selectedCategory === "circuit" ? "Format" :
-             selectedCategory === "yoga" ? "Focus" : "Type"}
+             selectedCategory === "yoga" ? "Focus" :
+             selectedCategory === "mobility" ? "Focus Area" : "Type"}
           </Text>
           <SubTypeSelector
             category={selectedCategory}
@@ -343,7 +391,12 @@ export default function GenerateScreen() {
 
         <Animated.View entering={FadeIn.delay(300).duration(400)}>
           <Text style={styles.sectionTitle}>Duration</Text>
-          <DurationPicker duration={selectedDuration} onSelect={setSelectedDuration} color={catColor} />
+          <DurationPicker
+            duration={selectedDuration}
+            onSelect={setSelectedDuration}
+            color={catColor}
+            options={selectedCategory === "mobility" ? MOBILITY_DURATION_OPTIONS : DURATION_OPTIONS}
+          />
         </Animated.View>
 
         <Animated.View

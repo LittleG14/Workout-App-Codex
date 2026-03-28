@@ -36,6 +36,7 @@ const CATEGORY_COLORS: Record<string, string> = {
   circuit: Colors.circuit,
   yoga: Colors.yoga,
   cardio: Colors.cardio,
+  mobility: Colors.mobility,
 };
 
 function ExerciseCard({ item, index, accentColor, onRefresh, onLogWeight, showWeightLog, onLogNotes, showNotesLog }: { item: WorkoutExercise; index: number; accentColor: string; onRefresh?: () => void; onLogWeight?: () => void; showWeightLog?: boolean; onLogNotes?: () => void; showNotesLog?: boolean }) {
@@ -489,7 +490,7 @@ export default function WorkoutDetailScreen() {
   const totalExerciseCount = workout.exercises.length + (hasSupersets ? workout.supersets!.length * 2 : 0);
   const hasCircuitBlocks = workout.circuitBlocks && workout.circuitBlocks.length > 0;
   const showWeightLog = workout.topCategory === 'weight_lifting' || workout.topCategory === 'circuit';
-  const showNotesLog = workout.topCategory === 'yoga' || workout.topCategory === 'cardio';
+  const showNotesLog = workout.topCategory === 'yoga' || workout.topCategory === 'cardio' || workout.topCategory === 'mobility';
   const categoryLabel = TOP_CATEGORY_LABELS[workout.topCategory] || "Workout";
   const subLabel = getSubTypeLabel(workout.topCategory, workout.subType);
   const circuitFormat = hasCircuitBlocks ? workout.circuitBlocks![0].format : null;

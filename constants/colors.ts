@@ -20,6 +20,7 @@ const Colors = {
   circuit: '#FF4757',
   yoga: '#A78BFA',
   cardio: '#22D3EE',
+  mobility: '#06B6D4',
   cardGradientStart: '#1E1E1E',
   cardGradientEnd: '#141414',
 

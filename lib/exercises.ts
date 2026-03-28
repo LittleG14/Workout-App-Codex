@@ -1,4 +1,4 @@
-export type TopCategory = 'weight_lifting' | 'circuit' | 'yoga' | 'cardio';
+export type TopCategory = 'weight_lifting' | 'circuit' | 'yoga' | 'cardio' | 'mobility';
 
 export type MuscleGroup = 'chest' | 'triceps' | 'back' | 'biceps' | 'shoulders' | 'abs' | 'quads' | 'hamstrings' | 'glutes' | 'calves' | 'full_body';
 
@@ -6,6 +6,7 @@ export type WeightLiftingType = 'chest_triceps' | 'back_biceps' | 'shoulders_abs
 export type CircuitStyle = 'amrap' | 'emom' | 'rounds_for_time' | 'hyrox';
 export type YogaStyle = 'core_strength' | 'flexibility';
 export type CardioStyle = 'running' | 'mixed_cardio';
+export type MobilityStyle = 'full_body' | 'lower_body' | 'upper_body' | 'hips_and_spine';
 
 export type TrainingStyle = 'strength' | 'hypertrophy';
 export type ExerciseCategory = 'compound' | 'isolation';
@@ -64,6 +65,7 @@ export const TOP_CATEGORY_LABELS: Record<TopCategory, string> = {
   circuit: 'Circuit Training',
   yoga: 'Yoga',
   cardio: 'Cardio',
+  mobility: 'Mobility',
 };
 
 export const TOP_CATEGORY_ICONS: Record<TopCategory, { name: string; set: 'ionicons' | 'mci' }> = {
@@ -71,6 +73,14 @@ export const TOP_CATEGORY_ICONS: Record<TopCategory, { name: string; set: 'ionic
   circuit: { name: 'flash', set: 'ionicons' },
   yoga: { name: 'meditation', set: 'mci' },
   cardio: { name: 'heart', set: 'ionicons' },
+  mobility: { name: 'body', set: 'ionicons' },
+};
+
+export const MOBILITY_STYLE_LABELS: Record<MobilityStyle, string> = {
+  full_body: 'Full Body',
+  lower_body: 'Lower Body',
+  upper_body: 'Upper Body',
+  hips_and_spine: 'Hips & Spine',
 };
 
 export const WEIGHT_LIFTING_LABELS: Record<WeightLiftingType, string> = {
@@ -115,6 +125,8 @@ function getExercisePool(topCategory: TopCategory, subType: string): Exercise[] 
       return subType === 'flexibility' ? YOGA_FLEX_POSES : YOGA_CORE_POSES;
     case 'cardio':
       return subType === 'running' ? CARDIO_RUNNING : CARDIO_MIXED;
+    case 'mobility':
+      return getMobilityPool(subType as MobilityStyle);
     default:
       return [];
   }
@@ -338,6 +350,45 @@ export const CARDIO_MIXED: Exercise[] = [
   { id: 'cm11', name: 'Jumping Jacks', muscles: ['full_body'], category: 'compound', equipment: 'Bodyweight' },
   { id: 'cm12', name: 'Box Step-Ups', muscles: ['quads', 'glutes'], category: 'compound', equipment: 'Plyo Box' },
 ];
+
+export const MOBILITY_EXERCISES: Exercise[] = [
+  { id: 'mob1',  name: 'Cossack Squats',                       muscles: ['quads', 'glutes', 'hamstrings'], category: 'compound',  equipment: 'Bodyweight' },
+  { id: 'mob2',  name: 'Prying Deep Squats',                   muscles: ['quads', 'glutes'],               category: 'compound',  equipment: 'Bodyweight' },
+  { id: 'mob3',  name: 'Romanian Deadlifts / Jefferson Curls',  muscles: ['hamstrings', 'glutes', 'back'],  category: 'compound',  equipment: 'Bodyweight' },
+  { id: 'mob4',  name: 'Ankle Dorsiflexion Drives',            muscles: ['calves', 'quads'],               category: 'isolation', equipment: 'Bodyweight' },
+  { id: 'mob5',  name: '90/90 Hip Switches',                   muscles: ['glutes', 'hamstrings'],          category: 'isolation', equipment: 'Bodyweight' },
+  { id: 'mob6',  name: 'Shoulder Dislocates / Pass-Throughs',  muscles: ['shoulders', 'back'],             category: 'isolation', equipment: 'Dowel / Band' },
+  { id: 'mob7',  name: 'Halos',                                muscles: ['shoulders', 'abs'],              category: 'compound',  equipment: 'Kettlebell / Plate' },
+  { id: 'mob8',  name: 'Overhead Squats',                      muscles: ['full_body'],                     category: 'compound',  equipment: 'Bodyweight / PVC' },
+  { id: 'mob9',  name: 'Thoracic Extensions (Pullovers)',       muscles: ['back', 'shoulders'],             category: 'isolation', equipment: 'Foam Roller / Bench' },
+  { id: 'mob10', name: "World's Greatest Stretch",             muscles: ['full_body'],                     category: 'compound',  equipment: 'Bodyweight' },
+  { id: 'mob11', name: 'Turkish Get-Ups',                      muscles: ['full_body'],                     category: 'compound',  equipment: 'Kettlebell / Bodyweight' },
+  { id: 'mob12', name: 'Windmills',                            muscles: ['full_body'],                     category: 'compound',  equipment: 'Kettlebell / Bodyweight' },
+  { id: 'mob13', name: 'Cat-Cow',                              muscles: ['back', 'abs'],                   category: 'isolation', equipment: 'Mat' },
+  { id: 'mob14', name: 'Bird-Dog',                             muscles: ['abs', 'glutes'],                 category: 'isolation', equipment: 'Mat' },
+  { id: 'mob15', name: 'Spiderman Lunges',                     muscles: ['quads', 'glutes'],               category: 'compound',  equipment: 'Bodyweight' },
+  { id: 'mob16', name: 'Inchworms',                            muscles: ['full_body'],                     category: 'compound',  equipment: 'Bodyweight' },
+  { id: 'mob17', name: 'Bear Crawls',                          muscles: ['full_body'],                     category: 'compound',  equipment: 'Bodyweight' },
+  { id: 'mob18', name: 'Thread the Needle',                    muscles: ['back', 'shoulders'],             category: 'isolation', equipment: 'Mat' },
+  { id: 'mob19', name: 'Pigeon Pose',                          muscles: ['glutes', 'hamstrings'],          category: 'isolation', equipment: 'Mat' },
+  { id: 'mob20', name: 'Couch Stretch',                        muscles: ['quads', 'glutes'],               category: 'isolation', equipment: 'Bodyweight' },
+  { id: 'mob21', name: 'Wall Slides',                          muscles: ['shoulders', 'back'],             category: 'isolation', equipment: 'Wall' },
+  { id: 'mob22', name: 'Scorpion Stretches',                   muscles: ['full_body'],                     category: 'isolation', equipment: 'Mat' },
+  { id: 'mob23', name: 'Deep Ape Squats',                      muscles: ['quads', 'glutes'],               category: 'compound',  equipment: 'Bodyweight' },
+  { id: 'mob24', name: 'Glute Bridges',                        muscles: ['glutes', 'hamstrings'],          category: 'isolation', equipment: 'Mat' },
+];
+
+const MOBILITY_SUBTYPE_IDS: Record<MobilityStyle, string[]> = {
+  full_body:    ['mob8', 'mob10', 'mob11', 'mob12', 'mob15', 'mob16', 'mob17', 'mob22', 'mob7', 'mob1'],
+  lower_body:   ['mob1', 'mob2', 'mob3', 'mob4', 'mob15', 'mob20', 'mob23', 'mob24', 'mob5', 'mob19'],
+  upper_body:   ['mob6', 'mob7', 'mob9', 'mob18', 'mob21', 'mob12', 'mob8', 'mob10'],
+  hips_and_spine: ['mob5', 'mob13', 'mob14', 'mob18', 'mob19', 'mob22', 'mob24', 'mob3', 'mob9', 'mob20'],
+};
+
+function getMobilityPool(subType: MobilityStyle): Exercise[] {
+  const ids = MOBILITY_SUBTYPE_IDS[subType] || MOBILITY_SUBTYPE_IDS.full_body;
+  return MOBILITY_EXERCISES.filter(e => ids.includes(e.id));
+}
 
 function shuffle<T>(arr: T[]): T[] {
   const a = [...arr];
@@ -727,6 +778,33 @@ function generateCardio(cardioStyle: CardioStyle, duration: number): GeneratedWo
   };
 }
 
+function generateMobility(subType: MobilityStyle, duration: number): GeneratedWorkout {
+  const pool = shuffle(getMobilityPool(subType));
+  const exCount = duration <= 10 ? 3 : duration <= 20 ? 5 : duration <= 30 ? 7 : 9;
+  const sets = duration <= 20 ? 2 : 3;
+  const restSeconds = duration <= 20 ? 20 : 30;
+  const selected = pool.slice(0, Math.min(exCount, pool.length));
+
+  const exercises: WorkoutExercise[] = selected.map(exercise => ({
+    exercise,
+    sets,
+    reps: exercise.category === 'compound' ? '8-10 reps' : '45 sec hold',
+    restSeconds,
+    notes: 'Move slowly and with control',
+  }));
+
+  return {
+    id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+    name: `${randomAdj()} ${MOBILITY_STYLE_LABELS[subType]}`,
+    topCategory: 'mobility',
+    subType,
+    style: subType,
+    durationMinutes: duration,
+    exercises,
+    createdAt: new Date().toISOString(),
+  };
+}
+
 export function generateWorkout(
   topCategory: TopCategory,
   subType: string,
@@ -744,6 +822,8 @@ export function generateWorkout(
       return generateYoga(subType as YogaStyle, durationMinutes);
     case 'cardio':
       return generateCardio(subType as CardioStyle, durationMinutes);
+    case 'mobility':
+      return generateMobility(subType as MobilityStyle, durationMinutes);
   }
 }
 
@@ -753,11 +833,13 @@ export function getSubTypeLabel(topCategory: TopCategory, subType: string): stri
     case 'circuit': return CIRCUIT_STYLE_LABELS[subType as CircuitStyle] || subType;
     case 'yoga': return YOGA_STYLE_LABELS[subType as YogaStyle] || subType;
     case 'cardio': return CARDIO_STYLE_LABELS[subType as CardioStyle] || subType;
+    case 'mobility': return MOBILITY_STYLE_LABELS[subType as MobilityStyle] || subType;
     default: return subType;
   }
 }
 
 export const DURATION_OPTIONS = [30, 45, 60, 90];
+export const MOBILITY_DURATION_OPTIONS = [10, 20, 30, 45];
 
 function getEmomConfig(duration: number, balance: CircuitBalance): { exCount: number; rounds: number } {
   if (balance === 'more_movements') {
