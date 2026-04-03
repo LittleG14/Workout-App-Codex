@@ -17,6 +17,7 @@ import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import Colors from "@/constants/colors";
+import { useAuth } from "@/contexts/AuthContext";
 import { UserProfile, getProfile, saveProfile } from "@/lib/profile-storage";
 import {
   Exercise,
@@ -173,11 +174,13 @@ function computeBMR(profile: UserProfile): number | null {
 
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
+  const { user, logout } = useAuth();
   const webTopPad = Platform.OS === "web" ? 67 : 0;
   const webBottomPad = Platform.OS === "web" ? 34 : 0;
 
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [showPRModal, setShowPRModal] = useState(false);
+  const [confirmLogout, setConfirmLogout] = useState(false);
   const [prCategory, setPrCategory] = useState<PRCategory>("weight_lifting");
   const [prData, setPrData] = useState<ExercisePR[]>([]);
   const [selectedExercise, setSelectedExercise] = useState<ExercisePR | null>(null);
@@ -237,6 +240,20 @@ export default function ProfileScreen() {
         contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + webBottomPad + 100 }]}
         showsVerticalScrollIndicator={false}
       >
+        <Animated.View entering={FadeInDown.delay(50).duration(400)}>
+          <View style={styles.accountCard}>
+            <View style={styles.accountAvatar}>
+              <Text style={styles.accountAvatarText}>
+                {user?.name?.charAt(0)?.toUpperCase() || "?"}
+              </Text>
+            </View>
+            <View style={styles.accountInfo}>
+              <Text style={styles.accountName} numberOfLines={1}>{user?.name || "IronForge User"}</Text>
+              <Text style={styles.accountEmail} numberOfLines={1}>{user?.email || ""}</Text>
+            </View>
+          </View>
+        </Animated.View>
+
         <Animated.View entering={FadeInDown.delay(100).duration(400)}>
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Gender</Text>
@@ -434,6 +451,42 @@ export default function ProfileScreen() {
             <Ionicons name="trophy" size={20} color="#FFF" />
             <Text style={styles.prButtonText}>PRs and Last</Text>
           </Pressable>
+        </Animated.View>
+
+        <Animated.View entering={FadeInDown.delay(550).duration(400)}>
+          {confirmLogout ? (
+            <View style={styles.logoutConfirm}>
+              <Text style={styles.logoutConfirmText}>Sign out of IronForge?</Text>
+              <View style={styles.logoutConfirmRow}>
+                <Pressable
+                  style={styles.logoutCancelBtn}
+                  onPress={() => setConfirmLogout(false)}
+                  testID="logout-cancel-btn"
+                >
+                  <Text style={styles.logoutCancelBtnText}>Cancel</Text>
+                </Pressable>
+                <Pressable
+                  style={styles.logoutConfirmBtn}
+                  onPress={() => { setConfirmLogout(false); logout(); }}
+                  testID="logout-confirm-btn"
+                >
+                  <Text style={styles.logoutConfirmBtnText}>Sign Out</Text>
+                </Pressable>
+              </View>
+            </View>
+          ) : (
+            <Pressable
+              style={styles.logoutBtn}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                setConfirmLogout(true);
+              }}
+              testID="logout-btn"
+            >
+              <Ionicons name="log-out-outline" size={18} color={Colors.textSecondary} />
+              <Text style={styles.logoutBtnText}>Sign Out</Text>
+            </Pressable>
+          )}
         </Animated.View>
       </ScrollView>
 
@@ -989,5 +1042,105 @@ const styles = StyleSheet.create({
     fontFamily: "Rubik_500Medium",
     color: Colors.textMuted,
     fontStyle: "italic",
+  },
+  accountCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: Colors.surface,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+    gap: 14,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  accountAvatar: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: `${Colors.primary}22`,
+    borderWidth: 1.5,
+    borderColor: Colors.primary,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  accountAvatarText: {
+    fontFamily: "Rubik_700Bold",
+    fontSize: 20,
+    color: Colors.primary,
+  },
+  accountInfo: {
+    flex: 1,
+  },
+  accountName: {
+    fontFamily: "Rubik_600SemiBold",
+    fontSize: 17,
+    color: Colors.text,
+  },
+  accountEmail: {
+    fontFamily: "Rubik_400Regular",
+    fontSize: 13,
+    color: Colors.textSecondary,
+    marginTop: 2,
+  },
+  logoutBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 14,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    backgroundColor: Colors.surface,
+    marginTop: 8,
+  },
+  logoutBtnText: {
+    fontFamily: "Rubik_500Medium",
+    fontSize: 15,
+    color: Colors.textSecondary,
+  },
+  logoutConfirm: {
+    backgroundColor: Colors.surface,
+    borderRadius: 14,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    marginTop: 8,
+    gap: 12,
+  },
+  logoutConfirmText: {
+    fontFamily: "Rubik_500Medium",
+    fontSize: 15,
+    color: Colors.text,
+    textAlign: "center",
+  },
+  logoutConfirmRow: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  logoutCancelBtn: {
+    flex: 1,
+    paddingVertical: 11,
+    borderRadius: 10,
+    backgroundColor: Colors.surfaceLight,
+    alignItems: "center",
+  },
+  logoutCancelBtnText: {
+    fontFamily: "Rubik_500Medium",
+    fontSize: 14,
+    color: Colors.textSecondary,
+  },
+  logoutConfirmBtn: {
+    flex: 1,
+    paddingVertical: 11,
+    borderRadius: 10,
+    backgroundColor: "#FF4444",
+    alignItems: "center",
+  },
+  logoutConfirmBtnText: {
+    fontFamily: "Rubik_600SemiBold",
+    fontSize: 14,
+    color: "#FFF",
   },
 });

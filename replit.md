@@ -4,7 +4,7 @@
 
 IronForge is a React Native mobile application built with Expo that generates workout routines across five major categories: Weight Lifting (traditional splits with strength/hypertrophy styles), Circuit Training (AMRAP, EMOM, Rounds for Time, Hyrox simulation), Yoga (core strength or flexibility routines), Cardio (running or mixed cardio), and Mobility (full body/lower body/upper body/hips & spine routines with a cyan color scheme). Users select a category, pick sub-options specific to that category, set a duration, and get a generated workout plan. Mobility uses its own duration options (10/20/30/45 min) while all other categories use 30/45/60/90 min. Workouts are saved locally and can be viewed/deleted in a history tab. The app has a dark-themed UI with category-specific accent colors and uses the Rubik font family.
 
-The project follows a full-stack architecture with an Express backend server and an Expo/React Native frontend, designed to run on Replit with support for iOS, Android, and web platforms.
+The project follows a full-stack architecture with an Express backend server and an Expo/React Native frontend, designed to run on Replit with support for iOS, Android, and web platforms. The app includes a complete authentication system (email/password, Google, and Apple sign-in) with JWT tokens stored in the device keychain (expo-secure-store) for persistent sessions.
 
 ## User Preferences
 
@@ -21,14 +21,29 @@ Preferred communication style: Simple, everyday language.
 - **Gesture Handling**: react-native-gesture-handler for swipeable list items
 - **Fonts**: Rubik font family (Regular, Medium, SemiBold, Bold) loaded via @expo-google-fonts
 - **Local Storage**: AsyncStorage for persisting generated workouts (`lib/workout-storage.ts`) and user profile (`lib/profile-storage.ts`)
+- **Auth Storage**: expo-secure-store (native keychain / localStorage on web) for JWT token and cached user object (`lib/auth-storage.ts`)
+- **Auth Context**: `contexts/AuthContext.tsx` provides `login`, `register`, `loginWithProvider`, `logout`, and `user` state with auto-login from cached token on startup
 - **Styling**: Dark theme with StyleSheet-based styling; colors defined in `constants/colors.ts`
 - **Error Handling**: Class-based ErrorBoundary component wrapping the app
+
+### Authentication
+
+- **Auth screens**: `app/(auth)/index.tsx` (login) and `app/(auth)/signup.tsx` (registration)
+- **Routing guard**: `app/(tabs)/_layout.tsx` redirects to `/(auth)` if `user` is null; `app/index.tsx` redirects to `/(tabs)` or `/(auth)` based on auth state
+- **Backend endpoints**: `POST /api/auth/register`, `POST /api/auth/login`, `POST /api/auth/google`, `POST /api/auth/apple`, `GET /api/auth/me` — all in `server/routes.ts`
+- **JWT**: 30-day tokens signed with `SESSION_SECRET` env var; generated in `server/auth.ts` using `jsonwebtoken`
+- **Password hashing**: bcryptjs with salt rounds = 10
+- **Schema**: `users` table with `email`, `name`, `password`, `googleId`, `appleId`, `avatarUrl` columns
+- **Sign-out UI**: Inline two-step confirmation (no browser dialog) — first press shows "Sign out of IronForge?" with Cancel + Sign Out buttons inline
+- **Google Sign-In**: Requires `EXPO_PUBLIC_GOOGLE_CLIENT_ID` env var; shows alert if missing
+- **Apple Sign-In**: iOS native builds only; shows informational message on other platforms
+- **Note**: Users are stored in-memory (`MemStorage`); need PostgreSQL integration for production persistence
 
 ### Backend (Express Server)
 
 - **Framework**: Express 5 running on Node.js
-- **Location**: `server/` directory with `index.ts` (entry point), `routes.ts` (API route registration), and `storage.ts` (data access layer)
-- **Storage Pattern**: Interface-based storage (`IStorage`) with an in-memory implementation (`MemStorage`). Currently only has user CRUD operations. The storage interface is designed to be swapped out for a database-backed implementation.
+- **Location**: `server/` directory with `index.ts` (entry point), `routes.ts` (API route registration), `auth.ts` (JWT/bcrypt utilities), and `storage.ts` (data access layer)
+- **Storage Pattern**: Interface-based storage (`IStorage`) with an in-memory implementation (`MemStorage`). The storage interface is designed to be swapped out for a database-backed implementation.
 - **CORS**: Dynamic CORS configuration supporting Replit domains and localhost for development
 - **Static Serving**: In production, serves a static web build; in development, proxies to Metro bundler
 
