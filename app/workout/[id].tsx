@@ -29,7 +29,7 @@ import {
   findCoreReplacementExercise,
   rebalanceCircuit,
 } from "@/lib/exercises";
-import { getWorkouts, updateWorkout } from "@/lib/workout-storage";
+import { getLocalWorkoutsOnly, updateWorkout } from "@/lib/workout-storage";
 
 const CATEGORY_COLORS: Record<string, string> = {
   weight_lifting: Colors.primary,
@@ -307,7 +307,7 @@ export default function WorkoutDetailScreen() {
   useEffect(() => { loadWorkout(); }, [id]);
 
   const loadWorkout = async () => {
-    const all = await getWorkouts();
+    const all = await getLocalWorkoutsOnly();
     const found = all.find((w) => w.id === id);
     if (found) setWorkout(found);
   };

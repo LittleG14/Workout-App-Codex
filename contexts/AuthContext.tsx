@@ -66,7 +66,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const freshUser: AuthUser = data.user;
       await setCachedUser(freshUser);
       setUser(freshUser);
-    } catch {
+    } catch (err: any) {
+      // If server says user doesn't exist (401), clear stale auth so
+      // the user is prompted to create a new account.
+      if (err?.message?.startsWith("401")) {
+        await clearAllAuth();
+        setUser(null);
+      }
     }
   }, []);
 
