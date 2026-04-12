@@ -37,7 +37,7 @@ Preferred communication style: Simple, everyday language.
 - **Sign-out UI**: Inline two-step confirmation (no browser dialog) — first press shows "Sign out of IronForge?" with Cancel + Sign Out buttons inline
 - **Google Sign-In**: Requires `EXPO_PUBLIC_GOOGLE_CLIENT_ID` env var; shows alert if missing
 - **Apple Sign-In**: iOS native builds only; shows informational message on other platforms
-- **Note**: Users are stored in-memory (`MemStorage`); need PostgreSQL integration for production persistence
+- **Note**: Users and workouts are stored in Supabase PostgreSQL via `DbStorage`. The `SUPABASE_CONNECTION_STRING` secret must be set to the Transaction Pooler URL from the Supabase dashboard.
 
 ### Backend (Express Server)
 
@@ -49,12 +49,13 @@ Preferred communication style: Simple, everyday language.
 
 ### Database Schema
 
-- **ORM**: Drizzle ORM with PostgreSQL dialect
+- **ORM**: Drizzle ORM with PostgreSQL dialect, using the `postgres` npm package as the driver
 - **Schema Location**: `shared/schema.ts` — shared between frontend and backend
-- **Current Tables**: `users` table with `id` (UUID, auto-generated), `username` (unique text), and `password` (text)
+- **Tables**: `users` (id, name, email, password, google_id, apple_id, avatar_url, created_at) and `workouts` (id, user_id FK→users, name, top_category, data JSON text, created_at)
 - **Validation**: Zod schemas generated from Drizzle schemas via `drizzle-zod`
-- **Migrations**: Output to `./migrations` directory; push with `npm run db:push`
-- **Note**: The database requires a `DATABASE_URL` environment variable. Workout data is currently stored client-side in AsyncStorage, not in the database.
+- **Migrations**: Run `tsx scripts/migrate.ts` to create/update tables (bypasses drizzle-kit due to Supabase password encoding)
+- **Connection**: Requires `SUPABASE_CONNECTION_STRING` set to the **Transaction Pooler** URL (port 6543) from the Supabase dashboard. Passwords with special characters are URL-encoded automatically in `server/db.ts`.
+- **Workout Storage**: Full `GeneratedWorkout` JSON stored in `workouts.data` text column. Frontend syncs to server on save/update/delete; local AsyncStorage used as fast cache.
 
 ### Workout Generation
 
