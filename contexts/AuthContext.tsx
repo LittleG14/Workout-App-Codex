@@ -16,6 +16,7 @@ import {
   clearAllAuth,
   type StoredUser,
 } from "@/lib/auth-storage";
+import { syncLocalWorkoutsToServer } from "@/lib/workout-storage";
 
 export type AuthUser = StoredUser;
 
@@ -52,6 +53,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await setToken(token);
     await setCachedUser(newUser);
     setUser(newUser);
+    syncLocalWorkoutsToServer().catch(() => {});
   }, []);
 
   const refreshUser = useCallback(async () => {
