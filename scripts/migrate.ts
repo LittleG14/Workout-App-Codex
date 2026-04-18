@@ -31,24 +31,23 @@ async function migrate() {
 
   console.log("Running migrations...");
 
+  // Drop the old FK constraint (links workouts to our custom users table).
+  // Supabase Auth now owns user identity — workouts reference auth user UUIDs directly.
   await sql`
-    CREATE TABLE IF NOT EXISTS users (
-      id VARCHAR PRIMARY KEY,
-      name TEXT NOT NULL,
-      email TEXT NOT NULL UNIQUE,
-      password TEXT,
-      google_id TEXT UNIQUE,
-      apple_id TEXT UNIQUE,
-      avatar_url TEXT,
-      created_at TEXT NOT NULL
-    )
+    ALTER TABLE workouts
+      DROP CONSTRAINT IF EXISTS workouts_user_id_fkey
   `;
-  console.log("✓ users table ready");
+  console.log("✓ Dropped FK constraint workouts_user_id_fkey (if existed)");
 
+  // Drop the old users table — Supabase Auth manages user records now.
+  await sql`DROP TABLE IF EXISTS users CASCADE`;
+  console.log("✓ Dropped users table (if existed)");
+
+  // Ensure workouts table exists without FK.
   await sql`
     CREATE TABLE IF NOT EXISTS workouts (
       id TEXT PRIMARY KEY,
-      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      user_id TEXT NOT NULL,
       name TEXT NOT NULL,
       top_category TEXT NOT NULL,
       data TEXT NOT NULL,

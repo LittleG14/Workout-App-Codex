@@ -7,139 +7,80 @@ import React, {
   ReactNode,
   useCallback,
 } from "react";
-import { getApiUrl } from "@/lib/query-client";
-import {
-  getToken,
-  setToken,
-  getCachedUser,
-  setCachedUser,
-  clearAllAuth,
-  type StoredUser,
-} from "@/lib/auth-storage";
+import type { User as SupabaseUser } from "@supabase/supabase-js";
+import { supabase } from "@/lib/supabase";
+import { clearAllAuth, type StoredUser } from "@/lib/auth-storage";
 import { syncLocalWorkoutsToServer } from "@/lib/workout-storage";
 
 export type AuthUser = StoredUser;
+
+function toAuthUser(u: SupabaseUser): AuthUser {
+  return {
+    id: u.id,
+    email: u.email ?? "",
+    name:
+      u.user_metadata?.name ??
+      u.email?.split("@")[0] ??
+      "User",
+    avatarUrl: u.user_metadata?.avatar_url ?? null,
+    createdAt: u.created_at,
+  };
+}
 
 interface AuthContextValue {
   user: AuthUser | null;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (name: string, email: string, password: string) => Promise<void>;
-  loginWithProvider: (provider: "google" | "apple", tokenOrPayload: string | Record<string, any>) => Promise<void>;
   logout: () => Promise<void>;
-  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
-
-async function apiFetch(path: string, options?: RequestInit) {
-  const url = new URL(path, getApiUrl()).toString();
-  const res = await fetch(url, {
-    headers: { "Content-Type": "application/json", ...options?.headers },
-    ...options,
-  });
-  const data = await res.json();
-  if (!res.ok) {
-    throw new Error(data.message || "Request failed");
-  }
-  return data;
-}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const setUserAndToken = useCallback(async (newUser: AuthUser, token: string) => {
-    await setToken(token);
-    await setCachedUser(newUser);
-    setUser(newUser);
-    syncLocalWorkoutsToServer().catch(() => {});
-  }, []);
-
-  const refreshUser = useCallback(async () => {
-    const token = await getToken();
-    if (!token) return;
-    try {
-      const data = await apiFetch("/api/auth/me", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const freshUser: AuthUser = data.user;
-      await setCachedUser(freshUser);
-      setUser(freshUser);
-    } catch (err: any) {
-      // If server says user doesn't exist (401), clear stale auth so
-      // the user is prompted to create a new account.
-      if (err?.message?.startsWith("401")) {
-        await clearAllAuth();
-        setUser(null);
-      }
-    }
-  }, []);
-
   useEffect(() => {
-    async function checkAuth() {
-      try {
-        const cached = await getCachedUser();
-        if (cached) {
-          setUser(cached);
-          setIsLoading(false);
-          refreshUser();
-          return;
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        if (session?.user) {
+          setUser(toAuthUser(session.user));
+          if (event === "SIGNED_IN") {
+            syncLocalWorkoutsToServer().catch(() => {});
+          }
+        } else {
+          setUser(null);
         }
-
-        const token = await getToken();
-        if (token) {
-          const data = await apiFetch("/api/auth/me", {
-            headers: { Authorization: `Bearer ${token}` },
-          });
-          const freshUser: AuthUser = data.user;
-          await setCachedUser(freshUser);
-          setUser(freshUser);
-        }
-      } catch {
-        await clearAllAuth();
-        setUser(null);
-      } finally {
         setIsLoading(false);
       }
-    }
-    checkAuth();
+    );
+    return () => subscription.unsubscribe();
   }, []);
 
   const login = useCallback(async (email: string, password: string) => {
-    const data = await apiFetch("/api/auth/login", {
-      method: "POST",
-      body: JSON.stringify({ email, password }),
+    const { error } = await supabase.auth.signInWithPassword({
+      email: email.trim().toLowerCase(),
+      password,
     });
-    await setUserAndToken(data.user, data.token);
-  }, [setUserAndToken]);
+    if (error) throw new Error(error.message);
+  }, []);
 
-  const register = useCallback(async (name: string, email: string, password: string) => {
-    const data = await apiFetch("/api/auth/register", {
-      method: "POST",
-      body: JSON.stringify({ name, email, password }),
-    });
-    await setUserAndToken(data.user, data.token);
-  }, [setUserAndToken]);
-
-  const loginWithProvider = useCallback(
-    async (provider: "google" | "apple", tokenOrPayload: string | Record<string, any>) => {
-      let endpoint = "";
-      let body: Record<string, any> = {};
-      if (provider === "google") {
-        endpoint = "/api/auth/google";
-        body = { accessToken: tokenOrPayload as string };
-      } else {
-        endpoint = "/api/auth/apple";
-        body = tokenOrPayload as Record<string, any>;
-      }
-      const data = await apiFetch(endpoint, {
-        method: "POST",
-        body: JSON.stringify(body),
+  const register = useCallback(
+    async (name: string, email: string, password: string) => {
+      const { data, error } = await supabase.auth.signUp({
+        email: email.trim().toLowerCase(),
+        password,
+        options: { data: { name: name.trim() } },
       });
-      await setUserAndToken(data.user, data.token);
+      if (error) throw new Error(error.message);
+      if (!data.session) {
+        throw new Error(
+          "Account created! Please check your email to confirm your address before signing in."
+        );
+      }
     },
-    [setUserAndToken]
+    []
   );
 
   const logout = useCallback(async () => {
@@ -148,8 +89,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo(
-    () => ({ user, isLoading, login, register, loginWithProvider, logout, refreshUser }),
-    [user, isLoading, login, register, loginWithProvider, logout, refreshUser]
+    () => ({ user, isLoading, login, register, logout }),
+    [user, isLoading, login, register, logout]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

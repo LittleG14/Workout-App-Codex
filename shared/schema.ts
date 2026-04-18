@@ -1,37 +1,13 @@
-import { pgTable, text, varchar, timestamp } from "drizzle-orm/pg-core";
-import { createInsertSchema } from "drizzle-zod";
-import { z } from "zod";
-
-export const users = pgTable("users", {
-  id: varchar("id").primaryKey(),
-  name: text("name").notNull(),
-  email: text("email").notNull().unique(),
-  password: text("password"),
-  googleId: text("google_id").unique(),
-  appleId: text("apple_id").unique(),
-  avatarUrl: text("avatar_url"),
-  createdAt: text("created_at").notNull(),
-});
+import { pgTable, text } from "drizzle-orm/pg-core";
 
 export const workouts = pgTable("workouts", {
   id: text("id").primaryKey(),
-  userId: text("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
+  userId: text("user_id").notNull(),
   name: text("name").notNull(),
   topCategory: text("top_category").notNull(),
   data: text("data").notNull(),
   createdAt: text("created_at").notNull(),
 });
-
-export const insertUserSchema = createInsertSchema(users).pick({
-  name: true,
-  email: true,
-  password: true,
-});
-
-export type InsertUser = typeof users.$inferInsert;
-export type User = typeof users.$inferSelect;
 
 export type InsertWorkout = typeof workouts.$inferInsert;
 export type WorkoutRow = typeof workouts.$inferSelect;

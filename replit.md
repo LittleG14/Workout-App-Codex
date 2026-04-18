@@ -21,23 +21,24 @@ Preferred communication style: Simple, everyday language.
 - **Gesture Handling**: react-native-gesture-handler for swipeable list items
 - **Fonts**: Rubik font family (Regular, Medium, SemiBold, Bold) loaded via @expo-google-fonts
 - **Local Storage**: AsyncStorage for persisting generated workouts (`lib/workout-storage.ts`) and user profile (`lib/profile-storage.ts`)
-- **Auth Storage**: expo-secure-store (native keychain / localStorage on web) for JWT token and cached user object (`lib/auth-storage.ts`)
-- **Auth Context**: `contexts/AuthContext.tsx` provides `login`, `register`, `loginWithProvider`, `logout`, and `user` state with auto-login from cached token on startup
+- **Supabase Client**: `lib/supabase.ts` — creates the Supabase client with a chunked `expo-secure-store` adapter (handles iOS 2048-byte key limit for large session tokens). Used by `lib/auth-storage.ts` and `contexts/AuthContext.tsx`.
+- **Auth Context**: `contexts/AuthContext.tsx` provides `login`, `register`, `logout`, and `user` state. Listens to `supabase.auth.onAuthStateChange` for session changes. User name is stored in Supabase `user_metadata.name` at sign-up.
 - **Styling**: Dark theme with StyleSheet-based styling; colors defined in `constants/colors.ts`
 - **Error Handling**: Class-based ErrorBoundary component wrapping the app
 
 ### Authentication
 
-- **Auth screens**: `app/(auth)/index.tsx` (login) and `app/(auth)/signup.tsx` (registration)
-- **Routing guard**: `app/(tabs)/_layout.tsx` redirects to `/(auth)` if `user` is null; `app/index.tsx` redirects to `/(tabs)` or `/(auth)` based on auth state
-- **Backend endpoints**: `POST /api/auth/register`, `POST /api/auth/login`, `POST /api/auth/google`, `POST /api/auth/apple`, `GET /api/auth/me` — all in `server/routes.ts`
-- **JWT**: 30-day tokens signed with `SESSION_SECRET` env var; generated in `server/auth.ts` using `jsonwebtoken`
-- **Password hashing**: bcryptjs with salt rounds = 10
-- **Schema**: `users` table with `email`, `name`, `password`, `googleId`, `appleId`, `avatarUrl` columns
-- **Sign-out UI**: Inline two-step confirmation (no browser dialog) — first press shows "Sign out of IronForge?" with Cancel + Sign Out buttons inline
-- **Google Sign-In**: Requires `EXPO_PUBLIC_GOOGLE_CLIENT_ID` env var; shows alert if missing
-- **Apple Sign-In**: iOS native builds only; shows informational message on other platforms
-- **Note**: Users and workouts are stored in Supabase PostgreSQL via `DbStorage`. The `SUPABASE_CONNECTION_STRING` secret must be set to the Transaction Pooler URL from the Supabase dashboard.
+- **Provider**: Supabase Auth (`@supabase/supabase-js`) — email/password only. Google and Apple can be added later via Supabase dashboard.
+- **Auth screens**: `app/(auth)/index.tsx` (sign in) and `app/(auth)/signup.tsx` (registration). Clean email-only UI — no social login buttons.
+- **Routing guard**: `app/(tabs)/_layout.tsx` redirects to `/(auth)` if `user` is null; `app/index.tsx` redirects to `/(tabs)` or `/(auth)` based on auth state.
+- **Session storage**: Supabase SDK manages tokens automatically via the chunked SecureStore adapter in `lib/supabase.ts`.
+- **`lib/auth-storage.ts`**: Thin wrapper — `getToken()` reads the current Supabase access token from the session; `clearAllAuth()` calls `supabase.auth.signOut()`.
+- **Server-side validation**: `server/auth.ts` creates a server-side Supabase client (no session persistence) and validates Bearer tokens in `authMiddleware` using `supabase.auth.getUser(token)`.
+- **No custom auth endpoints**: All `/api/auth/*` routes removed. Supabase handles sign-up, sign-in, and sign-out entirely client-side.
+- **Sign-out UI**: Inline two-step confirmation — first press shows "Sign out of IronForge?" with Cancel + Sign Out buttons inline.
+- **Required env vars**: `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (anon key) — set as secrets. Used by both client and server.
+- **Email confirmation**: Disabled by default in new Supabase projects. If enabled, the signup screen shows a "Check Your Email" dialog and redirects back to sign in.
+- **Note**: Workouts are stored in Supabase PostgreSQL via `DbStorage`. The `SUPABASE_CONNECTION_STRING` secret must be the Transaction Pooler URL (port 6543).
 
 ### Backend (Express Server)
 
@@ -51,9 +52,9 @@ Preferred communication style: Simple, everyday language.
 
 - **ORM**: Drizzle ORM with PostgreSQL dialect, using the `postgres` npm package as the driver
 - **Schema Location**: `shared/schema.ts` — shared between frontend and backend
-- **Tables**: `users` (id, name, email, password, google_id, apple_id, avatar_url, created_at) and `workouts` (id, user_id FK→users, name, top_category, data JSON text, created_at)
-- **Validation**: Zod schemas generated from Drizzle schemas via `drizzle-zod`
-- **Migrations**: Run `tsx scripts/migrate.ts` to create/update tables (bypasses drizzle-kit due to Supabase password encoding)
+- **Tables**: `workouts` only (id, user_id TEXT, name, top_category, data JSON text, created_at). No `users` table — Supabase Auth manages user identity.
+- **`workouts.user_id`**: Stores the Supabase Auth user UUID (no FK constraint — Supabase `auth.users` is in a different schema).
+- **Migrations**: Run `tsx scripts/migrate.ts` to create/update tables (bypasses drizzle-kit due to Supabase password encoding). The migration also drops the old FK constraint and users table if present.
 - **Connection**: Requires `SUPABASE_CONNECTION_STRING` set to the **Transaction Pooler** URL (port 6543) from the Supabase dashboard. Passwords with special characters are URL-encoded automatically in `server/db.ts`.
 - **Workout Storage**: Full `GeneratedWorkout` JSON stored in `workouts.data` text column. Frontend syncs to server on save/update/delete; local AsyncStorage used as fast cache.
 

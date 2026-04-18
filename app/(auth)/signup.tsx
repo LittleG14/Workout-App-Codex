@@ -108,7 +108,13 @@ export default function SignupScreen() {
     try {
       await register(name.trim(), email.trim().toLowerCase(), password);
     } catch (err: any) {
-      Alert.alert("Sign Up Failed", err.message || "Please try again.");
+      const msg: string = err.message || "Please try again.";
+      const isConfirmation = msg.toLowerCase().includes("confirm");
+      Alert.alert(
+        isConfirmation ? "Check Your Email" : "Sign Up Failed",
+        msg,
+        [{ text: isConfirmation ? "Got it" : "OK", onPress: isConfirmation ? () => router.back() : undefined }]
+      );
     } finally {
       setLoading(false);
     }
@@ -179,10 +185,11 @@ export default function SignupScreen() {
           />
 
           <Text style={styles.terms}>
-            By creating an account, your data is stored securely on your device.
+            By creating an account, your data is stored securely and synced across devices.
           </Text>
 
           <Pressable
+            testID="signup-btn"
             style={({ pressed }) => [styles.primaryBtn, pressed && styles.pressed, loading && styles.disabledBtn]}
             onPress={handleSignUp}
             disabled={loading}
