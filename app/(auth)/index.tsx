@@ -121,7 +121,7 @@ export default function LoginScreen() {
             <Ionicons name="barbell" size={36} color={Colors.primary} />
           </View>
           <Text style={styles.appName}>Swole House</Text>
-          <Text style={styles.tagline}>Your workout. Your story.</Text>
+          <Text style={styles.tagline}>Busy Lives, Simple Workouts</Text>
         </View>
 
         <View style={styles.form}>
