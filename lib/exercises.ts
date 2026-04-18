@@ -143,7 +143,6 @@ export function findReplacementExercise(
   const candidates = pool.filter(e =>
     e.id !== current.id &&
     !usedIds.includes(e.id) &&
-    e.category === current.category &&
     e.muscles.some(m => current.muscles.includes(m))
   );
 
@@ -151,14 +150,13 @@ export function findReplacementExercise(
     return candidates[Math.floor(Math.random() * candidates.length)];
   }
 
-  const looseCandidates = pool.filter(e =>
+  const fallbackCandidates = pool.filter(e =>
     e.id !== current.id &&
-    !usedIds.includes(e.id) &&
-    e.category === current.category
+    !usedIds.includes(e.id)
   );
 
-  if (looseCandidates.length > 0) {
-    return looseCandidates[Math.floor(Math.random() * looseCandidates.length)];
+  if (fallbackCandidates.length > 0) {
+    return fallbackCandidates[Math.floor(Math.random() * fallbackCandidates.length)];
   }
 
   return null;
