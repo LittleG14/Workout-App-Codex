@@ -248,7 +248,7 @@ export default function ProfileScreen() {
               </Text>
             </View>
             <View style={styles.accountInfo}>
-              <Text style={styles.accountName} numberOfLines={1}>{user?.name || "IronForge User"}</Text>
+              <Text style={styles.accountName} numberOfLines={1}>{user?.name || "Swole House User"}</Text>
               <Text style={styles.accountEmail} numberOfLines={1}>{user?.email || ""}</Text>
             </View>
           </View>
@@ -456,7 +456,7 @@ export default function ProfileScreen() {
         <Animated.View entering={FadeInDown.delay(550).duration(400)}>
           {confirmLogout ? (
             <View style={styles.logoutConfirm}>
-              <Text style={styles.logoutConfirmText}>Sign out of IronForge?</Text>
+              <Text style={styles.logoutConfirmText}>Sign out of Swole House?</Text>
               <View style={styles.logoutConfirmRow}>
                 <Pressable
                   style={styles.logoutCancelBtn}

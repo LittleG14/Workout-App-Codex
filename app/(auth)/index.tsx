@@ -120,7 +120,7 @@ export default function LoginScreen() {
           <View style={styles.logoWrap}>
             <Ionicons name="barbell" size={36} color={Colors.primary} />
           </View>
-          <Text style={styles.appName}>IronForge</Text>
+          <Text style={styles.appName}>Swole House</Text>
           <Text style={styles.tagline}>Your workout. Your story.</Text>
         </View>
 

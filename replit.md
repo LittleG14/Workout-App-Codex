@@ -1,8 +1,8 @@
-# IronForge - Workout Generator App
+# Swole House - Workout Generator App
 
 ## Overview
 
-IronForge is a React Native mobile application built with Expo that generates workout routines across five major categories: Weight Lifting (traditional splits with strength/hypertrophy styles), Circuit Training (AMRAP, EMOM, Rounds for Time, Hyrox simulation), Yoga (core strength or flexibility routines), Cardio (running or mixed cardio), and Mobility (full body/lower body/upper body/hips & spine routines with a cyan color scheme). Users select a category, pick sub-options specific to that category, set a duration, and get a generated workout plan. Mobility uses its own duration options (10/20/30/45 min) while all other categories use 30/45/60/90 min. Workouts are saved locally and can be viewed/deleted in a history tab. The app has a dark-themed UI with category-specific accent colors and uses the Rubik font family.
+Swole House is a React Native mobile application built with Expo that generates workout routines across five major categories: Weight Lifting (traditional splits with strength/hypertrophy styles), Circuit Training (AMRAP, EMOM, Rounds for Time, Hyrox simulation), Yoga (core strength or flexibility routines), Cardio (running or mixed cardio), and Mobility (full body/lower body/upper body/hips & spine routines with a cyan color scheme). Users select a category, pick sub-options specific to that category, set a duration, and get a generated workout plan. Mobility uses its own duration options (10/20/30/45 min) while all other categories use 30/45/60/90 min. Workouts are saved locally and can be viewed/deleted in a history tab. The app has a dark-themed UI with category-specific accent colors and uses the Rubik font family.
 
 The project follows a full-stack architecture with an Express backend server and an Expo/React Native frontend, designed to run on Replit with support for iOS, Android, and web platforms. The app includes a complete authentication system (email/password, Google, and Apple sign-in) with JWT tokens stored in the device keychain (expo-secure-store) for persistent sessions.
 

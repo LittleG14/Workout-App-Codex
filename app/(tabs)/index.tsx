@@ -295,7 +295,7 @@ export default function GenerateScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>IronForge</Text>
+          <Text style={styles.headerTitle}>Swole House</Text>
           <Text style={styles.headerSubtitle}>Build your workout</Text>
         </View>
 

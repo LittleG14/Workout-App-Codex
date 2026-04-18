@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "Forge",
-    "slug": "forge",
+    "name": "Swole House",
+    "slug": "swole-house",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "forge",
+    "scheme": "swolehouse",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
