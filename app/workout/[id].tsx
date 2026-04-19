@@ -76,7 +76,7 @@ function ExerciseCard({ item, index, accentColor, onRefresh, onPickExercise, onL
       <View style={styles.exerciseCard}>
         <View style={styles.exerciseHeader}>
           <View style={[styles.exerciseNumberBadge, { backgroundColor: `${accentColor}18` }]}>
-            <Text style={[styles.exerciseNumber, { color: accentColor }]}>{index + 1}</Text>
+            <Text style={[styles.exerciseNumber, { color: accentColor }]}>{index}</Text>
           </View>
           <View style={styles.exerciseInfo}>
             <Text style={styles.exerciseName}>{item.exercise.name}</Text>
