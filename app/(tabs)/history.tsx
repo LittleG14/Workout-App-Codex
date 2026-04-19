@@ -121,7 +121,7 @@ function SwipeableWorkoutItem({ item, index, onDelete }: {
   const deleteActionStyle = useAnimatedStyle(() => {
     const actionOpacity = interpolate(
       translateX.value,
-      [0, -SNAP_OPEN],
+      [0, SNAP_OPEN],
       [0, 1],
       Extrapolation.CLAMP,
     );
