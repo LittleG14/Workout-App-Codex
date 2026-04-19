@@ -888,7 +888,7 @@ export default function WorkoutDetailScreen() {
         presentationStyle="pageSheet"
         onRequestClose={() => setPickerModal(prev => ({ ...prev, visible: false }))}
       >
-        <View style={[styles.pickerModal, { paddingTop: Platform.OS === 'web' ? 20 : insets.top }]}>
+        <View style={[styles.pickerModal, { paddingTop: Platform.OS === 'web' ? 20 : 0 }]}>
           <View style={styles.pickerHeader}>
             <Text style={styles.pickerTitle}>Choose Exercise</Text>
             <Pressable onPress={() => setPickerModal(prev => ({ ...prev, visible: false }))} hitSlop={8}>
@@ -896,7 +896,7 @@ export default function WorkoutDetailScreen() {
             </Pressable>
           </View>
 
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.pickerCategoryScroll} contentContainerStyle={styles.pickerCategoryContent}>
+          <View style={styles.pickerCategoryRow}>
             {PICKER_TABS.map(tab => {
               const isActive = pickerCategory === tab.key;
               return (
@@ -910,7 +910,7 @@ export default function WorkoutDetailScreen() {
                 </Pressable>
               );
             })}
-          </ScrollView>
+          </View>
 
           <View style={styles.pickerSearchContainer}>
             <Ionicons name="search" size={16} color={Colors.textMuted} />
@@ -1597,22 +1597,21 @@ const styles = StyleSheet.create({
     fontFamily: "Rubik_700Bold",
     color: Colors.text,
   },
-  pickerCategoryScroll: {
+  pickerCategoryRow: {
+    flexDirection: "row",
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
   },
-  pickerCategoryContent: {
-    paddingHorizontal: 8,
-  },
   pickerCategoryTab: {
-    flexDirection: "row",
+    flex: 1,
+    flexDirection: "column",
     alignItems: "center",
-    gap: 5,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    justifyContent: "center",
+    gap: 4,
+    paddingVertical: 10,
   },
   pickerCategoryTabText: {
-    fontSize: 13,
+    fontSize: 11,
     fontFamily: "Rubik_500Medium",
     color: Colors.textMuted,
   },
