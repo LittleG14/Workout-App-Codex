@@ -9,6 +9,7 @@ import {
   Modal,
   TextInput,
   KeyboardAvoidingView,
+  FlatList,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLocalSearchParams, router } from "expo-router";
@@ -18,6 +19,7 @@ import * as Haptics from "expo-haptics";
 import Animated, { FadeInDown, FadeIn } from "react-native-reanimated";
 import Colors from "@/constants/colors";
 import {
+  Exercise,
   GeneratedWorkout,
   WorkoutExercise,
   CircuitBlock,
@@ -28,8 +30,35 @@ import {
   findReplacementExercise,
   findCoreReplacementExercise,
   rebalanceCircuit,
+  WEIGHT_EXERCISES,
+  CIRCUIT_EXERCISES,
+  YOGA_CORE_POSES,
+  YOGA_FLEX_POSES,
+  CARDIO_RUNNING,
+  CARDIO_MIXED,
+  MOBILITY_EXERCISES,
 } from "@/lib/exercises";
 import { getLocalWorkoutsOnly, updateWorkout } from "@/lib/workout-storage";
+
+type PickerCategory = 'weight_lifting' | 'circuit' | 'yoga' | 'cardio' | 'mobility';
+
+const PICKER_TABS: { key: PickerCategory; label: string; icon: string; color: string }[] = [
+  { key: 'weight_lifting', label: 'Weights', icon: 'barbell', color: Colors.primary },
+  { key: 'circuit', label: 'Circuit', icon: 'flash', color: Colors.circuit },
+  { key: 'yoga', label: 'Yoga', icon: 'leaf', color: Colors.yoga },
+  { key: 'cardio', label: 'Cardio', icon: 'heart', color: Colors.cardio },
+  { key: 'mobility', label: 'Mobility', icon: 'body', color: Colors.mobility },
+];
+
+function getPickerExercises(cat: PickerCategory): Exercise[] {
+  switch (cat) {
+    case 'weight_lifting': return WEIGHT_EXERCISES;
+    case 'circuit': return CIRCUIT_EXERCISES;
+    case 'yoga': return [...YOGA_CORE_POSES, ...YOGA_FLEX_POSES];
+    case 'cardio': return [...CARDIO_RUNNING, ...CARDIO_MIXED];
+    case 'mobility': return MOBILITY_EXERCISES;
+  }
+}
 
 const CATEGORY_COLORS: Record<string, string> = {
   weight_lifting: Colors.primary,
@@ -39,7 +68,7 @@ const CATEGORY_COLORS: Record<string, string> = {
   mobility: Colors.mobility,
 };
 
-function ExerciseCard({ item, index, accentColor, onRefresh, onLogWeight, showWeightLog, onLogNotes, showNotesLog }: { item: WorkoutExercise; index: number; accentColor: string; onRefresh?: () => void; onLogWeight?: () => void; showWeightLog?: boolean; onLogNotes?: () => void; showNotesLog?: boolean }) {
+function ExerciseCard({ item, index, accentColor, onRefresh, onPickExercise, onLogWeight, showWeightLog, onLogNotes, showNotesLog }: { item: WorkoutExercise; index: number; accentColor: string; onRefresh?: () => void; onPickExercise?: () => void; onLogWeight?: () => void; showWeightLog?: boolean; onLogNotes?: () => void; showNotesLog?: boolean }) {
   const isCompound = item.exercise.category === "compound";
 
   return (
@@ -63,6 +92,11 @@ function ExerciseCard({ item, index, accentColor, onRefresh, onLogWeight, showWe
             </View>
           </View>
           <View style={styles.exerciseActions}>
+            {onPickExercise && (
+              <Pressable onPress={onPickExercise} hitSlop={8} testID="pick-exercise">
+                <Ionicons name="pencil-outline" size={18} color={Colors.textMuted} />
+              </Pressable>
+            )}
             {showWeightLog && (
               <Pressable onPress={onLogWeight} hitSlop={8} testID="log-weight" style={styles.weightLogBtn}>
                 {item.weight ? (
@@ -155,7 +189,7 @@ function ExerciseCard({ item, index, accentColor, onRefresh, onLogWeight, showWe
   );
 }
 
-function CircuitBlockCard({ block, index, accentColor, showWeightLog, onLogWeight, onRefreshExercise }: { block: CircuitBlock; index: number; accentColor: string; showWeightLog?: boolean; onLogWeight?: (exIndex: number) => void; onRefreshExercise?: (exIndex: number) => void }) {
+function CircuitBlockCard({ block, index, accentColor, showWeightLog, onLogWeight, onRefreshExercise, onPickExercise }: { block: CircuitBlock; index: number; accentColor: string; showWeightLog?: boolean; onLogWeight?: (exIndex: number) => void; onRefreshExercise?: (exIndex: number) => void; onPickExercise?: (exIndex: number) => void }) {
   return (
     <Animated.View entering={FadeInDown.delay(100 + index * 80).duration(400)}>
       <View style={[styles.circuitBlockCard, { borderLeftColor: accentColor }]}>
@@ -204,6 +238,11 @@ function CircuitBlockCard({ block, index, accentColor, showWeightLog, onLogWeigh
                 )}
               </Pressable>
             )}
+            {onPickExercise && (
+              <Pressable onPress={() => onPickExercise(i)} hitSlop={6} testID={`pick-circuit-${i}`} style={{ marginRight: 4 }}>
+                <Ionicons name="pencil-outline" size={15} color={Colors.textMuted} />
+              </Pressable>
+            )}
             {onRefreshExercise && (
               <Pressable onPress={() => onRefreshExercise(i)} hitSlop={6} testID={`refresh-circuit-${i}`}>
                 <Ionicons name="refresh" size={16} color={Colors.textMuted} />
@@ -217,8 +256,8 @@ function CircuitBlockCard({ block, index, accentColor, showWeightLog, onLogWeigh
   );
 }
 
-function SupersetCard({ pair, index, accentColor, onRefreshA, onRefreshB, onLogWeightA, onLogWeightB }: { pair: SupersetPair; index: number; accentColor: string; onRefreshA?: () => void; onRefreshB?: () => void; onLogWeightA?: () => void; onLogWeightB?: () => void }) {
-  const renderMiniExercise = (item: WorkoutExercise, label: string, onRefresh?: () => void, onLogWeight?: () => void) => (
+function SupersetCard({ pair, index, accentColor, onRefreshA, onRefreshB, onLogWeightA, onLogWeightB, onPickA, onPickB }: { pair: SupersetPair; index: number; accentColor: string; onRefreshA?: () => void; onRefreshB?: () => void; onLogWeightA?: () => void; onLogWeightB?: () => void; onPickA?: () => void; onPickB?: () => void }) {
+  const renderMiniExercise = (item: WorkoutExercise, label: string, onRefresh?: () => void, onLogWeight?: () => void, onPick?: () => void) => (
     <View style={styles.ssExercise}>
       <View style={styles.ssExerciseHeader}>
         <View style={[styles.ssLabel, { backgroundColor: `${accentColor}20` }]}>
@@ -241,6 +280,11 @@ function SupersetCard({ pair, index, accentColor, onRefreshA, onRefreshB, onLogW
                   </View>
                 </View>
               )}
+            </Pressable>
+          )}
+          {onPick && (
+            <Pressable onPress={onPick} hitSlop={8} testID={`pick-superset-${label}`}>
+              <Ionicons name="pencil-outline" size={15} color={Colors.textMuted} />
             </Pressable>
           )}
           {onRefresh && (
@@ -282,7 +326,7 @@ function SupersetCard({ pair, index, accentColor, onRefreshA, onRefreshB, onLogW
           <Text style={[styles.supersetTitle, { color: accentColor }]}>Superset {index + 1}</Text>
         </View>
 
-        {renderMiniExercise(pair.exerciseA, "A", onRefreshA, onLogWeightA)}
+        {renderMiniExercise(pair.exerciseA, "A", onRefreshA, onLogWeightA, onPickA)}
 
         <View style={styles.ssConnector}>
           <View style={[styles.ssConnectorLine, { backgroundColor: `${accentColor}30` }]} />
@@ -292,7 +336,7 @@ function SupersetCard({ pair, index, accentColor, onRefreshA, onRefreshB, onLogW
           <View style={[styles.ssConnectorLine, { backgroundColor: `${accentColor}30` }]} />
         </View>
 
-        {renderMiniExercise(pair.exerciseB, "B", onRefreshB, onLogWeightB)}
+        {renderMiniExercise(pair.exerciseB, "B", onRefreshB, onLogWeightB, onPickB)}
       </View>
     </Animated.View>
   );
@@ -475,6 +519,54 @@ export default function WorkoutDetailScreen() {
     setNotesModal(prev => ({ ...prev, visible: false }));
   };
 
+  type PickerLocation =
+    | { type: 'exercise'; index: number }
+    | { type: 'superset'; index: number; slot: 'A' | 'B' }
+    | { type: 'circuit'; blockIndex: number; exIndex: number };
+
+  const [pickerModal, setPickerModal] = useState<{ visible: boolean; location: PickerLocation }>({
+    visible: false,
+    location: { type: 'exercise', index: 0 },
+  });
+  const [pickerCategory, setPickerCategory] = useState<PickerCategory>('weight_lifting');
+  const [pickerSearch, setPickerSearch] = useState('');
+
+  const openPicker = (location: PickerLocation) => {
+    setPickerSearch('');
+    setPickerModal({ visible: true, location });
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  };
+
+  const handleSelectExercise = async (exercise: Exercise) => {
+    if (!workout) return;
+    setPickerModal(prev => ({ ...prev, visible: false }));
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    const loc = pickerModal.location;
+    let updated: GeneratedWorkout = { ...workout };
+
+    if (loc.type === 'exercise') {
+      const exercises = [...workout.exercises];
+      exercises[loc.index] = { ...exercises[loc.index], exercise };
+      updated = { ...workout, exercises };
+    } else if (loc.type === 'superset' && workout.supersets) {
+      const supersets = [...workout.supersets];
+      const pair = supersets[loc.index];
+      const key = loc.slot === 'A' ? 'exerciseA' : 'exerciseB';
+      supersets[loc.index] = { ...pair, [key]: { ...pair[key], exercise } };
+      updated = { ...workout, supersets };
+    } else if (loc.type === 'circuit' && workout.circuitBlocks) {
+      const blocks = [...workout.circuitBlocks];
+      const block = { ...blocks[loc.blockIndex], exercises: [...blocks[loc.blockIndex].exercises] };
+      block.exercises[loc.exIndex] = { ...block.exercises[loc.exIndex], exercise };
+      blocks[loc.blockIndex] = block;
+      const flatExercises = blocks.flatMap(b => b.exercises);
+      updated = { ...workout, circuitBlocks: blocks, exercises: flatExercises };
+    }
+
+    setWorkout(updated);
+    await updateWorkout(updated);
+  };
+
   if (!workout) {
     return (
       <View style={[styles.container, styles.loadingContainer]}>
@@ -627,6 +719,7 @@ export default function WorkoutDetailScreen() {
                 block.exercises[exIndex].weightUnit
               )}
               onRefreshExercise={(exIndex) => handleRefreshCircuitExercise(bi, exIndex)}
+              onPickExercise={(exIndex) => openPicker({ type: 'circuit', blockIndex: bi, exIndex })}
             />
           ))
         ) : (
@@ -642,19 +735,19 @@ export default function WorkoutDetailScreen() {
               return (
                 <>
                   {compounds.map(({ ex, origIdx }) => (
-                    <ExerciseCard key={ex.exercise.id + origIdx} item={ex} index={++idx} accentColor={accentColor} onRefresh={() => handleRefreshExercise(origIdx)} showWeightLog={showWeightLog} onLogWeight={() => openWeightModal(ex.exercise.name, { type: 'exercise', index: origIdx }, ex.weight, ex.weightUnit)} />
+                    <ExerciseCard key={ex.exercise.id + origIdx} item={ex} index={++idx} accentColor={accentColor} onRefresh={() => handleRefreshExercise(origIdx)} onPickExercise={() => openPicker({ type: 'exercise', index: origIdx })} showWeightLog={showWeightLog} onLogWeight={() => openWeightModal(ex.exercise.name, { type: 'exercise', index: origIdx }, ex.weight, ex.weightUnit)} />
                   ))}
                   {workout.supersets!.map((pair, i) => (
-                    <SupersetCard key={`ss-${i}`} pair={pair} index={i} accentColor={accentColor} onRefreshA={() => handleRefreshSuperset(i, 'A')} onRefreshB={() => handleRefreshSuperset(i, 'B')} onLogWeightA={() => openWeightModal(pair.exerciseA.exercise.name, { type: 'superset', index: i, slot: 'A' }, pair.exerciseA.weight, pair.exerciseA.weightUnit)} onLogWeightB={() => openWeightModal(pair.exerciseB.exercise.name, { type: 'superset', index: i, slot: 'B' }, pair.exerciseB.weight, pair.exerciseB.weightUnit)} />
+                    <SupersetCard key={`ss-${i}`} pair={pair} index={i} accentColor={accentColor} onRefreshA={() => handleRefreshSuperset(i, 'A')} onRefreshB={() => handleRefreshSuperset(i, 'B')} onLogWeightA={() => openWeightModal(pair.exerciseA.exercise.name, { type: 'superset', index: i, slot: 'A' }, pair.exerciseA.weight, pair.exerciseA.weightUnit)} onLogWeightB={() => openWeightModal(pair.exerciseB.exercise.name, { type: 'superset', index: i, slot: 'B' }, pair.exerciseB.weight, pair.exerciseB.weightUnit)} onPickA={() => openPicker({ type: 'superset', index: i, slot: 'A' })} onPickB={() => openPicker({ type: 'superset', index: i, slot: 'B' })} />
                   ))}
                   {rest.map(({ ex, origIdx }) => (
-                    <ExerciseCard key={ex.exercise.id + origIdx} item={ex} index={++idx} accentColor={accentColor} onRefresh={() => handleRefreshExercise(origIdx)} showWeightLog={showWeightLog} onLogWeight={() => openWeightModal(ex.exercise.name, { type: 'exercise', index: origIdx }, ex.weight, ex.weightUnit)} />
+                    <ExerciseCard key={ex.exercise.id + origIdx} item={ex} index={++idx} accentColor={accentColor} onRefresh={() => handleRefreshExercise(origIdx)} onPickExercise={() => openPicker({ type: 'exercise', index: origIdx })} showWeightLog={showWeightLog} onLogWeight={() => openWeightModal(ex.exercise.name, { type: 'exercise', index: origIdx }, ex.weight, ex.weightUnit)} />
                   ))}
                 </>
               );
             }
             return workout.exercises.map((ex, i) => (
-              <ExerciseCard key={ex.exercise.id + i} item={ex} index={i + 1} accentColor={accentColor} onRefresh={() => handleRefreshExercise(i)} showWeightLog={showWeightLog} onLogWeight={() => openWeightModal(ex.exercise.name, { type: 'exercise', index: i }, ex.weight, ex.weightUnit)} showNotesLog={showNotesLog} onLogNotes={() => openNotesModal(ex.exercise.name, { type: 'exercise', index: i }, ex.userNotes)} />
+              <ExerciseCard key={ex.exercise.id + i} item={ex} index={i + 1} accentColor={accentColor} onRefresh={() => handleRefreshExercise(i)} onPickExercise={() => openPicker({ type: 'exercise', index: i })} showWeightLog={showWeightLog} onLogWeight={() => openWeightModal(ex.exercise.name, { type: 'exercise', index: i }, ex.weight, ex.weightUnit)} showNotesLog={showNotesLog} onLogNotes={() => openNotesModal(ex.exercise.name, { type: 'exercise', index: i }, ex.userNotes)} />
             ));
           })()
         )}
@@ -787,6 +880,86 @@ export default function WorkoutDetailScreen() {
             </Pressable>
           </Pressable>
         </KeyboardAvoidingView>
+      </Modal>
+
+      <Modal
+        visible={pickerModal.visible}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setPickerModal(prev => ({ ...prev, visible: false }))}
+      >
+        <View style={[styles.pickerModal, { paddingTop: Platform.OS === 'web' ? 20 : insets.top }]}>
+          <View style={styles.pickerHeader}>
+            <Text style={styles.pickerTitle}>Choose Exercise</Text>
+            <Pressable onPress={() => setPickerModal(prev => ({ ...prev, visible: false }))} hitSlop={8}>
+              <Ionicons name="close" size={24} color={Colors.text} />
+            </Pressable>
+          </View>
+
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.pickerCategoryScroll} contentContainerStyle={styles.pickerCategoryContent}>
+            {PICKER_TABS.map(tab => {
+              const isActive = pickerCategory === tab.key;
+              return (
+                <Pressable
+                  key={tab.key}
+                  style={[styles.pickerCategoryTab, isActive && { backgroundColor: `${tab.color}18`, borderBottomWidth: 2, borderBottomColor: tab.color }]}
+                  onPress={() => { setPickerCategory(tab.key); setPickerSearch(''); }}
+                >
+                  <Ionicons name={tab.icon as any} size={14} color={isActive ? tab.color : Colors.textMuted} />
+                  <Text style={[styles.pickerCategoryTabText, isActive && { color: tab.color }]}>{tab.label}</Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+
+          <View style={styles.pickerSearchContainer}>
+            <Ionicons name="search" size={16} color={Colors.textMuted} />
+            <TextInput
+              style={styles.pickerSearchInput}
+              value={pickerSearch}
+              onChangeText={setPickerSearch}
+              placeholder="Search exercises..."
+              placeholderTextColor={Colors.textMuted}
+              returnKeyType="search"
+              autoCorrect={false}
+            />
+            {pickerSearch.length > 0 && (
+              <Pressable onPress={() => setPickerSearch('')} hitSlop={8}>
+                <Ionicons name="close-circle" size={16} color={Colors.textMuted} />
+              </Pressable>
+            )}
+          </View>
+
+          <FlatList
+            data={getPickerExercises(pickerCategory).filter(ex =>
+              ex.name.toLowerCase().includes(pickerSearch.toLowerCase()) ||
+              ex.equipment.toLowerCase().includes(pickerSearch.toLowerCase())
+            )}
+            keyExtractor={item => item.id}
+            contentContainerStyle={styles.pickerListContent}
+            keyboardShouldPersistTaps="handled"
+            renderItem={({ item }) => {
+              const activeColor = PICKER_TABS.find(t => t.key === pickerCategory)?.color || Colors.primary;
+              return (
+                <Pressable style={styles.pickerExerciseRow} onPress={() => handleSelectExercise(item)}>
+                  <View style={styles.pickerExerciseInfo}>
+                    <Text style={styles.pickerExerciseName}>{item.name}</Text>
+                    <View style={styles.pickerExerciseMeta}>
+                      <Text style={styles.pickerExerciseEquipment}>{item.equipment}</Text>
+                      <View style={[styles.pickerCategoryBadge, { backgroundColor: item.category === 'compound' ? `${activeColor}18` : 'rgba(0,212,170,0.12)' }]}>
+                        <Text style={[styles.pickerCategoryBadgeText, { color: item.category === 'compound' ? activeColor : Colors.accent }]}>
+                          {item.category === 'compound' ? 'Compound' : 'Isolation'}
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+                  <Ionicons name="chevron-forward" size={18} color={Colors.textMuted} />
+                </Pressable>
+              );
+            }}
+            ItemSeparatorComponent={() => <View style={styles.pickerSeparator} />}
+          />
+        </View>
       </Modal>
     </View>
   );
@@ -1404,5 +1577,102 @@ const styles = StyleSheet.create({
     minHeight: 80,
     textAlignVertical: "top",
     marginBottom: 20,
+  },
+  pickerModal: {
+    flex: 1,
+    backgroundColor: Colors.background,
+  },
+  pickerHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  pickerTitle: {
+    fontSize: 18,
+    fontFamily: "Rubik_700Bold",
+    color: Colors.text,
+  },
+  pickerCategoryScroll: {
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  pickerCategoryContent: {
+    paddingHorizontal: 8,
+  },
+  pickerCategoryTab: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  pickerCategoryTabText: {
+    fontSize: 13,
+    fontFamily: "Rubik_500Medium",
+    color: Colors.textMuted,
+  },
+  pickerSearchContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    margin: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    backgroundColor: Colors.surface,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    gap: 8,
+  },
+  pickerSearchInput: {
+    flex: 1,
+    fontSize: 15,
+    fontFamily: "Rubik_400Regular",
+    color: Colors.text,
+  },
+  pickerListContent: {
+    paddingHorizontal: 16,
+    paddingBottom: 40,
+  },
+  pickerExerciseRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 14,
+  },
+  pickerExerciseInfo: {
+    flex: 1,
+  },
+  pickerExerciseName: {
+    fontSize: 15,
+    fontFamily: "Rubik_500Medium",
+    color: Colors.text,
+    marginBottom: 4,
+  },
+  pickerExerciseMeta: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  pickerExerciseEquipment: {
+    fontSize: 12,
+    fontFamily: "Rubik_400Regular",
+    color: Colors.textMuted,
+  },
+  pickerCategoryBadge: {
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  pickerCategoryBadgeText: {
+    fontSize: 11,
+    fontFamily: "Rubik_500Medium",
+  },
+  pickerSeparator: {
+    height: 1,
+    backgroundColor: Colors.border,
+    marginLeft: 0,
   },
 });
