@@ -92,11 +92,11 @@ function SwipeableWorkoutItem({ item, index, onDelete }: {
     })
     .onEnd((event) => {
       if (translateX.value < DELETE_THRESHOLD) {
-        translateX.value = withSpring(SNAP_OPEN, { damping: 20, stiffness: 200 });
+        translateX.value = withTiming(SNAP_OPEN, { duration: 200 });
         isOpen.current = true;
         runOnJS(Haptics.impactAsync)(Haptics.ImpactFeedbackStyle.Light);
       } else {
-        translateX.value = withSpring(0, { damping: 20, stiffness: 200 });
+        translateX.value = withTiming(0, { duration: 200 });
         isOpen.current = false;
       }
     });
@@ -104,7 +104,7 @@ function SwipeableWorkoutItem({ item, index, onDelete }: {
   const tapGesture = Gesture.Tap()
     .onEnd(() => {
       if (isOpen.current) {
-        translateX.value = withSpring(0, { damping: 20, stiffness: 200 });
+        translateX.value = withTiming(0, { duration: 200 });
         isOpen.current = false;
       } else {
         runOnJS(Haptics.impactAsync)(Haptics.ImpactFeedbackStyle.Light);
@@ -121,19 +121,12 @@ function SwipeableWorkoutItem({ item, index, onDelete }: {
   const deleteActionStyle = useAnimatedStyle(() => {
     const actionOpacity = interpolate(
       translateX.value,
-      [0, -40, -80],
-      [0, 0.5, 1],
-      Extrapolation.CLAMP,
-    );
-    const scale = interpolate(
-      translateX.value,
-      [0, -60, -90],
-      [0.5, 0.8, 1],
+      [0, -SNAP_OPEN],
+      [0, 1],
       Extrapolation.CLAMP,
     );
     return {
       opacity: actionOpacity,
-      transform: [{ scale }],
     };
   });
 
