@@ -75,6 +75,10 @@ export const getQueryFn: <T>(options: {
     return await res.json();
   };
 
+// Global staleTime is Infinity so static/config data is never re-fetched unnecessarily.
+// Queries that return frequently-changing or permission-sensitive data (e.g. admin status,
+// user feedback history) should override this with an explicit, shorter staleTime such as
+// 5 * 60 * 1000 (5 minutes). Always invalidate manually after mutations that change the data.
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {

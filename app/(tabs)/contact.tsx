@@ -288,6 +288,7 @@ function SubmissionCard({ item }: { item: FeedbackRow }) {
 function MySubmissions() {
   const { data, isLoading, isError } = useQuery<{ feedback: FeedbackRow[] }>({
     queryKey: ["/api/feedback"],
+    staleTime: 5 * 60 * 1000, // 5 minutes — also invalidated immediately after submission
   });
 
   const submissions = data?.feedback ?? [];
