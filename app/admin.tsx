@@ -87,7 +87,11 @@ export default function AdminScreen() {
 
   const errorMessage =
     statusError instanceof Error ? statusError.message : null;
-  const accessDenied = !!errorMessage && errorMessage.includes("403");
+  const accessDenied =
+    !!errorMessage &&
+    (errorMessage.includes("403") ||
+      errorMessage.includes("don't have permission") ||
+      errorMessage.includes("do not have permission"));
 
   const recheckDNS = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
