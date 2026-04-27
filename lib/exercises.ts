@@ -183,8 +183,8 @@ export const WORKOUT_TYPE_MUSCLES: Record<WeightLiftingType, MuscleGroup[]> = {
   shoulders_abs: ['shoulders', 'abs'],
   legs: ['quads', 'hamstrings', 'glutes', 'calves'],
   full_body: ['chest', 'back', 'shoulders', 'quads', 'hamstrings', 'glutes'],
-  push: ['chest', 'shoulders', 'triceps'],
-  pull: ['back', 'biceps'],
+  push: ['chest', 'shoulders', 'triceps', 'quads'],
+  pull: ['back', 'biceps', 'hamstrings', 'glutes'],
 };
 
 export const WEIGHT_EXERCISES: Exercise[] = [
@@ -256,6 +256,8 @@ export const WEIGHT_EXERCISES: Exercise[] = [
   { id: 'e66', name: 'Lineman Press', muscles: ['chest', 'triceps'], category: 'isolation', equipment: 'Dumbbells' },
   { id: 'e67', name: 'Dead Bench Press', muscles: ['chest', 'triceps'], category: 'compound', equipment: 'Barbell' },
   { id: 'e68', name: 'Wide Grip Bench Press', muscles: ['chest', 'triceps'], category: 'compound', equipment: 'Barbell' },
+  { id: 'e69', name: 'French Press', muscles: ['triceps'], category: 'isolation', equipment: 'Dumbbells' },
+  { id: 'e70', name: 'Z Press', muscles: ['shoulders', 'abs'], category: 'compound', equipment: 'Dumbbell' },
 ];
 
 export const CIRCUIT_EXERCISES: Exercise[] = [
