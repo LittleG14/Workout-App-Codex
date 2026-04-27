@@ -16,7 +16,17 @@ import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import Animated, { FadeInDown, FadeIn, FadeOut } from "react-native-reanimated";
 import Colors from "@/constants/colors";
-import { apiRequest } from "@/lib/query-client";
+import { apiRequest, queryClient } from "@/lib/query-client";
+import { useQuery } from "@tanstack/react-query";
+
+interface FeedbackRow {
+  id: string;
+  userId: string;
+  date: string;
+  selection: string;
+  category: string;
+  submission: string;
+}
 
 const SELECTIONS = ["Exercise Request", "App Functionality", "General Feedback"] as const;
 type Selection = (typeof SELECTIONS)[number];
@@ -140,6 +150,7 @@ function FeedbackSheet({
         submission: submission.trim(),
       });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      queryClient.invalidateQueries({ queryKey: ["/api/feedback"] });
       onSubmitSuccess();
       onClose();
     } catch {
@@ -250,6 +261,65 @@ function FeedbackSheet({
   );
 }
 
+function formatDate(isoDate: string): string {
+  try {
+    const d = new Date(isoDate);
+    return d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+  } catch {
+    return isoDate;
+  }
+}
+
+function SubmissionCard({ item }: { item: FeedbackRow }) {
+  return (
+    <View style={styles.submissionCard}>
+      <View style={styles.submissionHeader}>
+        <View style={styles.submissionBadge}>
+          <Text style={styles.submissionBadgeText}>{item.selection}</Text>
+        </View>
+        <Text style={styles.submissionDate}>{formatDate(item.date)}</Text>
+      </View>
+      <Text style={styles.submissionCategory}>{item.category}</Text>
+      <Text style={styles.submissionText} numberOfLines={2}>{item.submission}</Text>
+    </View>
+  );
+}
+
+function MySubmissions() {
+  const { data, isLoading, isError } = useQuery<{ feedback: FeedbackRow[] }>({
+    queryKey: ["/api/feedback"],
+  });
+
+  const submissions = data?.feedback ?? [];
+
+  return (
+    <View style={styles.submissionsSection}>
+      <Text style={styles.submissionsSectionTitle}>My Submissions</Text>
+      {isLoading ? (
+        <ActivityIndicator color={Colors.primary} style={{ marginTop: 12 }} />
+      ) : isError ? (
+        <View style={styles.submissionsEmpty}>
+          <Ionicons name="alert-circle-outline" size={32} color={Colors.textMuted} />
+          <Text style={styles.submissionsEmptyText}>Could not load history</Text>
+          <Text style={styles.submissionsEmptySubtext}>
+            Pull down to refresh or try again later.
+          </Text>
+        </View>
+      ) : submissions.length === 0 ? (
+        <View style={styles.submissionsEmpty}>
+          <Ionicons name="chatbubble-outline" size={32} color={Colors.textMuted} />
+          <Text style={styles.submissionsEmptyText}>No submissions yet</Text>
+          <Text style={styles.submissionsEmptySubtext}>
+            Your feedback history will appear here after you submit.
+          </Text>
+        </View>
+      ) : (
+        submissions.map((item) => <SubmissionCard key={item.id} item={item} />)
+      )}
+    </View>
+  );
+}
+
 function SuccessBanner() {
   return (
     <Animated.View
@@ -289,50 +359,56 @@ export default function ContactScreen() {
         styles.container,
         {
           paddingTop: insets.top + webTopPad,
-          paddingBottom: webBottomPad,
         },
       ]}
     >
-      <Animated.View entering={FadeInDown.duration(400)} style={styles.inner}>
-        <View style={styles.heroIcon}>
-          <Ionicons name="mail" size={44} color={Colors.primary} />
-        </View>
-        <Text style={styles.heading}>Contact Us</Text>
-        <Text style={styles.subheading}>
-          We want to hear from you. Request exercises, report issues, or share
-          your thoughts — everything helps us build a better app.
-        </Text>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={[styles.inner, { paddingBottom: insets.bottom + webBottomPad + 24 }]}
+      >
+        <Animated.View entering={FadeInDown.duration(400)} style={styles.heroSection}>
+          <View style={styles.heroIcon}>
+            <Ionicons name="mail" size={44} color={Colors.primary} />
+          </View>
+          <Text style={styles.heading}>Contact Us</Text>
+          <Text style={styles.subheading}>
+            We want to hear from you. Request exercises, report issues, or share
+            your thoughts — everything helps us build a better app.
+          </Text>
 
-        {showBanner && <SuccessBanner />}
+          {showBanner && <SuccessBanner />}
 
-        <Pressable
-          style={styles.feedbackButton}
-          onPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-            setSheetVisible(true);
-          }}
-        >
-          <Ionicons name="chatbubble-ellipses" size={20} color="#FFF" style={{ marginRight: 10 }} />
-          <Text style={styles.feedbackButtonText}>Send Feedback</Text>
-        </Pressable>
+          <Pressable
+            style={styles.feedbackButton}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+              setSheetVisible(true);
+            }}
+          >
+            <Ionicons name="chatbubble-ellipses" size={20} color="#FFF" style={{ marginRight: 10 }} />
+            <Text style={styles.feedbackButtonText}>Send Feedback</Text>
+          </Pressable>
 
-        <View style={styles.infoCards}>
-          <Animated.View entering={FadeInDown.delay(100).duration(350)} style={styles.infoCard}>
-            <Ionicons name="barbell" size={24} color={Colors.primary} />
-            <Text style={styles.infoCardTitle}>Exercise Requests</Text>
-            <Text style={styles.infoCardBody}>
-              Want a specific movement added? Submit it and we{"'"}ll prioritise the most-requested exercises.
-            </Text>
-          </Animated.View>
-          <Animated.View entering={FadeInDown.delay(180).duration(350)} style={styles.infoCard}>
-            <Ionicons name="construct" size={24} color={Colors.yoga} />
-            <Text style={styles.infoCardTitle}>App Feedback</Text>
-            <Text style={styles.infoCardBody}>
-              Found a bug or have an idea? Let us know and we{"'"}ll get right on it.
-            </Text>
-          </Animated.View>
-        </View>
-      </Animated.View>
+          <MySubmissions />
+
+          <View style={styles.infoCards}>
+            <Animated.View entering={FadeInDown.delay(100).duration(350)} style={styles.infoCard}>
+              <Ionicons name="barbell" size={24} color={Colors.primary} />
+              <Text style={styles.infoCardTitle}>Exercise Requests</Text>
+              <Text style={styles.infoCardBody}>
+                Want a specific movement added? Submit it and we{"'"}ll prioritise the most-requested exercises.
+              </Text>
+            </Animated.View>
+            <Animated.View entering={FadeInDown.delay(180).duration(350)} style={styles.infoCard}>
+              <Ionicons name="construct" size={24} color={Colors.yoga} />
+              <Text style={styles.infoCardTitle}>App Feedback</Text>
+              <Text style={styles.infoCardBody}>
+                Found a bug or have an idea? Let us know and we{"'"}ll get right on it.
+              </Text>
+            </Animated.View>
+          </View>
+        </Animated.View>
+      </ScrollView>
 
       <Modal
         visible={sheetVisible}
@@ -357,9 +433,10 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background,
   },
   inner: {
-    flex: 1,
     paddingHorizontal: 24,
     paddingTop: 32,
+  },
+  heroSection: {
     alignItems: "center",
   },
   heroIcon: {
@@ -607,5 +684,78 @@ const styles = StyleSheet.create({
     fontFamily: "Rubik_600SemiBold",
     fontSize: 16,
     color: "#FFF",
+  },
+  submissionsSection: {
+    marginTop: 32,
+    width: "100%",
+  },
+  submissionsSectionTitle: {
+    fontFamily: "Rubik_700Bold",
+    fontSize: 18,
+    color: Colors.text,
+    marginBottom: 14,
+  },
+  submissionCard: {
+    backgroundColor: Colors.surface,
+    borderRadius: 14,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    marginBottom: 12,
+    gap: 6,
+  },
+  submissionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 4,
+  },
+  submissionBadge: {
+    backgroundColor: `${Colors.primary}20`,
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  submissionBadgeText: {
+    fontFamily: "Rubik_500Medium",
+    fontSize: 11,
+    color: Colors.primary,
+    textTransform: "uppercase",
+    letterSpacing: 0.4,
+  },
+  submissionDate: {
+    fontFamily: "Rubik_400Regular",
+    fontSize: 12,
+    color: Colors.textMuted,
+  },
+  submissionCategory: {
+    fontFamily: "Rubik_500Medium",
+    fontSize: 13,
+    color: Colors.textSecondary,
+  },
+  submissionText: {
+    fontFamily: "Rubik_400Regular",
+    fontSize: 14,
+    color: Colors.text,
+    lineHeight: 20,
+  },
+  submissionsEmpty: {
+    alignItems: "center",
+    paddingVertical: 32,
+    gap: 8,
+  },
+  submissionsEmptyText: {
+    fontFamily: "Rubik_600SemiBold",
+    fontSize: 15,
+    color: Colors.textSecondary,
+    marginTop: 4,
+  },
+  submissionsEmptySubtext: {
+    fontFamily: "Rubik_400Regular",
+    fontSize: 13,
+    color: Colors.textMuted,
+    textAlign: "center",
+    maxWidth: 260,
+    lineHeight: 19,
   },
 });

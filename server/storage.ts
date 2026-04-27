@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 import { db } from "./db";
 import { workouts, feedback, type WorkoutRow, type FeedbackRow } from "@shared/schema";
 
@@ -9,6 +9,7 @@ export interface IStorage {
   updateWorkout(id: string, userId: string, workoutData: string): Promise<WorkoutRow | undefined>;
   deleteWorkout(id: string, userId: string): Promise<void>;
   saveFeedback(userId: string, id: string, date: string, selection: string, category: string, submission: string): Promise<FeedbackRow>;
+  getFeedback(userId: string): Promise<FeedbackRow[]>;
 }
 
 export class DbStorage implements IStorage {
@@ -75,6 +76,14 @@ export class DbStorage implements IStorage {
     const row = { id, userId, date, selection, category, submission };
     await db.insert(feedback).values(row);
     return row;
+  }
+
+  async getFeedback(userId: string): Promise<FeedbackRow[]> {
+    return db
+      .select()
+      .from(feedback)
+      .where(eq(feedback.userId, userId))
+      .orderBy(desc(feedback.date));
   }
 }
 

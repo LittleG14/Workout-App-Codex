@@ -83,6 +83,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     "General Feedback": ["General Feedback"],
   };
 
+  app.get("/api/feedback", authMiddleware, async (req: AuthRequest, res) => {
+    try {
+      const rows = await storage.getFeedback(req.userId!);
+      res.json({ feedback: rows });
+    } catch (err) {
+      console.error("Get feedback error:", err);
+      res.status(500).json({ message: "Failed to fetch feedback" });
+    }
+  });
+
   app.post("/api/feedback", authMiddleware, async (req: AuthRequest, res) => {
     try {
       const { selection, category, submission } = req.body;
