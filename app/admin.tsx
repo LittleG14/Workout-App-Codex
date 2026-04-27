@@ -64,6 +64,8 @@ export default function AdminScreen() {
     enabled: !isLoading && !!user,
     staleTime: 5 * 60 * 1000,
     gcTime: 0,
+    refetchInterval: (query) =>
+      query.state.data?.verified === true ? false : 60_000,
   });
 
   useEffect(() => {
