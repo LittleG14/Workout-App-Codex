@@ -69,7 +69,7 @@ export default function AdminScreen() {
   });
 
   useEffect(() => {
-    tickRef.current = setInterval(() => setTick((t) => t + 1), 10_000);
+    tickRef.current = setInterval(() => setTick((t) => t + 1), 1_000);
     return () => {
       if (tickRef.current) clearInterval(tickRef.current);
     };
@@ -77,12 +77,12 @@ export default function AdminScreen() {
 
   const formatLastChecked = (date: Date): string => {
     const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
-    if (seconds < 10) return "just now";
-    if (seconds < 60) return `${seconds} second${seconds === 1 ? "" : "s"} ago`;
+    if (seconds < 1) return "just now";
+    if (seconds < 60) return `${seconds}s ago`;
     const minutes = Math.floor(seconds / 60);
-    if (minutes < 60) return `${minutes} minute${minutes === 1 ? "" : "s"} ago`;
+    if (minutes < 60) return `${minutes}m ago`;
     const hours = Math.floor(minutes / 60);
-    return `${hours} hour${hours === 1 ? "" : "s"} ago`;
+    return `${hours}h ago`;
   };
 
   const errorMessage =
