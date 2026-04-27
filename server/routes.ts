@@ -179,7 +179,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/admin/email-domain-status", authMiddleware, async (req: AuthRequest, res) => {
     const adminEmails = (process.env.ADMIN_EMAILS ?? "").split(",").map((e) => e.trim()).filter(Boolean);
-    if (adminEmails.length > 0 && (!req.userEmail || !adminEmails.includes(req.userEmail))) {
+    if (adminEmails.length === 0 || !req.userEmail || !adminEmails.includes(req.userEmail)) {
       res.status(403).json({ error: "Forbidden" });
       return;
     }
@@ -230,6 +230,81 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (err) {
       console.error("Email domain status check failed:", err);
       res.status(500).json({ error: "Failed to check domain status" });
+    }
+  });
+
+  app.post("/api/admin/verify-domain", authMiddleware, async (req: AuthRequest, res) => {
+    const adminEmails = (process.env.ADMIN_EMAILS ?? "").split(",").map((e) => e.trim()).filter(Boolean);
+    if (adminEmails.length === 0 || !req.userEmail || !adminEmails.includes(req.userEmail)) {
+      res.status(403).json({ error: "Forbidden" });
+      return;
+    }
+    if (!process.env.RESEND_API_KEY) {
+      res.status(503).json({ error: "RESEND_API_KEY not configured" });
+      return;
+    }
+    try {
+      const verifyResponse = await fetch(
+        `https://api.resend.com/domains/93993891-8d5a-475a-a151-da57bf113e64/verify`,
+        {
+          method: "POST",
+          headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}` },
+        }
+      );
+      if (!verifyResponse.ok) {
+        const body = await verifyResponse.text();
+        res.status(502).json({ error: `Resend verify error: ${verifyResponse.status}`, detail: body });
+        return;
+      }
+      const data = await verifyResponse.json();
+      res.json({ ok: true, data });
+    } catch (err) {
+      console.error("Domain verification trigger failed:", err);
+      res.status(500).json({ error: "Failed to trigger domain verification" });
+    }
+  });
+
+  app.post("/api/admin/send-test-email", authMiddleware, async (req: AuthRequest, res) => {
+    const adminEmails = (process.env.ADMIN_EMAILS ?? "").split(",").map((e) => e.trim()).filter(Boolean);
+    if (adminEmails.length === 0 || !req.userEmail || !adminEmails.includes(req.userEmail)) {
+      res.status(403).json({ error: "Forbidden" });
+      return;
+    }
+    if (!process.env.RESEND_API_KEY) {
+      res.status(503).json({ error: "RESEND_API_KEY not configured" });
+      return;
+    }
+    const to: string = req.body?.to || req.userEmail;
+    if (!to) {
+      res.status(400).json({ error: "No recipient email address provided" });
+      return;
+    }
+    try {
+      const { data, error } = await resend.emails.send({
+        from: "Swole House <noreply@swolehousefitness.com>",
+        to,
+        subject: "Swole House — test email delivery",
+        html: `
+          <div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;background:#111;color:#f0f0f0;border-radius:12px;overflow:hidden;">
+            <div style="background:#C0392B;padding:24px 32px;">
+              <h1 style="margin:0;font-size:22px;color:#fff;letter-spacing:1px;">SWOLE HOUSE</h1>
+            </div>
+            <div style="padding:32px;">
+              <h2 style="margin-top:0;color:#fff;font-size:18px;">Email delivery confirmed!</h2>
+              <p style="color:#ccc;line-height:1.6;">This is a test email sent from <strong>noreply@swolehousefitness.com</strong> via Resend to verify the domain is verified and delivering correctly.</p>
+              <p style="color:#888;font-size:12px;margin-top:32px;border-top:1px solid #333;padding-top:16px;">Sent by admin test tool. You can ignore this email.</p>
+            </div>
+          </div>
+        `,
+      });
+      if (error) {
+        res.status(502).json({ error: "Resend rejected the email", detail: error.message });
+        return;
+      }
+      res.json({ ok: true, id: data?.id ?? null });
+    } catch (err) {
+      console.error("Test email send failed:", err);
+      res.status(500).json({ error: "Failed to send test email", detail: String(err) });
     }
   });
 
