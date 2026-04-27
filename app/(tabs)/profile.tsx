@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
   StyleSheet,
   Text,
@@ -18,6 +19,7 @@ import * as Haptics from "expo-haptics";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import Colors from "@/constants/colors";
 import { useAuth } from "@/contexts/AuthContext";
+import { apiRequest } from "@/lib/query-client";
 import { UserProfile, getProfile, saveProfile } from "@/lib/profile-storage";
 import {
   Exercise,
@@ -178,6 +180,16 @@ export default function ProfileScreen() {
   const router = useRouter();
   const webTopPad = Platform.OS === "web" ? 67 : 0;
   const webBottomPad = Platform.OS === "web" ? 34 : 0;
+
+  const { data: adminData } = useQuery<{ isAdmin: boolean }>({
+    queryKey: ["/api/admin/is-admin", user?.id ?? ""],
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/admin/is-admin");
+      return res.json();
+    },
+    enabled: !!user,
+  });
+  const isAdmin = adminData?.isAdmin ?? false;
 
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [showPRModal, setShowPRModal] = useState(false);
@@ -454,21 +466,23 @@ export default function ProfileScreen() {
           </Pressable>
         </Animated.View>
 
-        <Animated.View entering={FadeInDown.delay(520).duration(400)}>
-          <Pressable
-            style={styles.adminBtn}
-            onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              router.push("/admin");
-            }}
-            testID="admin-btn"
-          >
-            <Ionicons name="shield-checkmark-outline" size={18} color={Colors.textMuted} />
-            <Text style={styles.adminBtnText}>Admin</Text>
-            <View style={{ flex: 1 }} />
-            <Ionicons name="chevron-forward" size={16} color={Colors.textMuted} />
-          </Pressable>
-        </Animated.View>
+        {isAdmin && (
+          <Animated.View entering={FadeInDown.delay(520).duration(400)}>
+            <Pressable
+              style={styles.adminBtn}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                router.push("/admin");
+              }}
+              testID="admin-btn"
+            >
+              <Ionicons name="shield-checkmark-outline" size={18} color={Colors.textMuted} />
+              <Text style={styles.adminBtnText}>Admin</Text>
+              <View style={{ flex: 1 }} />
+              <Ionicons name="chevron-forward" size={16} color={Colors.textMuted} />
+            </Pressable>
+          </Animated.View>
+        )}
 
         <Animated.View entering={FadeInDown.delay(550).duration(400)}>
           {confirmLogout ? (

@@ -177,6 +177,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/admin/is-admin", authMiddleware, async (req: AuthRequest, res) => {
+    const adminEmails = (process.env.ADMIN_EMAILS ?? "").split(",").map((e) => e.trim()).filter(Boolean);
+    const isAdmin = adminEmails.length > 0 && !!req.userEmail && adminEmails.includes(req.userEmail);
+    res.json({ isAdmin });
+  });
+
   app.get("/api/admin/email-domain-status", authMiddleware, async (req: AuthRequest, res) => {
     const adminEmails = (process.env.ADMIN_EMAILS ?? "").split(",").map((e) => e.trim()).filter(Boolean);
     if (adminEmails.length === 0 || !req.userEmail || !adminEmails.includes(req.userEmail)) {
