@@ -177,6 +177,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/admin/email-domain-status", authMiddleware, async (req: AuthRequest, res) => {
+    const adminEmails = (process.env.ADMIN_EMAILS ?? "").split(",").map((e) => e.trim()).filter(Boolean);
+    if (adminEmails.length > 0 && (!req.userEmail || !adminEmails.includes(req.userEmail))) {
+      res.status(403).json({ error: "Forbidden" });
+      return;
+    }
+    if (!process.env.RESEND_API_KEY) {
+      res.status(503).json({ error: "RESEND_API_KEY not configured" });
+      return;
+    }
+    try {
+      const listResponse = await fetch("https://api.resend.com/domains", {
+        headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}` },
+      });
+      if (!listResponse.ok) {
+        res.status(502).json({ error: `Resend API error: ${listResponse.status} ${listResponse.statusText}` });
+        return;
+      }
+      const listData = (await listResponse.json()) as { data?: Array<{ name: string; status: string; id: string }> };
+      const domainEntry = listData.data?.find((d) => d.name === "swolehouse.com");
+      if (!domainEntry) {
+        res.json({
+          domain: "swolehouse.com",
+          status: "not_registered",
+          message: "Domain not yet added to Resend.",
+        });
+        return;
+      }
+
+      const detailResponse = await fetch(`https://api.resend.com/domains/${domainEntry.id}`, {
+        headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}` },
+      });
+      if (!detailResponse.ok) {
+        res.status(502).json({ error: `Resend domain detail error: ${detailResponse.status} ${detailResponse.statusText}` });
+        return;
+      }
+      type ResendRecord = { record: string; name: string; type: string; value: string; status: string; ttl: string; priority?: number };
+      const detail = (await detailResponse.json()) as { id: string; name: string; status: string; records: ResendRecord[] };
+
+      res.json({
+        domain: detail.name,
+        id: detail.id,
+        status: detail.status,
+        verified: detail.status === "verified",
+        message:
+          detail.status === "verified"
+            ? "Domain is verified. Emails from noreply@swolehouse.com will send."
+            : "Domain is registered but not yet verified. Add the DNS records below and wait for propagation (up to 48h).",
+        dns_records_needed: detail.status !== "verified" ? detail.records : undefined,
+      });
+    } catch (err) {
+      console.error("Email domain status check failed:", err);
+      res.status(500).json({ error: "Failed to check domain status" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
