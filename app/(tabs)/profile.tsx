@@ -188,6 +188,7 @@ export default function ProfileScreen() {
       return res.json();
     },
     enabled: !!user,
+    staleTime: 5 * 60 * 1000,
   });
   const isAdmin = adminData?.isAdmin ?? false;
 
