@@ -114,6 +114,18 @@ Preferred communication style: Simple, everyday language.
 - Yoga/Cardio tabs show exercise lists with last-performed date badges and detail views showing Last Performed date and Last Note (saved user notes)
 - The `computePRs` function in `profile.tsx` supports all 4 categories, tracking `lastNotes` for yoga/cardio
 
+### Admin Screen
+
+- **Location**: `app/admin.tsx` — registered as a root stack screen in `app/_layout.tsx`
+- **Access**: An "Admin" button (shield icon, testID=`admin-btn`) at the bottom of the Profile tab navigates to `/admin`
+- **Admin check**: The button is visible to all logged-in users, but the backend enforces access via `ADMIN_EMAILS` env var — non-admins receive a 403 "Access denied" error in the UI
+- **Features**:
+  - **Check Status** button calls `GET /api/admin/email-domain-status` and shows a colored status badge: Verified (green), Pending (amber), Not Registered (red)
+  - **DNS Records** section appears when status is pending, listing each DNS record with its type, name, value, and per-record verification status pills
+  - **Re-check DNS** button calls `POST /api/admin/verify-domain` to trigger Resend to re-verify the domain, then auto-refreshes the status
+  - **Send Test Email** section with a recipient input (pre-filled with admin's own email) and a "Send Test Email" button that calls `POST /api/admin/send-test-email` and shows a success message with the Resend message ID
+- **No new backend work**: All three admin API endpoints (`email-domain-status`, `verify-domain`, `send-test-email`) were pre-existing in `server/routes.ts`
+
 ### Contact Us & Feedback
 
 - Fourth tab "Contact" (mail icon) to the right of Profile in the bottom bar

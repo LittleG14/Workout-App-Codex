@@ -12,7 +12,7 @@ import {
   Alert,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useFocusEffect } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import Animated, { FadeInDown } from "react-native-reanimated";
@@ -175,6 +175,7 @@ function computeBMR(profile: UserProfile): number | null {
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const { user, logout } = useAuth();
+  const router = useRouter();
   const webTopPad = Platform.OS === "web" ? 67 : 0;
   const webBottomPad = Platform.OS === "web" ? 34 : 0;
 
@@ -450,6 +451,22 @@ export default function ProfileScreen() {
           <Pressable style={styles.prButton} onPress={openPRModal} testID="pr-button">
             <Ionicons name="trophy" size={20} color="#FFF" />
             <Text style={styles.prButtonText}>PRs and Last</Text>
+          </Pressable>
+        </Animated.View>
+
+        <Animated.View entering={FadeInDown.delay(520).duration(400)}>
+          <Pressable
+            style={styles.adminBtn}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              router.push("/admin");
+            }}
+            testID="admin-btn"
+          >
+            <Ionicons name="shield-checkmark-outline" size={18} color={Colors.textMuted} />
+            <Text style={styles.adminBtnText}>Admin</Text>
+            <View style={{ flex: 1 }} />
+            <Ionicons name="chevron-forward" size={16} color={Colors.textMuted} />
           </Pressable>
         </Animated.View>
 
@@ -1082,6 +1099,23 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: Colors.textSecondary,
     marginTop: 2,
+  },
+  adminBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    backgroundColor: Colors.surface,
+    marginTop: 8,
+  },
+  adminBtnText: {
+    fontFamily: "Rubik_500Medium",
+    fontSize: 15,
+    color: Colors.textMuted,
   },
   logoutBtn: {
     flexDirection: "row",
