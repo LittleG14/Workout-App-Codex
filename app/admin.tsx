@@ -60,6 +60,7 @@ export default function AdminScreen() {
     queryKey: DOMAIN_STATUS_KEY,
     enabled: !isLoading && !!user,
     staleTime: 5 * 60 * 1000,
+    gcTime: 0,
   });
 
   const errorMessage =
