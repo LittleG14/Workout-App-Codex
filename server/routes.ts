@@ -135,7 +135,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (req.userEmail) {
         resend.emails.send({
-          from: "Swole House <onboarding@resend.dev>",
+          from: "Swole House <noreply@swolehouse.com>",
           to: req.userEmail,
           subject: "We received your feedback!",
           html: `
