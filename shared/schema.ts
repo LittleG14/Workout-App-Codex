@@ -11,3 +11,15 @@ export const workouts = pgTable("workouts", {
 
 export type InsertWorkout = typeof workouts.$inferInsert;
 export type WorkoutRow = typeof workouts.$inferSelect;
+
+export const feedback = pgTable("feedback", {
+  id: text("id").primaryKey(),
+  userId: text("user_id").notNull(),
+  date: text("date").notNull(),
+  selection: text("selection").notNull(),
+  category: text("category").notNull(),
+  submission: text("submission").notNull(),
+});
+
+export type InsertFeedback = typeof feedback.$inferInsert;
+export type FeedbackRow = typeof feedback.$inferSelect;

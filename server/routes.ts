@@ -77,6 +77,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/feedback", authMiddleware, async (req: AuthRequest, res) => {
+    try {
+      const { selection, category, submission } = req.body;
+      if (!selection || !category || !submission) {
+        res.status(400).json({ message: "selection, category, and submission are required" });
+        return;
+      }
+      const id = Date.now().toString() + Math.random().toString(36).substr(2, 9);
+      const date = new Date().toISOString();
+      await storage.saveFeedback(req.userId!, id, date, selection, category, submission);
+      res.status(201).json({ ok: true });
+    } catch (err) {
+      console.error("Save feedback error:", err);
+      res.status(500).json({ message: "Failed to save feedback" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

@@ -114,6 +114,20 @@ Preferred communication style: Simple, everyday language.
 - Yoga/Cardio tabs show exercise lists with last-performed date badges and detail views showing Last Performed date and Last Note (saved user notes)
 - The `computePRs` function in `profile.tsx` supports all 4 categories, tracking `lastNotes` for yoga/cardio
 
+### Contact Us & Feedback
+
+- Fourth tab "Contact" (mail icon) to the right of Profile in the bottom bar
+- Full-screen landing with a "Send Feedback" button that opens a `pageSheet` modal
+- Three feedback types with different form behaviour:
+  - **Exercise Request**: Category = one of 5 workout categories (Weights/Circuit/Yoga/Cardio/Mobility); Submission capped at 40 characters
+  - **App Functionality**: Category = Workout Structure / Feature Problems / Profile Issues; Submission unlimited
+  - **General Feedback**: Category auto-filled as "General Feedback" (no dropdown); Submission unlimited
+- On submit, `POST /api/feedback` is called (auth-protected); server timestamps and inserts into the `feedback` Supabase table
+- Success state replaces the form with a thank-you screen; errors surface inline
+- **`feedback` table** (Supabase PostgreSQL): `id TEXT PK`, `user_id TEXT`, `date TEXT` (ISO), `selection TEXT`, `category TEXT`, `submission TEXT`
+- Schema in `shared/schema.ts`; migration via `tsx scripts/migrate.ts`; route in `server/routes.ts`; storage method `saveFeedback` in `server/storage.ts`
+- Screen: `app/(tabs)/contact.tsx`; tab registration in `app/(tabs)/_layout.tsx`
+
 ### Build & Development
 
 - **Dev Mode**: Two processes — `expo:dev` for the Expo bundler and `server:dev` for the Express API

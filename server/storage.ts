@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { db } from "./db";
-import { workouts, type WorkoutRow } from "@shared/schema";
+import { workouts, feedback, type WorkoutRow, type FeedbackRow } from "@shared/schema";
 
 export interface IStorage {
   saveWorkout(userId: string, workoutData: string, id: string, name: string, topCategory: string, createdAt: string): Promise<WorkoutRow>;
@@ -8,6 +8,7 @@ export interface IStorage {
   getWorkout(id: string, userId: string): Promise<WorkoutRow | undefined>;
   updateWorkout(id: string, userId: string, workoutData: string): Promise<WorkoutRow | undefined>;
   deleteWorkout(id: string, userId: string): Promise<void>;
+  saveFeedback(userId: string, id: string, date: string, selection: string, category: string, submission: string): Promise<FeedbackRow>;
 }
 
 export class DbStorage implements IStorage {
@@ -61,6 +62,19 @@ export class DbStorage implements IStorage {
     const existing = await this.getWorkout(id, userId);
     if (!existing) return;
     await db.delete(workouts).where(eq(workouts.id, id));
+  }
+
+  async saveFeedback(
+    userId: string,
+    id: string,
+    date: string,
+    selection: string,
+    category: string,
+    submission: string
+  ): Promise<FeedbackRow> {
+    const row = { id, userId, date, selection, category, submission };
+    await db.insert(feedback).values(row);
+    return row;
   }
 }
 

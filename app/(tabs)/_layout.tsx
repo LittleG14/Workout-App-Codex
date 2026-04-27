@@ -23,6 +23,10 @@ function NativeTabLayout() {
         <Icon sf={{ default: "person", selected: "person.fill" }} />
         <Label>Profile</Label>
       </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="contact">
+        <Icon sf={{ default: "envelope", selected: "envelope.fill" }} />
+        <Label>Contact</Label>
+      </NativeTabs.Trigger>
     </NativeTabs>
   );
 }
@@ -85,6 +89,15 @@ function ClassicTabLayout() {
           title: "Profile",
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="person" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="contact"
+        options={{
+          title: "Contact",
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="mail" size={size} color={color} />
           ),
         }}
       />

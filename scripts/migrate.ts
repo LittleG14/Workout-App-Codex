@@ -56,6 +56,19 @@ async function migrate() {
   `;
   console.log("✓ workouts table ready");
 
+  // Ensure feedback table exists.
+  await sql`
+    CREATE TABLE IF NOT EXISTS feedback (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      date TEXT NOT NULL,
+      selection TEXT NOT NULL,
+      category TEXT NOT NULL,
+      submission TEXT NOT NULL
+    )
+  `;
+  console.log("✓ feedback table ready");
+
   await sql.end();
   console.log("Migration complete!");
 }
