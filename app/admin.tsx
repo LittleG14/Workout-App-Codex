@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   StyleSheet,
   Text,
@@ -50,18 +50,38 @@ export default function AdminScreen() {
   const [testEmailLoading, setTestEmailLoading] = useState(false);
   const [testEmailTo, setTestEmailTo] = useState(user?.email ?? "");
   const [lastTestResult, setLastTestResult] = useState<string | null>(null);
+  const [, setTick] = useState(0);
+  const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const {
     data: domainStatus,
     isFetching: statusLoading,
     error: statusError,
     refetch: refetchDomainStatus,
+    dataUpdatedAt,
   } = useQuery<DomainStatusResponse>({
     queryKey: DOMAIN_STATUS_KEY,
     enabled: !isLoading && !!user,
     staleTime: 5 * 60 * 1000,
     gcTime: 0,
   });
+
+  useEffect(() => {
+    tickRef.current = setInterval(() => setTick((t) => t + 1), 10_000);
+    return () => {
+      if (tickRef.current) clearInterval(tickRef.current);
+    };
+  }, []);
+
+  const formatLastChecked = (date: Date): string => {
+    const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
+    if (seconds < 10) return "just now";
+    if (seconds < 60) return `${seconds} second${seconds === 1 ? "" : "s"} ago`;
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return `${minutes} minute${minutes === 1 ? "" : "s"} ago`;
+    const hours = Math.floor(minutes / 60);
+    return `${hours} hour${hours === 1 ? "" : "s"} ago`;
+  };
 
   const errorMessage =
     statusError instanceof Error ? statusError.message : null;
@@ -209,6 +229,11 @@ export default function AdminScreen() {
                     </View>
                   )}
                 </View>
+                {dataUpdatedAt > 0 && (
+                  <Text style={styles.lastCheckedText} testID="last-checked-label">
+                    Last checked {formatLastChecked(new Date(dataUpdatedAt))}
+                  </Text>
+                )}
 
                 {domainStatus.dns_records_needed && domainStatus.dns_records_needed.length > 0 && (
                   <View style={styles.dnsRecordsBox}>
@@ -548,6 +573,12 @@ const styles = StyleSheet.create({
     fontFamily: "Rubik_400Regular",
     fontSize: 12,
     color: Colors.primary,
+  },
+  lastCheckedText: {
+    fontFamily: "Rubik_400Regular",
+    fontSize: 12,
+    color: Colors.textMuted,
+    marginBottom: 12,
   },
   accessDeniedTitle: {
     fontFamily: "Rubik_700Bold",
