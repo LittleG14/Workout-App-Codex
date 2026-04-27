@@ -135,7 +135,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (req.userEmail) {
         resend.emails.send({
-          from: "Swole House <noreply@swolehouse.com>",
+          from: "Swole House <noreply@swolehousefitness.com>",
           to: req.userEmail,
           subject: "We received your feedback!",
           html: `
@@ -196,10 +196,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return;
       }
       const listData = (await listResponse.json()) as { data?: Array<{ name: string; status: string; id: string }> };
-      const domainEntry = listData.data?.find((d) => d.name === "swolehouse.com");
+      const domainEntry = listData.data?.find((d) => d.name === "swolehousefitness.com");
       if (!domainEntry) {
         res.json({
-          domain: "swolehouse.com",
+          domain: "swolehousefitness.com",
           status: "not_registered",
           message: "Domain not yet added to Resend.",
         });
@@ -223,7 +223,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         verified: detail.status === "verified",
         message:
           detail.status === "verified"
-            ? "Domain is verified. Emails from noreply@swolehouse.com will send."
+            ? "Domain is verified. Emails from noreply@swolehousefitness.com will send."
             : "Domain is registered but not yet verified. Add the DNS records below and wait for propagation (up to 48h).",
         dns_records_needed: detail.status !== "verified" ? detail.records : undefined,
       });
