@@ -84,7 +84,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         res.status(400).json({ message: "selection, category, and submission are required" });
         return;
       }
-      const id = Date.now().toString() + Math.random().toString(36).substr(2, 9);
+      const id = crypto.randomUUID();
       const date = new Date().toISOString();
       await storage.saveFeedback(req.userId!, id, date, selection, category, submission);
       res.status(201).json({ ok: true });

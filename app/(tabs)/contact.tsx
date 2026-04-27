@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -14,7 +14,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
-import Animated, { FadeInDown } from "react-native-reanimated";
+import Animated, { FadeInDown, FadeIn, FadeOut } from "react-native-reanimated";
 import Colors from "@/constants/colors";
 import { apiRequest } from "@/lib/query-client";
 
@@ -96,13 +96,18 @@ function DropdownRow({
   );
 }
 
-function FeedbackSheet({ onClose }: { onClose: () => void }) {
+function FeedbackSheet({
+  onClose,
+  onSubmitSuccess,
+}: {
+  onClose: () => void;
+  onSubmitSuccess: () => void;
+}) {
   const insets = useSafeAreaInsets();
   const [selection, setSelection] = useState<Selection | "">("");
   const [category, setCategory] = useState("");
   const [submission, setSubmission] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState("");
 
   const sel = selection as Selection;
@@ -134,9 +139,10 @@ function FeedbackSheet({ onClose }: { onClose: () => void }) {
         category,
         submission: submission.trim(),
       });
-      setSubmitted(true);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    } catch (e: any) {
+      onSubmitSuccess();
+      onClose();
+    } catch {
       setError("Something went wrong. Please try again.");
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     } finally {
@@ -144,34 +150,13 @@ function FeedbackSheet({ onClose }: { onClose: () => void }) {
     }
   };
 
-  if (submitted) {
-    return (
-      <View style={[styles.sheet, { paddingBottom: insets.bottom + 24 }]}>
-        <View style={styles.sheetHandle} />
-        <View style={styles.successContainer}>
-          <View style={styles.successIcon}>
-            <Ionicons name="checkmark-circle" size={64} color={Colors.success} />
-          </View>
-          <Text style={styles.successTitle}>Thank You!</Text>
-          <Text style={styles.successBody}>
-            Your feedback has been received. We review every submission and use
-            them to shape future updates.
-          </Text>
-          <Pressable style={styles.doneButton} onPress={onClose}>
-            <Text style={styles.doneButtonText}>Done</Text>
-          </Pressable>
-        </View>
-      </View>
-    );
-  }
-
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : "height"}
       style={{ flex: 1 }}
     >
       <ScrollView
-        style={styles.sheet}
+        style={[styles.sheet, { paddingBottom: insets.bottom + 32 }]}
         contentContainerStyle={{ paddingBottom: insets.bottom + 32 }}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
@@ -265,12 +250,38 @@ function FeedbackSheet({ onClose }: { onClose: () => void }) {
   );
 }
 
+function SuccessBanner() {
+  return (
+    <Animated.View
+      entering={FadeIn.duration(300)}
+      exiting={FadeOut.duration(300)}
+      style={styles.successBanner}
+    >
+      <Ionicons name="checkmark-circle" size={20} color={Colors.success} />
+      <Text style={styles.successBannerText}>
+        Thank you! We've received your feedback.
+      </Text>
+    </Animated.View>
+  );
+}
+
 export default function ContactScreen() {
   const insets = useSafeAreaInsets();
   const [sheetVisible, setSheetVisible] = useState(false);
+  const [showBanner, setShowBanner] = useState(false);
 
   const webTopPad = Platform.OS === "web" ? 67 : 0;
   const webBottomPad = Platform.OS === "web" ? 34 : 0;
+
+  const handleSubmitSuccess = () => {
+    setShowBanner(true);
+  };
+
+  useEffect(() => {
+    if (!showBanner) return;
+    const timer = setTimeout(() => setShowBanner(false), 3500);
+    return () => clearTimeout(timer);
+  }, [showBanner]);
 
   return (
     <View
@@ -291,6 +302,8 @@ export default function ContactScreen() {
           We want to hear from you. Request exercises, report issues, or share
           your thoughts — everything helps us build a better app.
         </Text>
+
+        {showBanner && <SuccessBanner />}
 
         <Pressable
           style={styles.feedbackButton}
@@ -328,7 +341,10 @@ export default function ContactScreen() {
         onRequestClose={() => setSheetVisible(false)}
       >
         <View style={styles.modalBackground}>
-          <FeedbackSheet onClose={() => setSheetVisible(false)} />
+          <FeedbackSheet
+            onClose={() => setSheetVisible(false)}
+            onSubmitSuccess={handleSubmitSuccess}
+          />
         </View>
       </Modal>
     </View>
@@ -368,8 +384,27 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     textAlign: "center",
     lineHeight: 22,
-    marginBottom: 32,
+    marginBottom: 24,
     maxWidth: 320,
+  },
+  successBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: `${Colors.success}20`,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    marginBottom: 16,
+    gap: 8,
+    borderWidth: 1,
+    borderColor: `${Colors.success}40`,
+    width: "100%",
+  },
+  successBannerText: {
+    fontFamily: "Rubik_500Medium",
+    fontSize: 14,
+    color: Colors.success,
+    flex: 1,
   },
   feedbackButton: {
     flexDirection: "row",
@@ -569,41 +604,6 @@ const styles = StyleSheet.create({
     elevation: 0,
   },
   submitButtonText: {
-    fontFamily: "Rubik_600SemiBold",
-    fontSize: 16,
-    color: "#FFF",
-  },
-  successContainer: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 32,
-    paddingTop: 40,
-  },
-  successIcon: {
-    marginBottom: 20,
-  },
-  successTitle: {
-    fontFamily: "Rubik_700Bold",
-    fontSize: 28,
-    color: Colors.text,
-    marginBottom: 16,
-  },
-  successBody: {
-    fontFamily: "Rubik_400Regular",
-    fontSize: 15,
-    color: Colors.textSecondary,
-    textAlign: "center",
-    lineHeight: 22,
-    marginBottom: 40,
-  },
-  doneButton: {
-    backgroundColor: Colors.primary,
-    paddingVertical: 16,
-    paddingHorizontal: 48,
-    borderRadius: 14,
-  },
-  doneButtonText: {
     fontFamily: "Rubik_600SemiBold",
     fontSize: 16,
     color: "#FFF",
