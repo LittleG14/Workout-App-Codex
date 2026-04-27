@@ -321,14 +321,14 @@ export default function ContactScreen() {
             <Ionicons name="barbell" size={24} color={Colors.primary} />
             <Text style={styles.infoCardTitle}>Exercise Requests</Text>
             <Text style={styles.infoCardBody}>
-              Want a specific movement added? Submit it and we'll prioritise the most-requested exercises.
+              Want a specific movement added? Submit it and we{"'"}ll prioritise the most-requested exercises.
             </Text>
           </Animated.View>
           <Animated.View entering={FadeInDown.delay(180).duration(350)} style={styles.infoCard}>
             <Ionicons name="construct" size={24} color={Colors.yoga} />
             <Text style={styles.infoCardTitle}>App Feedback</Text>
             <Text style={styles.infoCardBody}>
-              Found a bug or have an idea? Let us know and we'll get right on it.
+              Found a bug or have an idea? Let us know and we{"'"}ll get right on it.
             </Text>
           </Animated.View>
         </View>

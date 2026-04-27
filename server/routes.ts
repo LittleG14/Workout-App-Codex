@@ -77,11 +77,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  const VALID_FEEDBACK_CATEGORIES: Record<string, string[]> = {
+    "Exercise Request": ["Weights", "Circuit", "Yoga", "Cardio", "Mobility"],
+    "App Functionality": ["Workout Structure", "Feature Problems", "Profile Issues"],
+    "General Feedback": ["General Feedback"],
+  };
+
   app.post("/api/feedback", authMiddleware, async (req: AuthRequest, res) => {
     try {
       const { selection, category, submission } = req.body;
       if (!selection || !category || !submission) {
         res.status(400).json({ message: "selection, category, and submission are required" });
+        return;
+      }
+      const validCategories = VALID_FEEDBACK_CATEGORIES[selection];
+      if (!validCategories) {
+        res.status(400).json({ message: "Invalid selection value" });
+        return;
+      }
+      if (!validCategories.includes(category)) {
+        res.status(400).json({ message: "Invalid category for the given selection" });
+        return;
+      }
+      if (selection === "Exercise Request" && submission.length > 40) {
+        res.status(400).json({ message: "Exercise Request submissions must be 40 characters or fewer" });
         return;
       }
       const id = crypto.randomUUID();
