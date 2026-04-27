@@ -127,6 +127,8 @@ Preferred communication style: Simple, everyday language.
 - **`feedback` table** (Supabase PostgreSQL): `id TEXT PK`, `user_id TEXT`, `date TEXT` (ISO), `selection TEXT`, `category TEXT`, `submission TEXT`
 - Schema in `shared/schema.ts`; migration via `tsx scripts/migrate.ts`; route in `server/routes.ts`; storage method `saveFeedback` in `server/storage.ts`
 - Screen: `app/(tabs)/contact.tsx`; tab registration in `app/(tabs)/_layout.tsx`
+- **Confirmation email**: After a successful feedback POST, a styled HTML confirmation email is sent to the user's account address via Resend (`resend` npm package). Email includes the feedback type, category, and submission text. The email send is fire-and-forget (errors are logged but do not fail the request). Requires `RESEND_API_KEY` secret. Currently uses `onboarding@resend.dev` as the sender (Resend's shared domain) — update `from` in `server/routes.ts` once a custom domain is verified in Resend.
+- **Note on Resend integration**: The Replit Resend connector was dismissed; the integration is handled directly via the `RESEND_API_KEY` secret and the `resend` npm package in `server/routes.ts`.
 
 ### Build & Development
 

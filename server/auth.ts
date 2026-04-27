@@ -3,6 +3,7 @@ import type { Request, Response, NextFunction } from "express";
 
 export interface AuthRequest extends Request {
   userId?: string;
+  userEmail?: string;
 }
 
 const supabase = createClient(
@@ -28,5 +29,6 @@ export async function authMiddleware(
     return;
   }
   req.userId = user.id;
+  req.userEmail = user.email;
   next();
 }

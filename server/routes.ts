@@ -2,6 +2,22 @@ import type { Express } from "express";
 import { createServer, type Server } from "node:http";
 import { storage } from "./storage";
 import { authMiddleware, type AuthRequest } from "./auth";
+import { Resend } from "resend";
+
+const resend = new Resend(process.env.RESEND_API_KEY);
+
+if (!process.env.RESEND_API_KEY) {
+  console.warn("WARNING: RESEND_API_KEY is not set — confirmation emails will not be sent.");
+}
+
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
 
 export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/workouts", authMiddleware, async (req: AuthRequest, res) => {
@@ -116,6 +132,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const id = crypto.randomUUID();
       const date = new Date().toISOString();
       await storage.saveFeedback(req.userId!, id, date, selection, category, submission);
+
+      if (req.userEmail) {
+        resend.emails.send({
+          from: "Swole House <onboarding@resend.dev>",
+          to: req.userEmail,
+          subject: "We received your feedback!",
+          html: `
+            <div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;background:#111;color:#f0f0f0;border-radius:12px;overflow:hidden;">
+              <div style="background:#C0392B;padding:24px 32px;">
+                <h1 style="margin:0;font-size:22px;color:#fff;letter-spacing:1px;">SWOLE HOUSE</h1>
+              </div>
+              <div style="padding:32px;">
+                <h2 style="margin-top:0;color:#fff;font-size:18px;">Thanks for your feedback!</h2>
+                <p style="color:#ccc;line-height:1.6;">We've received your submission and our team will review it shortly. Here's a summary of what you sent:</p>
+                <table style="width:100%;border-collapse:collapse;margin:20px 0;">
+                  <tr>
+                    <td style="padding:10px 14px;background:#1a1a1a;border-radius:6px 6px 0 0;color:#999;font-size:13px;text-transform:uppercase;letter-spacing:0.5px;">Type</td>
+                    <td style="padding:10px 14px;background:#1a1a1a;border-radius:6px 6px 0 0;color:#fff;font-size:14px;">${escapeHtml(selection)}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding:10px 14px;background:#222;color:#999;font-size:13px;text-transform:uppercase;letter-spacing:0.5px;">Category</td>
+                    <td style="padding:10px 14px;background:#222;color:#fff;font-size:14px;">${escapeHtml(category)}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding:10px 14px;background:#1a1a1a;border-radius:0 0 6px 6px;color:#999;font-size:13px;text-transform:uppercase;letter-spacing:0.5px;">Your Message</td>
+                    <td style="padding:10px 14px;background:#1a1a1a;border-radius:0 0 6px 6px;color:#fff;font-size:14px;">${escapeHtml(submission)}</td>
+                  </tr>
+                </table>
+                <p style="color:#ccc;line-height:1.6;">We appreciate you taking the time to help us improve. Stay strong!</p>
+                <p style="color:#888;font-size:12px;margin-top:32px;border-top:1px solid #333;padding-top:16px;">This is an automated confirmation. Please do not reply to this email.</p>
+              </div>
+            </div>
+          `,
+        }).catch((err: unknown) => {
+          console.error("Failed to send confirmation email:", err);
+        });
+      }
+
       res.status(201).json({ ok: true });
     } catch (err) {
       console.error("Save feedback error:", err);
