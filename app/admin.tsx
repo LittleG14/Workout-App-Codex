@@ -16,7 +16,7 @@ import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import Colors from "@/constants/colors";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/query-client";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -43,7 +43,6 @@ export default function AdminScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { user, isLoading } = useAuth();
-  const queryClient = useQueryClient();
   const webTopPad = Platform.OS === "web" ? 67 : 0;
   const webBottomPad = Platform.OS === "web" ? 34 : 0;
 
@@ -72,8 +71,7 @@ export default function AdminScreen() {
     setRecheckLoading(true);
     try {
       await apiRequest("POST", "/api/admin/verify-domain");
-      await queryClient.invalidateQueries({ queryKey: DOMAIN_STATUS_KEY });
-      Alert.alert("DNS Re-check triggered", "Resend has been asked to re-verify the domain. Refresh status in a moment.");
+      await refetchDomainStatus();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       Alert.alert("Error", msg || "Failed to trigger DNS re-check.");
@@ -156,7 +154,7 @@ export default function AdminScreen() {
               <Text style={styles.sectionTitle}>Email Domain Status</Text>
             </View>
 
-            {domainStatus && !statusLoading && (
+            {domainStatus && (
               <View style={[styles.statusBadge, isVerified ? styles.statusBadgeVerified : isPending ? styles.statusBadgePending : styles.statusBadgeError]}>
                 <Ionicons
                   name={isVerified ? "checkmark-circle" : isPending ? "time" : "alert-circle"}
@@ -196,13 +194,19 @@ export default function AdminScreen() {
           </View>
         </Animated.View>
 
-        {domainStatus && !statusLoading && (
+        {domainStatus && (
           <>
             <Animated.View entering={FadeInDown.delay(100).duration(400)}>
               <View style={styles.section}>
                 <View style={styles.sectionHeader}>
                   <Ionicons name="globe" size={18} color={Colors.primary} />
                   <Text style={styles.sectionTitle}>DNS Verification</Text>
+                  {recheckLoading && (
+                    <View style={styles.checkingRow}>
+                      <ActivityIndicator size="small" color={Colors.primary} />
+                      <Text style={styles.checkingText}>Checking…</Text>
+                    </View>
+                  )}
                 </View>
 
                 {domainStatus.dns_records_needed && domainStatus.dns_records_needed.length > 0 && (
@@ -532,6 +536,17 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: Colors.text,
     marginBottom: 14,
+  },
+  checkingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginLeft: "auto",
+  },
+  checkingText: {
+    fontFamily: "Rubik_400Regular",
+    fontSize: 12,
+    color: Colors.primary,
   },
   accessDeniedTitle: {
     fontFamily: "Rubik_700Bold",
