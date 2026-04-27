@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState } from "react";
 import {
   StyleSheet,
   Text,
@@ -16,6 +16,7 @@ import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import Colors from "@/constants/colors";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/query-client";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -36,58 +37,42 @@ interface DomainStatusResponse {
   }>;
 }
 
+const DOMAIN_STATUS_KEY = ["/api/admin/email-domain-status"];
+
 export default function AdminScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { user, isLoading } = useAuth();
+  const queryClient = useQueryClient();
   const webTopPad = Platform.OS === "web" ? 67 : 0;
   const webBottomPad = Platform.OS === "web" ? 34 : 0;
-
-  const [domainStatus, setDomainStatus] = useState<DomainStatusResponse | null>(null);
-  const [statusLoading, setStatusLoading] = useState(true);
-  const [statusError, setStatusError] = useState<string | null>(null);
-  const [accessDenied, setAccessDenied] = useState(false);
 
   const [recheckLoading, setRecheckLoading] = useState(false);
   const [testEmailLoading, setTestEmailLoading] = useState(false);
   const [testEmailTo, setTestEmailTo] = useState(user?.email ?? "");
   const [lastTestResult, setLastTestResult] = useState<string | null>(null);
 
-  const fetchDomainStatus = useCallback(async (isInitial = false) => {
-    setStatusLoading(true);
-    setStatusError(null);
-    try {
-      const res = await apiRequest("GET", "/api/admin/email-domain-status");
-      const data: DomainStatusResponse = await res.json();
-      setDomainStatus(data);
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      if (msg.includes("403")) {
-        if (isInitial) {
-          setAccessDenied(true);
-        } else {
-          setStatusError("Access denied — you are not an admin.");
-        }
-      } else {
-        setStatusError(msg || "Failed to fetch domain status.");
-      }
-    } finally {
-      setStatusLoading(false);
-    }
-  }, []);
+  const {
+    data: domainStatus,
+    isFetching: statusLoading,
+    error: statusError,
+    refetch: refetchDomainStatus,
+  } = useQuery<DomainStatusResponse>({
+    queryKey: DOMAIN_STATUS_KEY,
+    enabled: !isLoading && !!user,
+    staleTime: 5 * 60 * 1000,
+  });
 
-  useEffect(() => {
-    if (!isLoading && user) {
-      fetchDomainStatus(true);
-    }
-  }, [isLoading, user, fetchDomainStatus]);
+  const errorMessage =
+    statusError instanceof Error ? statusError.message : null;
+  const accessDenied = !!errorMessage && errorMessage.includes("403");
 
   const recheckDNS = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setRecheckLoading(true);
     try {
       await apiRequest("POST", "/api/admin/verify-domain");
-      await fetchDomainStatus();
+      await queryClient.invalidateQueries({ queryKey: DOMAIN_STATUS_KEY });
       Alert.alert("DNS Re-check triggered", "Resend has been asked to re-verify the domain. Refresh status in a moment.");
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -188,16 +173,16 @@ export default function AdminScreen() {
               <Text style={styles.statusMessage}>{domainStatus.message}</Text>
             )}
 
-            {statusError && (
+            {errorMessage && !accessDenied && (
               <View style={styles.errorBox}>
                 <Ionicons name="warning-outline" size={16} color={Colors.error} />
-                <Text style={styles.errorText}>{statusError}</Text>
+                <Text style={styles.errorText}>{errorMessage}</Text>
               </View>
             )}
 
             <Pressable
               style={[styles.actionBtn, statusLoading && styles.actionBtnDisabled]}
-              onPress={() => fetchDomainStatus()}
+              onPress={() => refetchDomainStatus()}
               disabled={statusLoading}
               testID="check-status-btn"
             >
