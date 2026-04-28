@@ -196,9 +196,20 @@ function SwipeableWorkoutItem({ item, index, onDelete }: {
   );
 }
 
+const ALL_CATEGORIES: { key: TopCategory; label: string; color: string; icon: string }[] = [
+  { key: "weight_lifting", label: "Weights",  color: Colors.primary,  icon: "barbell" },
+  { key: "circuit",        label: "Circuit",  color: Colors.circuit,  icon: "flash" },
+  { key: "yoga",           label: "Yoga",     color: Colors.yoga,     icon: "leaf" },
+  { key: "cardio",         label: "Cardio",   color: Colors.cardio,   icon: "heart" },
+  { key: "mobility",       label: "Mobility", color: Colors.mobility, icon: "body" },
+];
+
 export default function HistoryScreen() {
   const insets = useSafeAreaInsets();
   const [workouts, setWorkouts] = useState<GeneratedWorkout[]>([]);
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [pendingFilters, setPendingFilters] = useState<Set<TopCategory>>(new Set());
+  const [activeFilters, setActiveFilters] = useState<Set<TopCategory>>(new Set());
   const webTopPad = Platform.OS === "web" ? 67 : 0;
 
   useFocusEffect(
@@ -217,12 +228,53 @@ export default function HistoryScreen() {
     setWorkouts((prev) => prev.filter((w) => w.id !== id));
   };
 
+  const togglePending = (key: TopCategory) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setPendingFilters((prev) => {
+      const next = new Set(prev);
+      next.has(key) ? next.delete(key) : next.add(key);
+      return next;
+    });
+  };
+
+  const openFilter = () => {
+    setPendingFilters(new Set(activeFilters));
+    setFilterOpen(true);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  };
+
+  const applyFilter = () => {
+    setActiveFilters(new Set(pendingFilters));
+    setFilterOpen(false);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+  };
+
+  const clearFilter = () => {
+    setPendingFilters(new Set());
+    setActiveFilters(new Set());
+    setFilterOpen(false);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  };
+
+  const isFiltered = activeFilters.size > 0;
+  const displayedWorkouts = isFiltered
+    ? workouts.filter((w) => activeFilters.has(w.topCategory as TopCategory))
+    : workouts;
+
+  const subtitleText = () => {
+    if (workouts.length === 0) return "Your past workouts";
+    if (isFiltered) {
+      return `${displayedWorkouts.length} of ${workouts.length} workout${workouts.length !== 1 ? "s" : ""}`;
+    }
+    return `${workouts.length} workout${workouts.length !== 1 ? "s" : ""} generated`;
+  };
+
   const renderEmpty = () => (
     <View style={styles.emptyContainer}>
       <Ionicons name="barbell-outline" size={48} color={Colors.textMuted} />
-      <Text style={styles.emptyTitle}>No workouts yet</Text>
+      <Text style={styles.emptyTitle}>{isFiltered ? "No matching workouts" : "No workouts yet"}</Text>
       <Text style={styles.emptySubtitle}>
-        Generate your first workout to see it here
+        {isFiltered ? "Try adjusting your filters" : "Generate your first workout to see it here"}
       </Text>
     </View>
   );
@@ -230,16 +282,64 @@ export default function HistoryScreen() {
   return (
     <View style={[styles.container, { paddingTop: insets.top + webTopPad }]}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>History</Text>
-        <Text style={styles.headerSubtitle}>
-          {workouts.length > 0
-            ? `${workouts.length} workout${workouts.length !== 1 ? "s" : ""} generated`
-            : "Your past workouts"}
-        </Text>
+        <View style={styles.headerRow}>
+          <View>
+            <Text style={styles.headerTitle}>History</Text>
+            <Text style={styles.headerSubtitle}>{subtitleText()}</Text>
+          </View>
+          <Pressable
+            style={[styles.filterBtn, isFiltered && styles.filterBtnActive]}
+            onPress={filterOpen ? () => setFilterOpen(false) : openFilter}
+            testID="filter-btn"
+          >
+            <Ionicons
+              name="options-outline"
+              size={18}
+              color={isFiltered ? Colors.primary : Colors.textSecondary}
+            />
+            {isFiltered && (
+              <View style={styles.filterBadge}>
+                <Text style={styles.filterBadgeText}>{activeFilters.size}</Text>
+              </View>
+            )}
+          </Pressable>
+        </View>
+
+        {filterOpen && (
+          <Animated.View entering={FadeInDown.duration(200)} style={styles.dropdown}>
+            {ALL_CATEGORIES.map((cat) => {
+              const selected = pendingFilters.has(cat.key);
+              return (
+                <Pressable
+                  key={cat.key}
+                  style={[styles.dropdownRow, selected && { backgroundColor: `${cat.color}12` }]}
+                  onPress={() => togglePending(cat.key)}
+                >
+                  <View style={[styles.catDot, { backgroundColor: cat.color }]} />
+                  <Ionicons name={cat.icon as any} size={16} color={selected ? cat.color : Colors.textMuted} />
+                  <Text style={[styles.dropdownLabel, selected && { color: cat.color, fontFamily: "Rubik_600SemiBold" }]}>
+                    {cat.label}
+                  </Text>
+                  <View style={[styles.checkbox, selected && { backgroundColor: cat.color, borderColor: cat.color }]}>
+                    {selected && <Ionicons name="checkmark" size={11} color="#FFF" />}
+                  </View>
+                </Pressable>
+              );
+            })}
+            <View style={styles.dropdownActions}>
+              <Pressable style={styles.clearBtn} onPress={clearFilter}>
+                <Text style={styles.clearBtnText}>Clear</Text>
+              </Pressable>
+              <Pressable style={styles.applyBtn} onPress={applyFilter}>
+                <Text style={styles.applyBtnText}>Apply</Text>
+              </Pressable>
+            </View>
+          </Animated.View>
+        )}
       </View>
 
       <FlatList
-        data={workouts}
+        data={displayedWorkouts}
         keyExtractor={(item) => item.id}
         renderItem={({ item, index }) => (
           <SwipeableWorkoutItem
@@ -251,7 +351,7 @@ export default function HistoryScreen() {
         contentContainerStyle={[
           styles.listContent,
           { paddingBottom: insets.bottom + 100 },
-          workouts.length === 0 && styles.emptyList,
+          displayedWorkouts.length === 0 && styles.emptyList,
         ]}
         ListEmptyComponent={renderEmpty}
         showsVerticalScrollIndicator={false}
@@ -399,5 +499,108 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: "Rubik_400Regular",
     color: Colors.textMuted,
+  },
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+  },
+  filterBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginTop: 4,
+    gap: 6,
+  },
+  filterBtnActive: {
+    borderColor: Colors.primary,
+    backgroundColor: `${Colors.primary}10`,
+  },
+  filterBadge: {
+    backgroundColor: Colors.primary,
+    borderRadius: 8,
+    minWidth: 16,
+    height: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 3,
+  },
+  filterBadgeText: {
+    fontSize: 10,
+    fontFamily: "Rubik_700Bold",
+    color: "#FFF",
+  },
+  dropdown: {
+    backgroundColor: Colors.surface,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    marginTop: 12,
+    overflow: "hidden",
+  },
+  dropdownRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 13,
+    gap: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  catDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+  },
+  dropdownLabel: {
+    flex: 1,
+    fontSize: 15,
+    fontFamily: "Rubik_400Regular",
+    color: Colors.text,
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 5,
+    borderWidth: 1.5,
+    borderColor: Colors.border,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  dropdownActions: {
+    flexDirection: "row",
+    gap: 10,
+    padding: 14,
+  },
+  clearBtn: {
+    flex: 1,
+    paddingVertical: 11,
+    borderRadius: 10,
+    backgroundColor: Colors.surfaceLight,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  clearBtnText: {
+    fontFamily: "Rubik_500Medium",
+    fontSize: 14,
+    color: Colors.textSecondary,
+  },
+  applyBtn: {
+    flex: 2,
+    paddingVertical: 11,
+    borderRadius: 10,
+    backgroundColor: Colors.primary,
+    alignItems: "center",
+  },
+  applyBtnText: {
+    fontFamily: "Rubik_600SemiBold",
+    fontSize: 14,
+    color: "#FFF",
   },
 });
