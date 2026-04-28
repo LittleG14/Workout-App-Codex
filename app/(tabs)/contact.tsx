@@ -391,23 +391,6 @@ export default function ContactScreen() {
           </Pressable>
 
           <MySubmissions />
-
-          <View style={styles.infoCards}>
-            <Animated.View entering={FadeInDown.delay(100).duration(350)} style={styles.infoCard}>
-              <Ionicons name="barbell" size={24} color={Colors.primary} />
-              <Text style={styles.infoCardTitle}>Exercise Requests</Text>
-              <Text style={styles.infoCardBody}>
-                Want a specific movement added? Submit it and we{"'"}ll prioritise the most-requested exercises.
-              </Text>
-            </Animated.View>
-            <Animated.View entering={FadeInDown.delay(180).duration(350)} style={styles.infoCard}>
-              <Ionicons name="construct" size={24} color={Colors.yoga} />
-              <Text style={styles.infoCardTitle}>App Feedback</Text>
-              <Text style={styles.infoCardBody}>
-                Found a bug or have an idea? Let us know and we{"'"}ll get right on it.
-              </Text>
-            </Animated.View>
-          </View>
         </Animated.View>
       </ScrollView>
 
@@ -502,29 +485,6 @@ const styles = StyleSheet.create({
     fontFamily: "Rubik_600SemiBold",
     fontSize: 16,
     color: "#FFF",
-  },
-  infoCards: {
-    width: "100%",
-    gap: 12,
-  },
-  infoCard: {
-    backgroundColor: Colors.surface,
-    borderRadius: 14,
-    padding: 18,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    gap: 8,
-  },
-  infoCardTitle: {
-    fontFamily: "Rubik_600SemiBold",
-    fontSize: 15,
-    color: Colors.text,
-  },
-  infoCardBody: {
-    fontFamily: "Rubik_400Regular",
-    fontSize: 13,
-    color: Colors.textSecondary,
-    lineHeight: 19,
   },
   modalBackground: {
     flex: 1,
