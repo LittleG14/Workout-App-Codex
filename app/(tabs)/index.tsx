@@ -6,6 +6,7 @@ import {
   ScrollView,
   Pressable,
   Platform,
+  Image,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
@@ -295,8 +296,15 @@ export default function GenerateScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>Swole House</Text>
-          <Text style={styles.headerSubtitle}>Build your workout</Text>
+          <View>
+            <Text style={styles.headerTitle}>Swole House</Text>
+            <Text style={styles.headerSubtitle}>Build your workout</Text>
+          </View>
+          <Image
+            source={require("@/assets/images/logo-transparent.png")}
+            style={styles.headerLogo}
+            resizeMode="contain"
+          />
         </View>
 
         <Animated.View entering={FadeIn.delay(100).duration(400)}>
@@ -465,8 +473,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     marginTop: 12,
     marginBottom: 24,
+  },
+  headerLogo: {
+    width: 64,
+    height: 44,
   },
   headerTitle: {
     fontSize: 32,
