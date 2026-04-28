@@ -33,6 +33,9 @@ interface AuthContextValue {
   login: (email: string, password: string) => Promise<void>;
   register: (name: string, email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
+  updateEmail: (newEmail: string) => Promise<void>;
+  updatePassword: (currentPassword: string, newPassword: string) => Promise<void>;
+  deleteAccount: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -88,9 +91,46 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   }, []);
 
+  const updateEmail = useCallback(async (newEmail: string) => {
+    const { error } = await supabase.auth.updateUser({
+      email: newEmail.trim().toLowerCase(),
+    });
+    if (error) throw new Error(error.message);
+  }, []);
+
+  const updatePassword = useCallback(async (currentPassword: string, newPassword: string) => {
+    const currentUser = (await supabase.auth.getUser()).data.user;
+    if (!currentUser?.email) throw new Error("No authenticated user found.");
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: currentUser.email,
+      password: currentPassword,
+    });
+    if (signInError) throw new Error("Current password is incorrect.");
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    if (error) throw new Error(error.message);
+  }, []);
+
+  const deleteAccount = useCallback(async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.access_token) throw new Error("No active session.");
+    const apiBase = process.env.EXPO_PUBLIC_DOMAIN
+      ? `https://${process.env.EXPO_PUBLIC_DOMAIN}`
+      : "http://localhost:5000";
+    const res = await fetch(`${apiBase}/api/account`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${session.access_token}` },
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error((body as any).message || "Failed to delete account.");
+    }
+    await clearAllAuth();
+    setUser(null);
+  }, []);
+
   const value = useMemo(
-    () => ({ user, isLoading, login, register, logout }),
-    [user, isLoading, login, register, logout]
+    () => ({ user, isLoading, login, register, logout, updateEmail, updatePassword, deleteAccount }),
+    [user, isLoading, login, register, logout, updateEmail, updatePassword, deleteAccount]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

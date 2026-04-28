@@ -38,6 +38,10 @@ Preferred communication style: Simple, everyday language.
 - **Provider**: Supabase Auth handles email/password sign-in/up.
 - **Session Management**: Supabase SDK manages tokens via a chunked `SecureStore` adapter.
 - **Server-side Validation**: Express backend validates Bearer tokens using Supabase.
+- **Account Management**: Users can tap their name card on the Profile tab to access an Account Settings sheet. Supports changing email (sends Supabase confirmation email), changing password (re-authenticates first), and deleting account (server-side via `SUPABASE_SERVICE_ROLE_KEY` + `DELETE /api/account`).
+
+### Environment Secrets
+- `SUPABASE_SERVICE_ROLE_KEY`: Required for server-side account deletion via Supabase Admin API.
 
 ### Workout Generation
 

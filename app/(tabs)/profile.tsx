@@ -11,12 +11,14 @@ import {
   TextInput,
   FlatList,
   Alert,
+  ActivityIndicator,
+  KeyboardAvoidingView,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect, useRouter } from "expo-router";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
-import Animated, { FadeInDown } from "react-native-reanimated";
+import Animated, { FadeInDown, FadeIn } from "react-native-reanimated";
 import Colors from "@/constants/colors";
 import { useAuth } from "@/contexts/AuthContext";
 import { apiRequest } from "@/lib/query-client";
@@ -174,9 +176,288 @@ function computeBMR(profile: UserProfile): number | null {
   return Math.round(base - 78);
 }
 
+type AccountSection = "menu" | "change_email" | "change_password" | "delete_confirm";
+
+function AccountSettingsSheet({
+  user,
+  onClose,
+  updateEmail,
+  updatePassword,
+  deleteAccount,
+  logout,
+}: {
+  user: { email?: string; name?: string } | null;
+  onClose: () => void;
+  updateEmail: (email: string) => Promise<void>;
+  updatePassword: (current: string, next: string) => Promise<void>;
+  deleteAccount: () => Promise<void>;
+  logout: () => Promise<void>;
+}) {
+  const insets = useSafeAreaInsets();
+  const [section, setSection] = useState<AccountSection>("menu");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+
+  const [newEmail, setNewEmail] = useState("");
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+
+  const reset = () => {
+    setError("");
+    setSuccess("");
+    setNewEmail("");
+    setCurrentPassword("");
+    setNewPassword("");
+    setConfirmPassword("");
+  };
+
+  const goTo = (s: AccountSection) => {
+    reset();
+    setSection(s);
+  };
+
+  const handleUpdateEmail = async () => {
+    if (!newEmail.trim()) { setError("Please enter a new email address."); return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail.trim())) { setError("Please enter a valid email address."); return; }
+    setLoading(true);
+    setError("");
+    try {
+      await updateEmail(newEmail.trim());
+      setSuccess("A confirmation email has been sent to your new address. Please check your inbox to complete the change.");
+      setNewEmail("");
+    } catch (e: any) {
+      setError(e.message || "Failed to update email.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUpdatePassword = async () => {
+    if (!currentPassword) { setError("Please enter your current password."); return; }
+    if (newPassword.length < 6) { setError("New password must be at least 6 characters."); return; }
+    if (newPassword !== confirmPassword) { setError("Passwords do not match."); return; }
+    setLoading(true);
+    setError("");
+    try {
+      await updatePassword(currentPassword, newPassword);
+      setSuccess("Password updated successfully.");
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch (e: any) {
+      setError(e.message || "Failed to update password.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      await deleteAccount();
+    } catch (e: any) {
+      setError(e.message || "Failed to delete account.");
+      setLoading(false);
+    }
+  };
+
+  const webTopPad = Platform.OS === "web" ? 20 : 0;
+
+  return (
+    <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
+      <View style={[accountStyles.sheet, { paddingTop: insets.top + webTopPad }]}>
+        <View style={accountStyles.header}>
+          {section !== "menu" ? (
+            <Pressable onPress={() => goTo("menu")} hitSlop={12} style={accountStyles.backBtn}>
+              <Ionicons name="chevron-back" size={22} color={Colors.text} />
+            </Pressable>
+          ) : (
+            <View style={{ width: 34 }} />
+          )}
+          <Text style={accountStyles.headerTitle}>
+            {section === "menu" ? "Account" :
+             section === "change_email" ? "Change Email" :
+             section === "change_password" ? "Change Password" :
+             "Delete Account"}
+          </Text>
+          <Pressable onPress={onClose} hitSlop={12} style={accountStyles.closeBtn}>
+            <Ionicons name="close" size={22} color={Colors.textMuted} />
+          </Pressable>
+        </View>
+
+        <ScrollView
+          contentContainerStyle={[accountStyles.body, { paddingBottom: insets.bottom + 32 }]}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          {section === "menu" && (
+            <>
+              <View style={accountStyles.infoBlock}>
+                <View style={accountStyles.avatarLg}>
+                  <Text style={accountStyles.avatarLgText}>
+                    {user?.name?.charAt(0)?.toUpperCase() || "?"}
+                  </Text>
+                </View>
+                <Text style={accountStyles.infoName}>{user?.name || "Swole House User"}</Text>
+                <Text style={accountStyles.infoEmail}>{user?.email || ""}</Text>
+              </View>
+
+              <View style={accountStyles.menuGroup}>
+                <Pressable style={accountStyles.menuRow} onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); goTo("change_email"); }}>
+                  <View style={[accountStyles.menuIcon, { backgroundColor: `${Colors.primary}18` }]}>
+                    <Ionicons name="mail-outline" size={18} color={Colors.primary} />
+                  </View>
+                  <Text style={accountStyles.menuRowText}>Change Email</Text>
+                  <Ionicons name="chevron-forward" size={16} color={Colors.textMuted} />
+                </Pressable>
+                <View style={accountStyles.menuDivider} />
+                <Pressable style={accountStyles.menuRow} onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); goTo("change_password"); }}>
+                  <View style={[accountStyles.menuIcon, { backgroundColor: `${Colors.yoga}18` }]}>
+                    <Ionicons name="lock-closed-outline" size={18} color={Colors.yoga} />
+                  </View>
+                  <Text style={accountStyles.menuRowText}>Change Password</Text>
+                  <Ionicons name="chevron-forward" size={16} color={Colors.textMuted} />
+                </Pressable>
+              </View>
+
+              <Pressable
+                style={accountStyles.deleteMenuRow}
+                onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); goTo("delete_confirm"); }}
+              >
+                <View style={[accountStyles.menuIcon, { backgroundColor: "#FF444418" }]}>
+                  <Ionicons name="trash-outline" size={18} color="#FF4444" />
+                </View>
+                <Text style={[accountStyles.menuRowText, { color: "#FF4444" }]}>Delete Account</Text>
+                <Ionicons name="chevron-forward" size={16} color="#FF4444" />
+              </Pressable>
+            </>
+          )}
+
+          {section === "change_email" && (
+            <>
+              <Text style={accountStyles.sectionDesc}>
+                Enter a new email address. We'll send a confirmation link to verify the change.
+              </Text>
+              <Text style={accountStyles.fieldLabel}>Current Email</Text>
+              <View style={accountStyles.staticField}>
+                <Text style={accountStyles.staticFieldText}>{user?.email || ""}</Text>
+              </View>
+              <Text style={accountStyles.fieldLabel}>New Email Address</Text>
+              <TextInput
+                style={accountStyles.input}
+                value={newEmail}
+                onChangeText={setNewEmail}
+                placeholder="new@example.com"
+                placeholderTextColor={Colors.textMuted}
+                autoCapitalize="none"
+                keyboardType="email-address"
+                autoCorrect={false}
+                editable={!loading}
+              />
+              {error ? <Text style={accountStyles.errorText}>{error}</Text> : null}
+              {success ? (
+                <Animated.View entering={FadeIn.duration(300)} style={accountStyles.successBox}>
+                  <Ionicons name="checkmark-circle" size={18} color={Colors.success} />
+                  <Text style={accountStyles.successText}>{success}</Text>
+                </Animated.View>
+              ) : null}
+              <Pressable
+                style={[accountStyles.actionBtn, loading && accountStyles.actionBtnDisabled]}
+                onPress={handleUpdateEmail}
+                disabled={loading}
+              >
+                {loading ? <ActivityIndicator color="#FFF" size="small" /> : <Text style={accountStyles.actionBtnText}>Send Confirmation Email</Text>}
+              </Pressable>
+            </>
+          )}
+
+          {section === "change_password" && (
+            <>
+              <Text style={accountStyles.sectionDesc}>
+                Enter your current password to confirm your identity, then set a new one.
+              </Text>
+              <Text style={accountStyles.fieldLabel}>Current Password</Text>
+              <TextInput
+                style={accountStyles.input}
+                value={currentPassword}
+                onChangeText={setCurrentPassword}
+                placeholder="••••••••"
+                placeholderTextColor={Colors.textMuted}
+                secureTextEntry
+                editable={!loading}
+              />
+              <Text style={accountStyles.fieldLabel}>New Password</Text>
+              <TextInput
+                style={accountStyles.input}
+                value={newPassword}
+                onChangeText={setNewPassword}
+                placeholder="Min. 6 characters"
+                placeholderTextColor={Colors.textMuted}
+                secureTextEntry
+                editable={!loading}
+              />
+              <Text style={accountStyles.fieldLabel}>Confirm New Password</Text>
+              <TextInput
+                style={accountStyles.input}
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+                placeholder="Repeat new password"
+                placeholderTextColor={Colors.textMuted}
+                secureTextEntry
+                editable={!loading}
+              />
+              {error ? <Text style={accountStyles.errorText}>{error}</Text> : null}
+              {success ? (
+                <Animated.View entering={FadeIn.duration(300)} style={accountStyles.successBox}>
+                  <Ionicons name="checkmark-circle" size={18} color={Colors.success} />
+                  <Text style={accountStyles.successText}>{success}</Text>
+                </Animated.View>
+              ) : null}
+              <Pressable
+                style={[accountStyles.actionBtn, loading && accountStyles.actionBtnDisabled]}
+                onPress={handleUpdatePassword}
+                disabled={loading}
+              >
+                {loading ? <ActivityIndicator color="#FFF" size="small" /> : <Text style={accountStyles.actionBtnText}>Update Password</Text>}
+              </Pressable>
+            </>
+          )}
+
+          {section === "delete_confirm" && (
+            <>
+              <View style={accountStyles.dangerIcon}>
+                <Ionicons name="warning" size={40} color="#FF4444" />
+              </View>
+              <Text style={accountStyles.dangerTitle}>Delete Your Account?</Text>
+              <Text style={accountStyles.dangerDesc}>
+                This will permanently delete your account and all associated data including your workout history and feedback submissions. This action{" "}
+                <Text style={{ fontFamily: "Rubik_700Bold" }}>cannot be undone.</Text>
+              </Text>
+              {error ? <Text style={accountStyles.errorText}>{error}</Text> : null}
+              <Pressable
+                style={[accountStyles.deleteBtn, loading && accountStyles.actionBtnDisabled]}
+                onPress={handleDeleteAccount}
+                disabled={loading}
+              >
+                {loading ? <ActivityIndicator color="#FFF" size="small" /> : <Text style={accountStyles.actionBtnText}>Yes, Delete My Account</Text>}
+              </Pressable>
+              <Pressable style={accountStyles.cancelBtn} onPress={() => goTo("menu")} disabled={loading}>
+                <Text style={accountStyles.cancelBtnText}>Cancel</Text>
+              </Pressable>
+            </>
+          )}
+        </ScrollView>
+      </View>
+    </KeyboardAvoidingView>
+  );
+}
+
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
-  const { user, logout } = useAuth();
+  const { user, logout, updateEmail, updatePassword, deleteAccount } = useAuth();
   const router = useRouter();
   const webTopPad = Platform.OS === "web" ? 67 : 0;
   const webBottomPad = Platform.OS === "web" ? 34 : 0;
@@ -194,6 +475,7 @@ export default function ProfileScreen() {
 
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [showPRModal, setShowPRModal] = useState(false);
+  const [showAccountSettings, setShowAccountSettings] = useState(false);
   const [confirmLogout, setConfirmLogout] = useState(false);
   const [prCategory, setPrCategory] = useState<PRCategory>("weight_lifting");
   const [prData, setPrData] = useState<ExercisePR[]>([]);
@@ -255,7 +537,14 @@ export default function ProfileScreen() {
         showsVerticalScrollIndicator={false}
       >
         <Animated.View entering={FadeInDown.delay(50).duration(400)}>
-          <View style={styles.accountCard}>
+          <Pressable
+            style={styles.accountCard}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              setShowAccountSettings(true);
+            }}
+            testID="account-card"
+          >
             <View style={styles.accountAvatar}>
               <Text style={styles.accountAvatarText}>
                 {user?.name?.charAt(0)?.toUpperCase() || "?"}
@@ -265,7 +554,8 @@ export default function ProfileScreen() {
               <Text style={styles.accountName} numberOfLines={1}>{user?.name || "Swole House User"}</Text>
               <Text style={styles.accountEmail} numberOfLines={1}>{user?.email || ""}</Text>
             </View>
-          </View>
+            <Ionicons name="chevron-forward" size={18} color={Colors.textMuted} />
+          </Pressable>
         </Animated.View>
 
         <Animated.View entering={FadeInDown.delay(100).duration(400)}>
@@ -521,6 +811,22 @@ export default function ProfileScreen() {
           )}
         </Animated.View>
       </ScrollView>
+
+      <Modal
+        visible={showAccountSettings}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowAccountSettings(false)}
+      >
+        <AccountSettingsSheet
+          user={user}
+          onClose={() => setShowAccountSettings(false)}
+          updateEmail={updateEmail}
+          updatePassword={updatePassword}
+          deleteAccount={deleteAccount}
+          logout={logout}
+        />
+      </Modal>
 
       <Modal
         visible={showPRModal}
@@ -1191,5 +1497,248 @@ const styles = StyleSheet.create({
     fontFamily: "Rubik_600SemiBold",
     fontSize: 14,
     color: "#FFF",
+  },
+});
+
+const accountStyles = StyleSheet.create({
+  sheet: {
+    flex: 1,
+    backgroundColor: Colors.background,
+  },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  backBtn: {
+    width: 34,
+    alignItems: "flex-start",
+  },
+  closeBtn: {
+    width: 34,
+    alignItems: "flex-end",
+  },
+  headerTitle: {
+    flex: 1,
+    textAlign: "center",
+    fontFamily: "Rubik_700Bold",
+    fontSize: 17,
+    color: Colors.text,
+  },
+  body: {
+    paddingHorizontal: 20,
+    paddingTop: 24,
+  },
+  infoBlock: {
+    alignItems: "center",
+    marginBottom: 32,
+  },
+  avatarLg: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: `${Colors.primary}22`,
+    borderWidth: 2,
+    borderColor: Colors.primary,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 12,
+  },
+  avatarLgText: {
+    fontFamily: "Rubik_700Bold",
+    fontSize: 28,
+    color: Colors.primary,
+  },
+  infoName: {
+    fontFamily: "Rubik_600SemiBold",
+    fontSize: 18,
+    color: Colors.text,
+    marginBottom: 4,
+  },
+  infoEmail: {
+    fontFamily: "Rubik_400Regular",
+    fontSize: 14,
+    color: Colors.textSecondary,
+  },
+  menuGroup: {
+    backgroundColor: Colors.surface,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    marginBottom: 12,
+    overflow: "hidden",
+  },
+  menuRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 15,
+    gap: 12,
+  },
+  menuDivider: {
+    height: 1,
+    backgroundColor: Colors.border,
+    marginLeft: 52,
+  },
+  menuIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 9,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  menuRowText: {
+    flex: 1,
+    fontFamily: "Rubik_500Medium",
+    fontSize: 15,
+    color: Colors.text,
+  },
+  deleteMenuRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 15,
+    gap: 12,
+    backgroundColor: Colors.surface,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "#FF444430",
+    marginBottom: 12,
+    overflow: "hidden",
+  },
+  sectionDesc: {
+    fontFamily: "Rubik_400Regular",
+    fontSize: 14,
+    color: Colors.textSecondary,
+    lineHeight: 21,
+    marginBottom: 24,
+  },
+  fieldLabel: {
+    fontFamily: "Rubik_500Medium",
+    fontSize: 12,
+    color: Colors.textSecondary,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    marginBottom: 8,
+  },
+  staticField: {
+    backgroundColor: Colors.surface,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    marginBottom: 20,
+  },
+  staticFieldText: {
+    fontFamily: "Rubik_400Regular",
+    fontSize: 15,
+    color: Colors.textMuted,
+  },
+  input: {
+    backgroundColor: Colors.surface,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    color: Colors.text,
+    fontFamily: "Rubik_400Regular",
+    fontSize: 15,
+    marginBottom: 20,
+  },
+  errorText: {
+    fontFamily: "Rubik_400Regular",
+    fontSize: 14,
+    color: Colors.error,
+    marginBottom: 16,
+    textAlign: "center",
+  },
+  successBox: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
+    backgroundColor: `${Colors.success}18`,
+    borderRadius: 12,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: `${Colors.success}40`,
+    marginBottom: 20,
+  },
+  successText: {
+    flex: 1,
+    fontFamily: "Rubik_400Regular",
+    fontSize: 14,
+    color: Colors.success,
+    lineHeight: 20,
+  },
+  actionBtn: {
+    backgroundColor: Colors.primary,
+    borderRadius: 14,
+    paddingVertical: 16,
+    alignItems: "center",
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  actionBtnDisabled: {
+    backgroundColor: Colors.surfaceHighlight,
+    shadowOpacity: 0,
+    elevation: 0,
+  },
+  actionBtnText: {
+    fontFamily: "Rubik_600SemiBold",
+    fontSize: 16,
+    color: "#FFF",
+  },
+  dangerIcon: {
+    alignItems: "center",
+    marginBottom: 16,
+    marginTop: 8,
+  },
+  dangerTitle: {
+    fontFamily: "Rubik_700Bold",
+    fontSize: 20,
+    color: Colors.text,
+    textAlign: "center",
+    marginBottom: 12,
+  },
+  dangerDesc: {
+    fontFamily: "Rubik_400Regular",
+    fontSize: 14,
+    color: Colors.textSecondary,
+    textAlign: "center",
+    lineHeight: 22,
+    marginBottom: 32,
+  },
+  deleteBtn: {
+    backgroundColor: "#FF4444",
+    borderRadius: 14,
+    paddingVertical: 16,
+    alignItems: "center",
+    marginBottom: 12,
+    shadowColor: "#FF4444",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  cancelBtn: {
+    borderRadius: 14,
+    paddingVertical: 16,
+    alignItems: "center",
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  cancelBtnText: {
+    fontFamily: "Rubik_500Medium",
+    fontSize: 16,
+    color: Colors.textSecondary,
   },
 });

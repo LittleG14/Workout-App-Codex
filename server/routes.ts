@@ -1,5 +1,6 @@
 import type { Express } from "express";
 import { createServer, type Server } from "node:http";
+import { createClient } from "@supabase/supabase-js";
 import { storage } from "./storage";
 import { authMiddleware, type AuthRequest } from "./auth";
 import { Resend } from "resend";
@@ -9,6 +10,14 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 if (!process.env.RESEND_API_KEY) {
   console.warn("WARNING: RESEND_API_KEY is not set — confirmation emails will not be sent.");
 }
+
+const supabaseAdmin = process.env.SUPABASE_SERVICE_ROLE_KEY
+  ? createClient(
+      process.env.EXPO_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY,
+      { auth: { persistSession: false, autoRefreshToken: false } }
+    )
+  : null;
 
 function escapeHtml(text: string): string {
   return text
@@ -311,6 +320,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (err) {
       console.error("Test email send failed:", err);
       res.status(500).json({ error: "Failed to send test email", detail: String(err) });
+    }
+  });
+
+  app.delete("/api/account", authMiddleware, async (req: AuthRequest, res) => {
+    if (!supabaseAdmin) {
+      res.status(503).json({ message: "Account deletion is not configured on this server." });
+      return;
+    }
+    try {
+      const { error } = await supabaseAdmin.auth.admin.deleteUser(req.userId!);
+      if (error) {
+        console.error("Delete user error:", error);
+        res.status(500).json({ message: "Failed to delete account." });
+        return;
+      }
+      res.json({ ok: true });
+    } catch (err) {
+      console.error("Delete account error:", err);
+      res.status(500).json({ message: "Failed to delete account." });
     }
   });
 
