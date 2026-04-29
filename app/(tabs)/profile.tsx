@@ -121,6 +121,9 @@ function computePRs(
     }
 
     allExercises.forEach(({ ex, date }) => {
+      if (!prMap.has(ex.exercise.id)) {
+        prMap.set(ex.exercise.id, { exercise: ex.exercise });
+      }
       const entry = prMap.get(ex.exercise.id);
       if (!entry) return;
 
