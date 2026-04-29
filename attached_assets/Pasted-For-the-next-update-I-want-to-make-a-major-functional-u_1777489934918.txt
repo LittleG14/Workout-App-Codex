@@ -1,0 +1,16 @@
+For the next update, I want to make a major functional update. I want to build out functionality for users to add their own exercises to their workouts that are then available to be reused for future workouts. ## It is extremely important to only change the front end user experience in the necessary spots laid out below. 
+
+Backend Functionality Update:
+I believe the best way to provide this custom of an experience for our users is to maintain our current hardcoded list of exercises as the default exercises that get loaded into a table in Supabase unique to the user id, and is linked to each users account when they sign up. Then the workout generator references the user’s exercises table in Supabase rather than our current hardcoded list. I believe this won’t be to heavy of an ask just need to change where the exercises are being pulled from, and we can keep our current list hardcoded so that it can be uploaded to each new user’s account when they sign up as a default table. 
+
+This new format for exercise storage should also auto update the manual exercise selections, and exercise selections within the PRs and Last button with any additions or deletions. 
+
+Exercise Addition Functionality:
+I want this functionality to be activated from within the manual exercise changer (the pencil icon in the exercise tile) after the workout is generated. When they click the pencil icon and the menu pops up for them to choose an exercise, I want there to be a new tab at the end of the category list called “New +”. When they tap that tab then I want there to be a menu for the user to fill out so that the exercise can be saved properly to the exercise tables. They will be as follows:
+Category: this will be a drop down list with multiple selection checkboxes of our current categories. I want this to have the ability of an exercise to be available in multiple categories if the user wishes (ie. Kettle bell swings available for both weights pull workouts, and circuit workouts). 
+Exercise Name, this will be a text box with 40 character limit. 
+Muscle Group(s), a drop down list of the current available muscle groups set up as a multiple selection checkbox list so that if the exercise targets multiple muscles it can be used for those workouts. 
+Equipment, make it a normal dropdown of what equipment the user will need for their exercise. We can use the current list we have for our exercises. 
+Compound or Isolation, just a dropdown selection for if an exercise is a compound or isolation exercise. 
+Then a save button that places the exercise and its characteristics in the exercise tile the user was editing as well as saving the exercise to the workout table for that specific user. 
+Please lay out your plan before starting any work, since this is such a big backend change I would like to make sure I was clear in what I was asking to you. 
