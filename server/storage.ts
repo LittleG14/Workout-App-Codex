@@ -1,6 +1,6 @@
 import { eq, desc } from "drizzle-orm";
 import { db } from "./db";
-import { workouts, feedback, type WorkoutRow, type FeedbackRow } from "@shared/schema";
+import { workouts, feedback, customExercises, type WorkoutRow, type FeedbackRow, type CustomExerciseRow } from "@shared/schema";
 
 export interface IStorage {
   saveWorkout(userId: string, workoutData: string, id: string, name: string, topCategory: string, createdAt: string): Promise<WorkoutRow>;
@@ -10,6 +10,9 @@ export interface IStorage {
   deleteWorkout(id: string, userId: string): Promise<void>;
   saveFeedback(userId: string, id: string, date: string, selection: string, category: string, submission: string): Promise<FeedbackRow>;
   getFeedback(userId: string): Promise<FeedbackRow[]>;
+  saveCustomExercise(userId: string, id: string, name: string, muscles: string, equipment: string, type: string, topCategories: string, weightSubCategories: string, createdAt: string): Promise<CustomExerciseRow>;
+  getCustomExercises(userId: string): Promise<CustomExerciseRow[]>;
+  deleteCustomExercise(id: string, userId: string): Promise<void>;
 }
 
 export class DbStorage implements IStorage {
@@ -84,6 +87,37 @@ export class DbStorage implements IStorage {
       .from(feedback)
       .where(eq(feedback.userId, userId))
       .orderBy(desc(feedback.date));
+  }
+
+  async saveCustomExercise(
+    userId: string,
+    id: string,
+    name: string,
+    muscles: string,
+    equipment: string,
+    type: string,
+    topCategories: string,
+    weightSubCategories: string,
+    createdAt: string
+  ): Promise<CustomExerciseRow> {
+    const row = { id, userId, name, muscles, equipment, type, topCategories, weightSubCategories, createdAt };
+    await db.insert(customExercises).values(row);
+    return row;
+  }
+
+  async getCustomExercises(userId: string): Promise<CustomExerciseRow[]> {
+    return db
+      .select()
+      .from(customExercises)
+      .where(eq(customExercises.userId, userId))
+      .orderBy(customExercises.createdAt);
+  }
+
+  async deleteCustomExercise(id: string, userId: string): Promise<void> {
+    const rows = await db.select().from(customExercises).where(eq(customExercises.id, id)).limit(1);
+    const row = rows[0];
+    if (!row || row.userId !== userId) return;
+    await db.delete(customExercises).where(eq(customExercises.id, id));
   }
 }
 

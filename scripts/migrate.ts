@@ -31,19 +31,15 @@ async function migrate() {
 
   console.log("Running migrations...");
 
-  // Drop the old FK constraint (links workouts to our custom users table).
-  // Supabase Auth now owns user identity — workouts reference auth user UUIDs directly.
   await sql`
     ALTER TABLE workouts
       DROP CONSTRAINT IF EXISTS workouts_user_id_fkey
   `;
   console.log("✓ Dropped FK constraint workouts_user_id_fkey (if existed)");
 
-  // Drop the old users table — Supabase Auth manages user records now.
   await sql`DROP TABLE IF EXISTS users CASCADE`;
   console.log("✓ Dropped users table (if existed)");
 
-  // Ensure workouts table exists without FK.
   await sql`
     CREATE TABLE IF NOT EXISTS workouts (
       id TEXT PRIMARY KEY,
@@ -56,7 +52,6 @@ async function migrate() {
   `;
   console.log("✓ workouts table ready");
 
-  // Ensure feedback table exists.
   await sql`
     CREATE TABLE IF NOT EXISTS feedback (
       id TEXT PRIMARY KEY,
@@ -68,6 +63,21 @@ async function migrate() {
     )
   `;
   console.log("✓ feedback table ready");
+
+  await sql`
+    CREATE TABLE IF NOT EXISTS custom_exercises (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      name TEXT NOT NULL,
+      muscles TEXT NOT NULL,
+      equipment TEXT NOT NULL,
+      type TEXT NOT NULL,
+      top_categories TEXT NOT NULL,
+      weight_sub_categories TEXT NOT NULL,
+      created_at TEXT NOT NULL
+    )
+  `;
+  console.log("✓ custom_exercises table ready");
 
   await sql.end();
   console.log("Migration complete!");

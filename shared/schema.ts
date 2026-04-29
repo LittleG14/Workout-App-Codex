@@ -23,3 +23,18 @@ export const feedback = pgTable("feedback", {
 
 export type InsertFeedback = typeof feedback.$inferInsert;
 export type FeedbackRow = typeof feedback.$inferSelect;
+
+export const customExercises = pgTable("custom_exercises", {
+  id: text("id").primaryKey(),
+  userId: text("user_id").notNull(),
+  name: text("name").notNull(),
+  muscles: text("muscles").notNull(),
+  equipment: text("equipment").notNull(),
+  type: text("type").notNull(),
+  topCategories: text("top_categories").notNull(),
+  weightSubCategories: text("weight_sub_categories").notNull(),
+  createdAt: text("created_at").notNull(),
+});
+
+export type InsertCustomExercise = typeof customExercises.$inferInsert;
+export type CustomExerciseRow = typeof customExercises.$inferSelect;

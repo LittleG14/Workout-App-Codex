@@ -323,6 +323,91 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/exercises", authMiddleware, async (req: AuthRequest, res) => {
+    try {
+      const rows = await storage.getCustomExercises(req.userId!);
+      const exercises = rows.map((row) => ({
+        id: row.id,
+        name: row.name,
+        muscles: JSON.parse(row.muscles),
+        equipment: row.equipment,
+        type: row.type,
+        topCategories: JSON.parse(row.topCategories),
+        weightSubCategories: JSON.parse(row.weightSubCategories),
+        createdAt: row.createdAt,
+      }));
+      res.json({ exercises });
+    } catch (err) {
+      console.error("Get custom exercises error:", err);
+      res.status(500).json({ message: "Failed to fetch exercises" });
+    }
+  });
+
+  app.post("/api/exercises", authMiddleware, async (req: AuthRequest, res) => {
+    try {
+      const { name, muscles, equipment, type, topCategories, weightSubCategories } = req.body;
+      if (!name || !muscles || !equipment || !type || !topCategories) {
+        res.status(400).json({ message: "name, muscles, equipment, type, and topCategories are required" });
+        return;
+      }
+      if (typeof name !== "string" || name.trim().length === 0 || name.length > 40) {
+        res.status(400).json({ message: "name must be between 1 and 40 characters" });
+        return;
+      }
+      if (!Array.isArray(topCategories) || topCategories.length === 0) {
+        res.status(400).json({ message: "At least one category is required" });
+        return;
+      }
+      if (!Array.isArray(muscles) || muscles.length === 0) {
+        res.status(400).json({ message: "At least one muscle group is required" });
+        return;
+      }
+      if (type !== "compound" && type !== "isolation") {
+        res.status(400).json({ message: "type must be compound or isolation" });
+        return;
+      }
+      const id = "cx_" + Date.now().toString() + Math.random().toString(36).substr(2, 6);
+      const createdAt = new Date().toISOString();
+      await storage.saveCustomExercise(
+        req.userId!,
+        id,
+        name.trim(),
+        JSON.stringify(muscles),
+        equipment,
+        type,
+        JSON.stringify(topCategories),
+        JSON.stringify(weightSubCategories ?? []),
+        createdAt
+      );
+      res.status(201).json({
+        exercise: {
+          id,
+          name: name.trim(),
+          muscles,
+          equipment,
+          type,
+          topCategories,
+          weightSubCategories: weightSubCategories ?? [],
+          createdAt,
+        },
+      });
+    } catch (err) {
+      console.error("Save custom exercise error:", err);
+      res.status(500).json({ message: "Failed to save exercise" });
+    }
+  });
+
+  app.delete("/api/exercises/:id", authMiddleware, async (req: AuthRequest, res) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteCustomExercise(id, req.userId!);
+      res.json({ ok: true });
+    } catch (err) {
+      console.error("Delete custom exercise error:", err);
+      res.status(500).json({ message: "Failed to delete exercise" });
+    }
+  });
+
   app.delete("/api/account", authMiddleware, async (req: AuthRequest, res) => {
     if (!supabaseAdmin) {
       res.status(503).json({ message: "Account deletion is not configured on this server." });

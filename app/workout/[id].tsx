@@ -37,8 +37,16 @@ import {
   CARDIO_RUNNING,
   CARDIO_MIXED,
   MOBILITY_EXERCISES,
+  WEIGHT_LIFTING_LABELS,
+  EQUIPMENT_OPTIONS,
+  CustomExerciseData,
+  TopCategory,
+  MuscleGroup,
+  WeightLiftingType,
+  ExerciseCategory,
 } from "@/lib/exercises";
 import { getLocalWorkoutsOnly, updateWorkout } from "@/lib/workout-storage";
+import { useCustomExercises } from "@/lib/useCustomExercises";
 
 type PickerCategory = 'weight_lifting' | 'circuit' | 'yoga' | 'cardio' | 'mobility';
 
@@ -50,13 +58,45 @@ const PICKER_TABS: { key: PickerCategory; label: string; icon: string; color: st
   { key: 'mobility', label: 'Mobility', icon: 'body', color: Colors.mobility },
 ];
 
-function getPickerExercises(cat: PickerCategory): Exercise[] {
+const MUSCLE_GROUP_OPTIONS: MuscleGroup[] = [
+  'chest', 'triceps', 'back', 'biceps', 'shoulders', 'abs',
+  'quads', 'hamstrings', 'glutes', 'calves', 'full_body',
+];
+
+const MUSCLE_GROUP_LABELS: Record<MuscleGroup, string> = {
+  chest: 'Chest', triceps: 'Triceps', back: 'Back', biceps: 'Biceps',
+  shoulders: 'Shoulders', abs: 'Abs', quads: 'Quads', hamstrings: 'Hamstrings',
+  glutes: 'Glutes', calves: 'Calves', full_body: 'Full Body',
+};
+
+const WEIGHT_SUB_OPTIONS: { key: WeightLiftingType; label: string }[] = [
+  { key: 'chest_triceps', label: 'Chest & Triceps' },
+  { key: 'back_biceps', label: 'Back & Biceps' },
+  { key: 'shoulders_abs', label: 'Shoulders & Abs' },
+  { key: 'legs', label: 'Legs' },
+  { key: 'full_body', label: 'Full Body' },
+  { key: 'push', label: 'Push' },
+  { key: 'pull', label: 'Pull' },
+];
+
+const TOP_CATEGORY_FORM_OPTIONS: { key: TopCategory; label: string }[] = [
+  { key: 'weight_lifting', label: 'Weight Lifting' },
+  { key: 'circuit', label: 'Circuit Training' },
+  { key: 'yoga', label: 'Yoga' },
+  { key: 'cardio', label: 'Cardio' },
+  { key: 'mobility', label: 'Mobility' },
+];
+
+function getPickerExercises(cat: PickerCategory, customExercises?: CustomExerciseData[]): Exercise[] {
+  const custom = (customExercises ?? [])
+    .filter(c => c.topCategories.includes(cat as TopCategory))
+    .map(c => ({ id: c.id, name: c.name, muscles: c.muscles, category: c.type, equipment: c.equipment }));
   switch (cat) {
-    case 'weight_lifting': return WEIGHT_EXERCISES;
-    case 'circuit': return CIRCUIT_EXERCISES;
-    case 'yoga': return [...YOGA_CORE_POSES, ...YOGA_FLEX_POSES];
-    case 'cardio': return [...CARDIO_RUNNING, ...CARDIO_MIXED];
-    case 'mobility': return MOBILITY_EXERCISES;
+    case 'weight_lifting': return [...WEIGHT_EXERCISES, ...custom];
+    case 'circuit': return [...CIRCUIT_EXERCISES, ...custom];
+    case 'yoga': return [...YOGA_CORE_POSES, ...YOGA_FLEX_POSES, ...custom];
+    case 'cardio': return [...CARDIO_RUNNING, ...CARDIO_MIXED, ...custom];
+    case 'mobility': return [...MOBILITY_EXERCISES, ...custom];
   }
 }
 
@@ -376,8 +416,8 @@ export default function WorkoutDetailScreen() {
     const isLastExercise = exerciseIndex === workout.exercises.length - 1;
     const isCoreSlot = isLastExercise && workout.includeCore;
     const replacement = isCoreSlot
-      ? findCoreReplacementExercise(target.exercise, usedIds)
-      : findReplacementExercise(target.exercise, workout.topCategory, workout.subType, usedIds);
+      ? findCoreReplacementExercise(target.exercise, usedIds, customExercises)
+      : findReplacementExercise(target.exercise, workout.topCategory, workout.subType, usedIds, customExercises);
     if (!replacement) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     const updated = { ...workout, exercises: [...workout.exercises] };
@@ -391,7 +431,7 @@ export default function WorkoutDetailScreen() {
     const pair = workout.supersets[supersetIndex];
     const target = slot === 'A' ? pair.exerciseA : pair.exerciseB;
     const usedIds = getAllUsedIds(workout);
-    const replacement = findReplacementExercise(target.exercise, workout.topCategory, workout.subType, usedIds);
+    const replacement = findReplacementExercise(target.exercise, workout.topCategory, workout.subType, usedIds, customExercises);
     if (!replacement) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     const updatedSupersets = [...workout.supersets];
@@ -409,7 +449,7 @@ export default function WorkoutDetailScreen() {
     const block = workout.circuitBlocks[blockIndex];
     const target = block.exercises[exIndex];
     const usedIds = getAllUsedIds(workout);
-    const replacement = findReplacementExercise(target.exercise, workout.topCategory, workout.subType, usedIds);
+    const replacement = findReplacementExercise(target.exercise, workout.topCategory, workout.subType, usedIds, customExercises);
     if (!replacement) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     const updatedBlocks = [...workout.circuitBlocks];
@@ -530,11 +570,70 @@ export default function WorkoutDetailScreen() {
   });
   const [pickerCategory, setPickerCategory] = useState<PickerCategory>('weight_lifting');
   const [pickerSearch, setPickerSearch] = useState('');
+  const [pickerIsNew, setPickerIsNew] = useState(false);
+
+  const [newExName, setNewExName] = useState('');
+  const [newExCategories, setNewExCategories] = useState<Set<TopCategory>>(new Set());
+  const [newExWeightSubs, setNewExWeightSubs] = useState<Set<WeightLiftingType>>(new Set());
+  const [newExMuscles, setNewExMuscles] = useState<Set<MuscleGroup>>(new Set());
+  const [newExEquipment, setNewExEquipment] = useState('');
+  const [newExType, setNewExType] = useState<ExerciseCategory>('compound');
+  const [newExSaving, setNewExSaving] = useState(false);
+  const [newExError, setNewExError] = useState('');
+
+  const { customExercises, createExercise } = useCustomExercises();
+
+  const resetNewExForm = () => {
+    setNewExName('');
+    setNewExCategories(new Set());
+    setNewExWeightSubs(new Set());
+    setNewExMuscles(new Set());
+    setNewExEquipment('');
+    setNewExType('compound');
+    setNewExError('');
+  };
 
   const openPicker = (location: PickerLocation) => {
     setPickerSearch('');
+    setPickerIsNew(false);
+    resetNewExForm();
     setPickerModal({ visible: true, location });
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  };
+
+  const handleSaveNewExercise = async () => {
+    const trimmedName = newExName.trim();
+    if (!trimmedName) { setNewExError('Exercise name is required.'); return; }
+    if (trimmedName.length > 40) { setNewExError('Name must be 40 characters or less.'); return; }
+    if (newExCategories.size === 0) { setNewExError('Select at least one category.'); return; }
+    if (newExMuscles.size === 0) { setNewExError('Select at least one muscle group.'); return; }
+    if (!newExEquipment) { setNewExError('Select equipment.'); return; }
+    setNewExError('');
+    setNewExSaving(true);
+    try {
+      const saved = await createExercise({
+        name: trimmedName,
+        muscles: Array.from(newExMuscles),
+        equipment: newExEquipment,
+        type: newExType,
+        topCategories: Array.from(newExCategories),
+        weightSubCategories: Array.from(newExWeightSubs),
+      });
+      const exercise: Exercise = {
+        id: saved.id,
+        name: saved.name,
+        muscles: saved.muscles,
+        category: saved.type,
+        equipment: saved.equipment,
+      };
+      await handleSelectExercise(exercise);
+      resetNewExForm();
+      setPickerIsNew(false);
+    } catch {
+      setNewExError('Failed to save. Please try again.');
+    } finally {
+      setNewExSaving(false);
+    }
   };
 
   const handleSelectExercise = async (exercise: Exercise) => {
@@ -592,7 +691,7 @@ export default function WorkoutDetailScreen() {
   const handleBalance = async (balance: CircuitBalance) => {
     if (!workout || balance === currentBalance) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    const rebalanced = rebalanceCircuit(workout, balance);
+    const rebalanced = rebalanceCircuit(workout, balance, customExercises);
     setWorkout(rebalanced);
     await updateWorkout(rebalanced);
   };
@@ -898,67 +997,212 @@ export default function WorkoutDetailScreen() {
 
           <View style={styles.pickerCategoryRow}>
             {PICKER_TABS.map(tab => {
-              const isActive = pickerCategory === tab.key;
+              const isActive = !pickerIsNew && pickerCategory === tab.key;
               return (
                 <Pressable
                   key={tab.key}
                   style={[styles.pickerCategoryTab, isActive && { backgroundColor: `${tab.color}18`, borderBottomWidth: 2, borderBottomColor: tab.color }]}
-                  onPress={() => { setPickerCategory(tab.key); setPickerSearch(''); }}
+                  onPress={() => { setPickerCategory(tab.key); setPickerSearch(''); setPickerIsNew(false); }}
                 >
                   <Ionicons name={tab.icon as any} size={14} color={isActive ? tab.color : Colors.textMuted} />
                   <Text style={[styles.pickerCategoryTabText, isActive && { color: tab.color }]}>{tab.label}</Text>
                 </Pressable>
               );
             })}
+            <Pressable
+              style={[styles.pickerCategoryTab, pickerIsNew && { backgroundColor: `${Colors.primary}18`, borderBottomWidth: 2, borderBottomColor: Colors.primary }]}
+              onPress={() => { setPickerIsNew(true); setPickerSearch(''); resetNewExForm(); }}
+            >
+              <Ionicons name="add-circle-outline" size={14} color={pickerIsNew ? Colors.primary : Colors.textMuted} />
+              <Text style={[styles.pickerCategoryTabText, pickerIsNew && { color: Colors.primary }]}>New +</Text>
+            </Pressable>
           </View>
 
-          <View style={styles.pickerSearchContainer}>
-            <Ionicons name="search" size={16} color={Colors.textMuted} />
-            <TextInput
-              style={styles.pickerSearchInput}
-              value={pickerSearch}
-              onChangeText={setPickerSearch}
-              placeholder="Search exercises..."
-              placeholderTextColor={Colors.textMuted}
-              returnKeyType="search"
-              autoCorrect={false}
-            />
-            {pickerSearch.length > 0 && (
-              <Pressable onPress={() => setPickerSearch('')} hitSlop={8}>
-                <Ionicons name="close-circle" size={16} color={Colors.textMuted} />
-              </Pressable>
-            )}
-          </View>
+          {pickerIsNew ? (
+            <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.newExFormContent} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+              <Text style={styles.newExSectionLabel}>Category <Text style={styles.newExRequired}>*</Text></Text>
+              <View style={styles.newExChipRow}>
+                {TOP_CATEGORY_FORM_OPTIONS.map(opt => {
+                  const checked = newExCategories.has(opt.key);
+                  return (
+                    <Pressable
+                      key={opt.key}
+                      style={[styles.newExChip, checked && styles.newExChipActive]}
+                      onPress={() => {
+                        const next = new Set(newExCategories);
+                        if (checked) { next.delete(opt.key); if (opt.key === 'weight_lifting') setNewExWeightSubs(new Set()); }
+                        else next.add(opt.key);
+                        setNewExCategories(next);
+                      }}
+                    >
+                      {checked && <Ionicons name="checkmark" size={12} color={Colors.primary} style={{ marginRight: 4 }} />}
+                      <Text style={[styles.newExChipText, checked && styles.newExChipTextActive]}>{opt.label}</Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
 
-          <FlatList
-            data={getPickerExercises(pickerCategory).filter(ex =>
-              ex.name.toLowerCase().includes(pickerSearch.toLowerCase()) ||
-              ex.equipment.toLowerCase().includes(pickerSearch.toLowerCase())
-            )}
-            keyExtractor={item => item.id}
-            contentContainerStyle={styles.pickerListContent}
-            keyboardShouldPersistTaps="handled"
-            renderItem={({ item }) => {
-              const activeColor = PICKER_TABS.find(t => t.key === pickerCategory)?.color || Colors.primary;
-              return (
-                <Pressable style={styles.pickerExerciseRow} onPress={() => handleSelectExercise(item)}>
-                  <View style={styles.pickerExerciseInfo}>
-                    <Text style={styles.pickerExerciseName}>{item.name}</Text>
-                    <View style={styles.pickerExerciseMeta}>
-                      <Text style={styles.pickerExerciseEquipment}>{item.equipment}</Text>
-                      <View style={[styles.pickerCategoryBadge, { backgroundColor: item.category === 'compound' ? `${activeColor}18` : 'rgba(0,212,170,0.12)' }]}>
-                        <Text style={[styles.pickerCategoryBadgeText, { color: item.category === 'compound' ? activeColor : Colors.accent }]}>
-                          {item.category === 'compound' ? 'Compound' : 'Isolation'}
-                        </Text>
-                      </View>
-                    </View>
+              {newExCategories.has('weight_lifting') && (
+                <>
+                  <Text style={styles.newExSectionLabel}>Weight Splits <Text style={styles.newExHint}>(leave empty for all splits)</Text></Text>
+                  <View style={styles.newExChipRow}>
+                    {WEIGHT_SUB_OPTIONS.map(opt => {
+                      const checked = newExWeightSubs.has(opt.key);
+                      return (
+                        <Pressable
+                          key={opt.key}
+                          style={[styles.newExChip, checked && styles.newExChipActive]}
+                          onPress={() => {
+                            const next = new Set(newExWeightSubs);
+                            if (checked) next.delete(opt.key); else next.add(opt.key);
+                            setNewExWeightSubs(next);
+                          }}
+                        >
+                          {checked && <Ionicons name="checkmark" size={12} color={Colors.primary} style={{ marginRight: 4 }} />}
+                          <Text style={[styles.newExChipText, checked && styles.newExChipTextActive]}>{opt.label}</Text>
+                        </Pressable>
+                      );
+                    })}
                   </View>
-                  <Ionicons name="chevron-forward" size={18} color={Colors.textMuted} />
-                </Pressable>
-              );
-            }}
-            ItemSeparatorComponent={() => <View style={styles.pickerSeparator} />}
-          />
+                </>
+              )}
+
+              <Text style={styles.newExSectionLabel}>Exercise Name <Text style={styles.newExRequired}>*</Text></Text>
+              <View style={styles.newExInputRow}>
+                <TextInput
+                  style={styles.newExInput}
+                  value={newExName}
+                  onChangeText={t => setNewExName(t.slice(0, 40))}
+                  placeholder="e.g. Kettlebell Clean"
+                  placeholderTextColor={Colors.textMuted}
+                  autoCorrect={false}
+                  maxLength={40}
+                />
+                <Text style={styles.newExCharCount}>{newExName.length}/40</Text>
+              </View>
+
+              <Text style={styles.newExSectionLabel}>Muscle Group(s) <Text style={styles.newExRequired}>*</Text></Text>
+              <View style={styles.newExChipRow}>
+                {MUSCLE_GROUP_OPTIONS.map(mg => {
+                  const checked = newExMuscles.has(mg);
+                  return (
+                    <Pressable
+                      key={mg}
+                      style={[styles.newExChip, checked && styles.newExChipActive]}
+                      onPress={() => {
+                        const next = new Set(newExMuscles);
+                        if (checked) next.delete(mg); else next.add(mg);
+                        setNewExMuscles(next);
+                      }}
+                    >
+                      {checked && <Ionicons name="checkmark" size={12} color={Colors.primary} style={{ marginRight: 4 }} />}
+                      <Text style={[styles.newExChipText, checked && styles.newExChipTextActive]}>{MUSCLE_GROUP_LABELS[mg]}</Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+
+              <Text style={styles.newExSectionLabel}>Equipment <Text style={styles.newExRequired}>*</Text></Text>
+              <View style={styles.newExChipRow}>
+                {EQUIPMENT_OPTIONS.map(eq => {
+                  const checked = newExEquipment === eq;
+                  return (
+                    <Pressable
+                      key={eq}
+                      style={[styles.newExChip, checked && styles.newExChipActive]}
+                      onPress={() => setNewExEquipment(checked ? '' : eq)}
+                    >
+                      {checked && <Ionicons name="checkmark" size={12} color={Colors.primary} style={{ marginRight: 4 }} />}
+                      <Text style={[styles.newExChipText, checked && styles.newExChipTextActive]}>{eq}</Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+
+              <Text style={styles.newExSectionLabel}>Type <Text style={styles.newExRequired}>*</Text></Text>
+              <View style={styles.newExTypeRow}>
+                {(['compound', 'isolation'] as ExerciseCategory[]).map(t => (
+                  <Pressable
+                    key={t}
+                    style={[styles.newExTypeBtn, newExType === t && styles.newExTypeBtnActive]}
+                    onPress={() => setNewExType(t)}
+                  >
+                    <Text style={[styles.newExTypeBtnText, newExType === t && styles.newExTypeBtnTextActive]}>
+                      {t.charAt(0).toUpperCase() + t.slice(1)}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+
+              {newExError ? <Text style={styles.newExErrorText}>{newExError}</Text> : null}
+
+              <Pressable
+                style={[styles.newExSaveBtn, newExSaving && { opacity: 0.6 }]}
+                onPress={handleSaveNewExercise}
+                disabled={newExSaving}
+              >
+                <Text style={styles.newExSaveBtnText}>{newExSaving ? 'Saving...' : 'Save & Use Exercise'}</Text>
+              </Pressable>
+            </ScrollView>
+          ) : (
+            <>
+              <View style={styles.pickerSearchContainer}>
+                <Ionicons name="search" size={16} color={Colors.textMuted} />
+                <TextInput
+                  style={styles.pickerSearchInput}
+                  value={pickerSearch}
+                  onChangeText={setPickerSearch}
+                  placeholder="Search exercises..."
+                  placeholderTextColor={Colors.textMuted}
+                  returnKeyType="search"
+                  autoCorrect={false}
+                />
+                {pickerSearch.length > 0 && (
+                  <Pressable onPress={() => setPickerSearch('')} hitSlop={8}>
+                    <Ionicons name="close-circle" size={16} color={Colors.textMuted} />
+                  </Pressable>
+                )}
+              </View>
+
+              <FlatList
+                data={getPickerExercises(pickerCategory, customExercises).filter(ex =>
+                  ex.name.toLowerCase().includes(pickerSearch.toLowerCase()) ||
+                  ex.equipment.toLowerCase().includes(pickerSearch.toLowerCase())
+                )}
+                keyExtractor={item => item.id}
+                contentContainerStyle={styles.pickerListContent}
+                keyboardShouldPersistTaps="handled"
+                renderItem={({ item }) => {
+                  const activeColor = PICKER_TABS.find(t => t.key === pickerCategory)?.color || Colors.primary;
+                  const isCustom = item.id.startsWith('cx_');
+                  return (
+                    <Pressable style={styles.pickerExerciseRow} onPress={() => handleSelectExercise(item)}>
+                      <View style={styles.pickerExerciseInfo}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                          <Text style={styles.pickerExerciseName}>{item.name}</Text>
+                          {isCustom && (
+                            <View style={styles.customBadge}>
+                              <Text style={styles.customBadgeText}>Custom</Text>
+                            </View>
+                          )}
+                        </View>
+                        <View style={styles.pickerExerciseMeta}>
+                          <Text style={styles.pickerExerciseEquipment}>{item.equipment}</Text>
+                          <View style={[styles.pickerCategoryBadge, { backgroundColor: item.category === 'compound' ? `${activeColor}18` : 'rgba(0,212,170,0.12)' }]}>
+                            <Text style={[styles.pickerCategoryBadgeText, { color: item.category === 'compound' ? activeColor : Colors.accent }]}>
+                              {item.category === 'compound' ? 'Compound' : 'Isolation'}
+                            </Text>
+                          </View>
+                        </View>
+                      </View>
+                      <Ionicons name="chevron-forward" size={18} color={Colors.textMuted} />
+                    </Pressable>
+                  );
+                }}
+                ItemSeparatorComponent={() => <View style={styles.pickerSeparator} />}
+              />
+            </>
+          )}
         </View>
       </Modal>
     </View>
@@ -1674,5 +1918,136 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: Colors.border,
     marginLeft: 0,
+  },
+  customBadge: {
+    backgroundColor: 'rgba(255,107,53,0.15)',
+    borderRadius: 5,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  customBadgeText: {
+    fontSize: 10,
+    fontFamily: 'Rubik_600SemiBold',
+    color: Colors.primary,
+  },
+  newExFormContent: {
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 60,
+  },
+  newExSectionLabel: {
+    fontSize: 13,
+    fontFamily: 'Rubik_600SemiBold',
+    color: Colors.textSecondary,
+    marginBottom: 10,
+    marginTop: 18,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  newExRequired: {
+    color: Colors.primary,
+  },
+  newExHint: {
+    fontSize: 11,
+    fontFamily: 'Rubik_400Regular',
+    color: Colors.textMuted,
+    textTransform: 'none',
+    letterSpacing: 0,
+  },
+  newExChipRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  newExChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 20,
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  newExChipActive: {
+    backgroundColor: `${Colors.primary}18`,
+    borderColor: Colors.primary,
+  },
+  newExChipText: {
+    fontSize: 13,
+    fontFamily: 'Rubik_500Medium',
+    color: Colors.textSecondary,
+  },
+  newExChipTextActive: {
+    color: Colors.primary,
+  },
+  newExInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.surface,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    paddingHorizontal: 14,
+    paddingVertical: 4,
+  },
+  newExInput: {
+    flex: 1,
+    fontSize: 15,
+    fontFamily: 'Rubik_400Regular',
+    color: Colors.text,
+    paddingVertical: 10,
+  },
+  newExCharCount: {
+    fontSize: 12,
+    fontFamily: 'Rubik_400Regular',
+    color: Colors.textMuted,
+    marginLeft: 8,
+  },
+  newExTypeRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  newExTypeBtn: {
+    flex: 1,
+    paddingVertical: 11,
+    borderRadius: 12,
+    alignItems: 'center',
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  newExTypeBtnActive: {
+    backgroundColor: `${Colors.primary}18`,
+    borderColor: Colors.primary,
+  },
+  newExTypeBtnText: {
+    fontSize: 14,
+    fontFamily: 'Rubik_500Medium',
+    color: Colors.textSecondary,
+  },
+  newExTypeBtnTextActive: {
+    color: Colors.primary,
+    fontFamily: 'Rubik_600SemiBold',
+  },
+  newExErrorText: {
+    fontSize: 13,
+    fontFamily: 'Rubik_400Regular',
+    color: '#FF4757',
+    marginTop: 12,
+    marginBottom: 4,
+  },
+  newExSaveBtn: {
+    marginTop: 24,
+    backgroundColor: Colors.primary,
+    borderRadius: 14,
+    paddingVertical: 15,
+    alignItems: 'center',
+  },
+  newExSaveBtnText: {
+    fontSize: 16,
+    fontFamily: 'Rubik_700Bold',
+    color: '#FFFFFF',
+    letterSpacing: 0.3,
   },
 });

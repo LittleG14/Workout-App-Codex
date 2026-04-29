@@ -1,5 +1,22 @@
 export type TopCategory = 'weight_lifting' | 'circuit' | 'yoga' | 'cardio' | 'mobility';
 
+export interface CustomExerciseData {
+  id: string;
+  name: string;
+  muscles: MuscleGroup[];
+  equipment: string;
+  type: ExerciseCategory;
+  topCategories: TopCategory[];
+  weightSubCategories: WeightLiftingType[];
+}
+
+export const EQUIPMENT_OPTIONS: string[] = [
+  'Barbell', 'Dumbbells', 'Cable', 'Machine', 'Bodyweight', 'Kettlebell',
+  'Medicine Ball', 'Jump Rope', 'Mat', 'Plyo Box', 'Battle Ropes', 'Ski Erg',
+  'Sled', 'Rower', 'Assault Bike', 'Sandbag', 'Rings', 'Ab Wheel',
+  'Pull-Up Bar', 'Bench', 'Resistance Band', 'None',
+];
+
 export type MuscleGroup = 'chest' | 'triceps' | 'back' | 'biceps' | 'shoulders' | 'abs' | 'quads' | 'hamstrings' | 'glutes' | 'calves' | 'full_body';
 
 export type WeightLiftingType = 'chest_triceps' | 'back_biceps' | 'shoulders_abs' | 'legs' | 'full_body' | 'push' | 'pull';
@@ -110,23 +127,42 @@ export const CARDIO_STYLE_LABELS: Record<CardioStyle, string> = {
   mixed_cardio: 'Mixed Cardio',
 };
 
-function getExercisePool(topCategory: TopCategory, subType: string): Exercise[] {
+function toExercise(c: CustomExerciseData): Exercise {
+  return { id: c.id, name: c.name, muscles: c.muscles, category: c.type, equipment: c.equipment };
+}
+
+function getCustomForCategory(topCategory: TopCategory, subType: string, customExercises?: CustomExerciseData[]): Exercise[] {
+  if (!customExercises?.length) return [];
+  return customExercises
+    .filter(c => c.topCategories.includes(topCategory))
+    .filter(c => {
+      if (topCategory !== 'weight_lifting') return true;
+      return c.weightSubCategories.length === 0 || c.weightSubCategories.includes(subType as WeightLiftingType);
+    })
+    .map(toExercise);
+}
+
+function getExercisePool(topCategory: TopCategory, subType: string, customExercises?: CustomExerciseData[]): Exercise[] {
+  const custom = getCustomForCategory(topCategory, subType, customExercises);
   switch (topCategory) {
     case 'weight_lifting': {
       const muscles = WORKOUT_TYPE_MUSCLES[subType as WeightLiftingType];
-      if (muscles) {
-        return WEIGHT_EXERCISES.filter(e => e.muscles.some(m => muscles.includes(m)));
-      }
-      return WEIGHT_EXERCISES;
+      const base = muscles
+        ? WEIGHT_EXERCISES.filter(e => e.muscles.some(m => muscles.includes(m)))
+        : WEIGHT_EXERCISES;
+      const filteredCustom = muscles
+        ? custom.filter(e => e.muscles.some(m => muscles.includes(m)))
+        : custom;
+      return [...base, ...filteredCustom];
     }
     case 'circuit':
-      return CIRCUIT_EXERCISES;
+      return [...CIRCUIT_EXERCISES, ...custom];
     case 'yoga':
-      return subType === 'flexibility' ? YOGA_FLEX_POSES : YOGA_CORE_POSES;
+      return [...(subType === 'flexibility' ? YOGA_FLEX_POSES : YOGA_CORE_POSES), ...custom];
     case 'cardio':
-      return subType === 'running' ? CARDIO_RUNNING : CARDIO_MIXED;
+      return [...(subType === 'running' ? CARDIO_RUNNING : CARDIO_MIXED), ...custom];
     case 'mobility':
-      return getMobilityPool(subType as MobilityStyle);
+      return [...getMobilityPool(subType as MobilityStyle), ...custom];
     default:
       return [];
   }
@@ -136,9 +172,10 @@ export function findReplacementExercise(
   current: Exercise,
   topCategory: TopCategory,
   subType: string,
-  usedIds: string[]
+  usedIds: string[],
+  customExercises?: CustomExerciseData[]
 ): Exercise | null {
-  const pool = getExercisePool(topCategory, subType);
+  const pool = getExercisePool(topCategory, subType, customExercises);
 
   const candidates = pool.filter(e =>
     e.id !== current.id &&
@@ -164,9 +201,12 @@ export function findReplacementExercise(
 
 export function findCoreReplacementExercise(
   current: Exercise,
-  usedIds: string[]
+  usedIds: string[],
+  customExercises?: CustomExerciseData[]
 ): Exercise | null {
-  const candidates = WEIGHT_EXERCISES.filter(e =>
+  const customWeight = getCustomForCategory('weight_lifting', 'shoulders_abs', customExercises);
+  const pool = [...WEIGHT_EXERCISES, ...customWeight];
+  const candidates = pool.filter(e =>
     e.id !== current.id &&
     !usedIds.includes(e.id) &&
     e.muscles.includes('abs')
@@ -418,9 +458,11 @@ function randomAdj(): string {
   return a[Math.floor(Math.random() * a.length)];
 }
 
-function generateWeightLifting(subType: WeightLiftingType, style: TrainingStyle, duration: number, includeSupersets: boolean = false, includeCore: boolean = false): GeneratedWorkout {
+function generateWeightLifting(subType: WeightLiftingType, style: TrainingStyle, duration: number, includeSupersets: boolean = false, includeCore: boolean = false, customExercises?: CustomExerciseData[]): GeneratedWorkout {
   const muscles = WORKOUT_TYPE_MUSCLES[subType];
-  const available = WEIGHT_EXERCISES.filter(e => e.muscles.some(m => muscles.includes(m)));
+  const customWeight = getCustomForCategory('weight_lifting', subType, customExercises);
+  const allWeight = [...WEIGHT_EXERCISES, ...customWeight];
+  const available = allWeight.filter(e => e.muscles.some(m => muscles.includes(m)));
   const config = getStyleConfig(style);
   const counts = getExerciseCount(duration, style);
 
@@ -434,7 +476,7 @@ function generateWeightLifting(subType: WeightLiftingType, style: TrainingStyle,
 
   if (includeCore && exercises.length > 0) {
     const usedIds = exercises.map(e => e.exercise.id);
-    const abExercises = WEIGHT_EXERCISES.filter(e =>
+    const abExercises = allWeight.filter(e =>
       e.muscles.includes('abs') && !usedIds.includes(e.id)
     );
     if (abExercises.length > 0) {
@@ -522,8 +564,9 @@ function generateWeightLifting(subType: WeightLiftingType, style: TrainingStyle,
   };
 }
 
-function generateCircuit(circuitStyle: CircuitStyle, duration: number): GeneratedWorkout {
-  const allExercises = shuffle(CIRCUIT_EXERCISES);
+function generateCircuit(circuitStyle: CircuitStyle, duration: number, customExercises?: CustomExerciseData[]): GeneratedWorkout {
+  const customCircuit = getCustomForCategory('circuit', '', customExercises);
+  const allExercises = shuffle([...CIRCUIT_EXERCISES, ...customCircuit]);
   let circuitBlocks: CircuitBlock[] = [];
   let flatExercises: WorkoutExercise[] = [];
 
@@ -675,9 +718,10 @@ function generateCircuit(circuitStyle: CircuitStyle, duration: number): Generate
   };
 }
 
-function generateYoga(yogaStyle: YogaStyle, duration: number): GeneratedWorkout {
-  const pool = yogaStyle === 'core_strength' ? YOGA_CORE_POSES : YOGA_FLEX_POSES;
-  const selected = shuffle(pool);
+function generateYoga(yogaStyle: YogaStyle, duration: number, customExercises?: CustomExerciseData[]): GeneratedWorkout {
+  const customYoga = getCustomForCategory('yoga', yogaStyle, customExercises);
+  const base = yogaStyle === 'core_strength' ? YOGA_CORE_POSES : YOGA_FLEX_POSES;
+  const selected = shuffle([...base, ...customYoga]);
 
   const poseCount = duration <= 30 ? 8 : duration <= 45 ? 10 : duration <= 60 ? 14 : 18;
   const holdTime = yogaStyle === 'core_strength' ? '30-45s' : '45-60s';
@@ -705,9 +749,10 @@ function generateYoga(yogaStyle: YogaStyle, duration: number): GeneratedWorkout 
   };
 }
 
-function generateCardio(cardioStyle: CardioStyle, duration: number): GeneratedWorkout {
+function generateCardio(cardioStyle: CardioStyle, duration: number, customExercises?: CustomExerciseData[]): GeneratedWorkout {
+  const customCardio = getCustomForCategory('cardio', cardioStyle, customExercises);
   if (cardioStyle === 'running') {
-    const pool = shuffle(CARDIO_RUNNING);
+    const pool = shuffle([...CARDIO_RUNNING, ...customCardio]);
     let exercises: WorkoutExercise[] = [];
 
     if (duration <= 30) {
@@ -753,7 +798,7 @@ function generateCardio(cardioStyle: CardioStyle, duration: number): GeneratedWo
     };
   }
 
-  const pool = shuffle(CARDIO_MIXED);
+  const pool = shuffle([...CARDIO_MIXED, ...customCardio]);
   const exCount = duration <= 30 ? 3 : duration <= 45 ? 4 : duration <= 60 ? 5 : 6;
   const selected = pool.slice(0, exCount);
   const blockTime = Math.floor(duration / exCount);
@@ -778,8 +823,9 @@ function generateCardio(cardioStyle: CardioStyle, duration: number): GeneratedWo
   };
 }
 
-function generateMobility(subType: MobilityStyle, duration: number): GeneratedWorkout {
-  const pool = shuffle(getMobilityPool(subType));
+function generateMobility(subType: MobilityStyle, duration: number, customExercises?: CustomExerciseData[]): GeneratedWorkout {
+  const customMobility = getCustomForCategory('mobility', subType, customExercises);
+  const pool = shuffle([...getMobilityPool(subType), ...customMobility]);
   const exCount = duration <= 10 ? 3 : duration <= 20 ? 5 : duration <= 30 ? 7 : 9;
   const sets = duration <= 20 ? 2 : 3;
   const restSeconds = duration <= 20 ? 20 : 30;
@@ -812,18 +858,19 @@ export function generateWorkout(
   durationMinutes: number,
   includeSupersets: boolean = false,
   includeCore: boolean = false,
+  customExercises?: CustomExerciseData[]
 ): GeneratedWorkout {
   switch (topCategory) {
     case 'weight_lifting':
-      return generateWeightLifting(subType as WeightLiftingType, style as TrainingStyle, durationMinutes, includeSupersets, includeCore);
+      return generateWeightLifting(subType as WeightLiftingType, style as TrainingStyle, durationMinutes, includeSupersets, includeCore, customExercises);
     case 'circuit':
-      return generateCircuit(subType as CircuitStyle, durationMinutes);
+      return generateCircuit(subType as CircuitStyle, durationMinutes, customExercises);
     case 'yoga':
-      return generateYoga(subType as YogaStyle, durationMinutes);
+      return generateYoga(subType as YogaStyle, durationMinutes, customExercises);
     case 'cardio':
-      return generateCardio(subType as CardioStyle, durationMinutes);
+      return generateCardio(subType as CardioStyle, durationMinutes, customExercises);
     case 'mobility':
-      return generateMobility(subType as MobilityStyle, durationMinutes);
+      return generateMobility(subType as MobilityStyle, durationMinutes, customExercises);
   }
 }
 
@@ -873,7 +920,7 @@ function getRftConfig(duration: number, balance: CircuitBalance): { exCount: num
     : { exCount: 6, rounds: 5 };
 }
 
-function rebalanceSingleBlock(block: CircuitBlock, blockDuration: number, balance: CircuitBalance, allUsedIds: Set<string>, blockNum?: number): CircuitBlock {
+function rebalanceSingleBlock(block: CircuitBlock, blockDuration: number, balance: CircuitBalance, allUsedIds: Set<string>, blockNum?: number, extraCircuitExercises?: Exercise[]): CircuitBlock {
   const format = block.format;
   const config = format === 'EMOM'
     ? getEmomConfig(blockDuration, balance)
@@ -885,7 +932,7 @@ function rebalanceSingleBlock(block: CircuitBlock, blockDuration: number, balanc
   if (config.exCount <= currentExercises.length) {
     newExercises = currentExercises.slice(0, config.exCount);
   } else {
-    const pool = shuffle([...CIRCUIT_EXERCISES]);
+    const pool = shuffle([...CIRCUIT_EXERCISES, ...(extraCircuitExercises ?? [])]);
     const extras = pool.filter(e => !allUsedIds.has(e.id));
     newExercises = [...currentExercises];
     for (let i = 0; newExercises.length < config.exCount && i < extras.length; i++) {
@@ -925,12 +972,13 @@ function rebalanceSingleBlock(block: CircuitBlock, blockDuration: number, balanc
   };
 }
 
-export function rebalanceCircuit(workout: GeneratedWorkout, balance: CircuitBalance): GeneratedWorkout {
+export function rebalanceCircuit(workout: GeneratedWorkout, balance: CircuitBalance, customExercises?: CustomExerciseData[]): GeneratedWorkout {
   if (!workout.circuitBlocks || workout.circuitBlocks.length === 0) return workout;
 
   const format = workout.circuitBlocks[0].format;
   if (format !== 'EMOM' && format !== 'Rounds for Time') return workout;
 
+  const extraCircuit = getCustomForCategory('circuit', '', customExercises);
   const allUsedIds = new Set<string>();
   const newBlocks: CircuitBlock[] = [];
 
@@ -938,10 +986,10 @@ export function rebalanceCircuit(workout: GeneratedWorkout, balance: CircuitBala
     for (let i = 0; i < workout.circuitBlocks.length; i++) {
       const block = workout.circuitBlocks[i];
       const blockDuration = block.timeCapMinutes || Math.floor(workout.durationMinutes / workout.circuitBlocks.length);
-      newBlocks.push(rebalanceSingleBlock(block, blockDuration, balance, allUsedIds, i + 1));
+      newBlocks.push(rebalanceSingleBlock(block, blockDuration, balance, allUsedIds, i + 1, extraCircuit));
     }
   } else {
-    newBlocks.push(rebalanceSingleBlock(workout.circuitBlocks[0], workout.durationMinutes, balance, allUsedIds));
+    newBlocks.push(rebalanceSingleBlock(workout.circuitBlocks[0], workout.durationMinutes, balance, allUsedIds, undefined, extraCircuit));
   }
 
   const allExercises = newBlocks.flatMap(b => b.exercises);
