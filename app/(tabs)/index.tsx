@@ -41,6 +41,7 @@ import {
 } from "@/lib/exercises";
 import { saveWorkout } from "@/lib/workout-storage";
 import { useCustomExercises } from "@/lib/useCustomExercises";
+import { useHiddenExercises } from "@/lib/useHiddenExercises";
 
 const CATEGORIES: { key: TopCategory; label: string; icon: string; iconSet: "ionicons" | "mci"; color: string; desc: string }[] = [
   { key: "weight_lifting", label: "Weights", icon: "barbell", iconSet: "ionicons", color: Colors.primary, desc: "Traditional splits" },
@@ -254,6 +255,7 @@ const DEFAULT_SUB_TYPES: Record<TopCategory, string> = {
 export default function GenerateScreen() {
   const insets = useSafeAreaInsets();
   const { customExercises } = useCustomExercises();
+  const { hiddenIds } = useHiddenExercises();
   const [selectedCategory, setSelectedCategory] = useState<TopCategory>("weight_lifting");
   const [subTypes, setSubTypes] = useState<Record<TopCategory, string>>(DEFAULT_SUB_TYPES);
   const [trainingStyle, setTrainingStyle] = useState<TrainingStyle>("hypertrophy");
@@ -279,11 +281,11 @@ export default function GenerateScreen() {
     await new Promise(r => setTimeout(r, 400));
 
     const style = selectedCategory === "weight_lifting" ? trainingStyle : currentSubType;
-    const workout = generateWorkout(selectedCategory, currentSubType, style, selectedDuration, includeSupersets, includeCore, customExercises);
+    const workout = generateWorkout(selectedCategory, currentSubType, style, selectedDuration, includeSupersets, includeCore, customExercises, hiddenIds);
     await saveWorkout(workout);
     setGenerating(false);
     router.push({ pathname: "/workout/[id]", params: { id: workout.id, fresh: "true" } });
-  }, [selectedCategory, currentSubType, trainingStyle, selectedDuration, includeSupersets, includeCore, customExercises]);
+  }, [selectedCategory, currentSubType, trainingStyle, selectedDuration, includeSupersets, includeCore, customExercises, hiddenIds]);
 
   const webTopPad = Platform.OS === "web" ? 67 : 0;
 

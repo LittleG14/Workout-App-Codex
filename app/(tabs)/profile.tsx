@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   StyleSheet,
@@ -18,7 +18,17 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect, useRouter } from "expo-router";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
-import Animated, { FadeInDown, FadeIn } from "react-native-reanimated";
+import Animated, {
+  FadeInDown,
+  FadeIn,
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  runOnJS,
+  interpolate,
+  Extrapolation,
+} from "react-native-reanimated";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Colors from "@/constants/colors";
 import { useAuth } from "@/contexts/AuthContext";
 import { apiRequest } from "@/lib/query-client";
@@ -36,6 +46,7 @@ import {
   MOBILITY_EXERCISES,
 } from "@/lib/exercises";
 import { getWorkouts } from "@/lib/workout-storage";
+import { useHiddenExercises } from "@/lib/useHiddenExercises";
 
 type Gender = UserProfile["gender"];
 type Goal = UserProfile["goal"];
@@ -88,12 +99,16 @@ function getExerciseListForCategory(cat: PRCategory): Exercise[] {
 function computePRs(
   workouts: GeneratedWorkout[],
   exerciseList: Exercise[],
-  category: PRCategory
+  category: PRCategory,
+  hiddenIds?: string[],
+  resetTimestamps?: Record<string, string>
 ): ExercisePR[] {
   const prMap = new Map<string, ExercisePR>();
 
   exerciseList.forEach((ex) => {
-    prMap.set(ex.id, { exercise: ex });
+    if (!hiddenIds?.includes(ex.id)) {
+      prMap.set(ex.id, { exercise: ex });
+    }
   });
 
   const sorted = [...workouts]
@@ -121,11 +136,16 @@ function computePRs(
     }
 
     allExercises.forEach(({ ex, date }) => {
-      if (!prMap.has(ex.exercise.id)) {
-        prMap.set(ex.exercise.id, { exercise: ex.exercise });
+      const exId = ex.exercise.id;
+      if (hiddenIds?.includes(exId)) return;
+      if (!prMap.has(exId)) {
+        prMap.set(exId, { exercise: ex.exercise });
       }
-      const entry = prMap.get(ex.exercise.id);
+      const entry = prMap.get(exId);
       if (!entry) return;
+
+      const resetDate = resetTimestamps?.[exId];
+      if (resetDate && new Date(date) <= new Date(resetDate)) return;
 
       if (ex.weight && ex.weight > 0) {
         if (!entry.prWeight || ex.weight > entry.prWeight) {
@@ -458,6 +478,201 @@ function AccountSettingsSheet({
   );
 }
 
+const PR_DELETE_THRESHOLD = -80;
+const PR_SNAP_OPEN = -90;
+
+function SwipeablePRItem({
+  item, index, onDelete, onSelect, isWeightCategory, catColor,
+}: {
+  item: ExercisePR;
+  index: number;
+  onDelete: (id: string) => void;
+  onSelect: (item: ExercisePR) => void;
+  isWeightCategory: boolean;
+  catColor: string;
+}) {
+  const translateX = useSharedValue(0);
+  const rowOpacity = useSharedValue(1);
+  const rowHeight = useSharedValue(1);
+  const contextX = useSharedValue(0);
+  const isOpen = useRef(false);
+
+  const triggerDelete = useCallback(() => {
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    onDelete(item.exercise.id);
+  }, [item.exercise.id, onDelete]);
+
+  const handleDeletePress = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    translateX.value = withTiming(-400, { duration: 250 });
+    rowHeight.value = withTiming(0, { duration: 300 });
+    rowOpacity.value = withTiming(0, { duration: 250 }, () => {
+      runOnJS(triggerDelete)();
+    });
+  }, [triggerDelete]);
+
+  const panGesture = Gesture.Pan()
+    .activeOffsetX([-10, 10])
+    .failOffsetY([-5, 5])
+    .onStart(() => { contextX.value = translateX.value; })
+    .onUpdate((event) => {
+      const newX = contextX.value + event.translationX;
+      translateX.value = Math.min(0, Math.max(newX, -150));
+    })
+    .onEnd(() => {
+      if (translateX.value < PR_DELETE_THRESHOLD) {
+        translateX.value = withTiming(PR_SNAP_OPEN, { duration: 200 });
+        isOpen.current = true;
+        runOnJS(Haptics.impactAsync)(Haptics.ImpactFeedbackStyle.Light);
+      } else {
+        translateX.value = withTiming(0, { duration: 200 });
+        isOpen.current = false;
+      }
+    });
+
+  const tapGesture = Gesture.Tap()
+    .onEnd(() => {
+      if (isOpen.current) {
+        translateX.value = withTiming(0, { duration: 200 });
+        isOpen.current = false;
+      } else {
+        runOnJS(onSelect)(item);
+      }
+    });
+
+  const composedGesture = Gesture.Race(panGesture, tapGesture);
+
+  const cardAnimStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: translateX.value }],
+  }));
+
+  const deleteActionStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(translateX.value, [0, PR_SNAP_OPEN], [0, 1], Extrapolation.CLAMP),
+  }));
+
+  const rowContainerStyle = useAnimatedStyle(() => ({
+    opacity: rowOpacity.value,
+    transform: [{ scaleY: rowHeight.value }],
+    marginBottom: interpolate(rowHeight.value, [0, 1], [0, 0], Extrapolation.CLAMP),
+    overflow: "hidden" as const,
+  }));
+
+  return (
+    <Animated.View style={rowContainerStyle}>
+      <View style={prSwipeStyles.swipeContainer}>
+        <Animated.View style={[prSwipeStyles.deleteAction, deleteActionStyle]}>
+          <Pressable onPress={handleDeletePress} style={prSwipeStyles.deleteButton}>
+            <Ionicons name="trash" size={20} color="#FFF" />
+            <Text style={prSwipeStyles.deleteText}>Delete</Text>
+          </Pressable>
+        </Animated.View>
+        <GestureDetector gesture={composedGesture}>
+          <Animated.View style={[prSwipeStyles.exerciseRow, cardAnimStyle]}>
+            <View style={prSwipeStyles.exerciseInfo}>
+              <Text style={prSwipeStyles.exerciseName}>{item.exercise.name}</Text>
+              <Text style={prSwipeStyles.exerciseEquipment}>{item.exercise.equipment}</Text>
+            </View>
+            {isWeightCategory ? (
+              item.prWeight ? (
+                <View style={[prSwipeStyles.badge, { backgroundColor: `${catColor}18` }]}>
+                  <Ionicons name="trophy" size={12} color="#FFD700" />
+                  <Text style={[prSwipeStyles.badgeText, { color: catColor }]}>{item.prWeight} {item.prWeightUnit}</Text>
+                </View>
+              ) : (
+                <Text style={prSwipeStyles.noData}>--</Text>
+              )
+            ) : (
+              item.lastDate ? (
+                <View style={[prSwipeStyles.badge, { backgroundColor: `${catColor}18` }]}>
+                  <Ionicons name="checkmark-circle" size={12} color={catColor} />
+                  <Text style={[prSwipeStyles.badgeText, { color: catColor }]}>{formatDate(item.lastDate)}</Text>
+                </View>
+              ) : (
+                <Text style={prSwipeStyles.noData}>--</Text>
+              )
+            )}
+            <Ionicons name="chevron-forward" size={18} color={Colors.textMuted} />
+          </Animated.View>
+        </GestureDetector>
+      </View>
+    </Animated.View>
+  );
+}
+
+const prSwipeStyles = StyleSheet.create({
+  swipeContainer: {
+    position: "relative",
+    overflow: "hidden",
+  },
+  deleteAction: {
+    position: "absolute",
+    right: 0,
+    top: 0,
+    bottom: 0,
+    width: 90,
+    backgroundColor: "#FF4757",
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 14,
+  },
+  deleteButton: {
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 3,
+    width: "100%",
+    height: "100%",
+  },
+  deleteText: {
+    color: "#FFF",
+    fontSize: 12,
+    fontFamily: "Rubik_600SemiBold",
+  },
+  exerciseRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    backgroundColor: Colors.surface,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    marginBottom: 8,
+  },
+  exerciseInfo: {
+    flex: 1,
+  },
+  exerciseName: {
+    fontSize: 15,
+    fontFamily: "Rubik_500Medium",
+    color: Colors.text,
+    marginBottom: 2,
+  },
+  exerciseEquipment: {
+    fontSize: 12,
+    fontFamily: "Rubik_400Regular",
+    color: Colors.textMuted,
+  },
+  badge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    marginRight: 8,
+  },
+  badgeText: {
+    fontSize: 12,
+    fontFamily: "Rubik_600SemiBold",
+  },
+  noData: {
+    fontSize: 14,
+    fontFamily: "Rubik_400Regular",
+    color: Colors.textMuted,
+    marginRight: 8,
+  },
+});
+
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const { user, logout, updateEmail, updatePassword, deleteAccount } = useAuth();
@@ -484,6 +699,7 @@ export default function ProfileScreen() {
   const [prData, setPrData] = useState<ExercisePR[]>([]);
   const [selectedExercise, setSelectedExercise] = useState<ExercisePR | null>(null);
   const [prSearch, setPrSearch] = useState("");
+  const { hiddenIds, resetTimestamps, hideExercise, resetExercise } = useHiddenExercises();
 
   useEffect(() => {
     loadProfile();
@@ -510,7 +726,7 @@ export default function ProfileScreen() {
   const openPRModal = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     const workouts = await getWorkouts();
-    const data = computePRs(workouts, getExerciseListForCategory(prCategory), prCategory);
+    const data = computePRs(workouts, getExerciseListForCategory(prCategory), prCategory, hiddenIds, resetTimestamps);
     setPrData(data);
     setSelectedExercise(null);
     setPrSearch("");
@@ -522,9 +738,52 @@ export default function ProfileScreen() {
     setSelectedExercise(null);
     setPrSearch("");
     const workouts = await getWorkouts();
-    const data = computePRs(workouts, getExerciseListForCategory(cat), cat);
+    const data = computePRs(workouts, getExerciseListForCategory(cat), cat, hiddenIds, resetTimestamps);
     setPrData(data);
   };
+
+  const handleDeletePRExercise = useCallback((id: string) => {
+    Alert.alert(
+      "Remove Exercise",
+      "Remove this exercise from tracking and future workouts? Your history won't be affected.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Remove",
+          style: "destructive",
+          onPress: async () => {
+            await hideExercise(id);
+            setPrData(prev => prev.filter(e => e.exercise.id !== id));
+            if (selectedExercise?.exercise.id === id) setSelectedExercise(null);
+          },
+        },
+      ]
+    );
+  }, [hideExercise, selectedExercise]);
+
+  const handleResetPRExercise = useCallback(async (id: string) => {
+    Alert.alert(
+      "Reset Stats & Notes?",
+      "This will clear the PR, last session, and notes for this exercise. Your workout history stays intact.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Reset",
+          style: "destructive",
+          onPress: async () => {
+            await resetExercise(id);
+            const workouts = await getWorkouts();
+            const next = { ...resetTimestamps, [id]: new Date().toISOString() };
+            const data = computePRs(workouts, getExerciseListForCategory(prCategory), prCategory, hiddenIds, next);
+            setPrData(data);
+            const updated = data.find(e => e.exercise.id === id) ?? null;
+            setSelectedExercise(updated);
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          },
+        },
+      ]
+    );
+  }, [resetExercise, prCategory, hiddenIds, resetTimestamps]);
 
   const isWeightCategory = prCategory === "weight_lifting" || prCategory === "circuit";
   const activeCatColor = PR_CATEGORY_TABS.find((t) => t.key === prCategory)?.color || Colors.primary;
@@ -942,6 +1201,14 @@ export default function ProfileScreen() {
                     </View>
                   </View>
                 )}
+
+                <Pressable
+                  style={styles.prResetBtn}
+                  onPress={() => handleResetPRExercise(selectedExercise.exercise.id)}
+                >
+                  <Ionicons name="refresh" size={16} color="#FF4757" />
+                  <Text style={styles.prResetBtnText}>Reset Stats & Notes</Text>
+                </Pressable>
               </View>
             </View>
           ) : (
@@ -952,6 +1219,7 @@ export default function ProfileScreen() {
               )}
               keyExtractor={(item) => item.exercise.id}
               contentContainerStyle={styles.prListContent}
+              keyboardShouldPersistTaps="handled"
               ListHeaderComponent={
                 <View style={styles.prSearchContainer}>
                   <Ionicons name="search" size={16} color={Colors.textMuted} />
@@ -971,36 +1239,15 @@ export default function ProfileScreen() {
                   )}
                 </View>
               }
-              renderItem={({ item }) => (
-                <Pressable
-                  style={styles.prExerciseRow}
-                  onPress={() => setSelectedExercise(item)}
-                >
-                  <View style={styles.prExerciseInfo}>
-                    <Text style={styles.prExerciseName}>{item.exercise.name}</Text>
-                    <Text style={styles.prExerciseEquipment}>{item.exercise.equipment}</Text>
-                  </View>
-                  {isWeightCategory ? (
-                    item.prWeight ? (
-                      <View style={[styles.prWeightBadge, { backgroundColor: `${activeCatColor}18` }]}>
-                        <Ionicons name="trophy" size={12} color="#FFD700" />
-                        <Text style={[styles.prWeightBadgeText, { color: activeCatColor }]}>{item.prWeight} {item.prWeightUnit}</Text>
-                      </View>
-                    ) : (
-                      <Text style={styles.prNoData}>--</Text>
-                    )
-                  ) : (
-                    item.lastDate ? (
-                      <View style={[styles.prWeightBadge, { backgroundColor: `${activeCatColor}18` }]}>
-                        <Ionicons name="checkmark-circle" size={12} color={activeCatColor} />
-                        <Text style={[styles.prWeightBadgeText, { color: activeCatColor }]}>{formatDate(item.lastDate)}</Text>
-                      </View>
-                    ) : (
-                      <Text style={styles.prNoData}>--</Text>
-                    )
-                  )}
-                  <Ionicons name="chevron-forward" size={18} color={Colors.textMuted} />
-                </Pressable>
+              renderItem={({ item, index }) => (
+                <SwipeablePRItem
+                  item={item}
+                  index={index}
+                  onDelete={handleDeletePRExercise}
+                  onSelect={setSelectedExercise}
+                  isWeightCategory={isWeightCategory}
+                  catColor={activeCatColor}
+                />
               )}
             />
           )}
@@ -1383,6 +1630,23 @@ const styles = StyleSheet.create({
     fontFamily: "Rubik_500Medium",
     color: Colors.textMuted,
     fontStyle: "italic",
+  },
+  prResetBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    marginTop: 20,
+    paddingVertical: 13,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#FF4757",
+    backgroundColor: "rgba(255,71,87,0.07)",
+  },
+  prResetBtnText: {
+    fontSize: 15,
+    fontFamily: "Rubik_600SemiBold",
+    color: "#FF4757",
   },
   accountCard: {
     flexDirection: "row",

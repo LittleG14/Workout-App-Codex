@@ -47,6 +47,7 @@ import {
 } from "@/lib/exercises";
 import { getLocalWorkoutsOnly, updateWorkout } from "@/lib/workout-storage";
 import { useCustomExercises } from "@/lib/useCustomExercises";
+import { useHiddenExercises } from "@/lib/useHiddenExercises";
 
 type PickerCategory = 'weight_lifting' | 'circuit' | 'yoga' | 'cardio' | 'mobility';
 
@@ -87,17 +88,20 @@ const TOP_CATEGORY_FORM_OPTIONS: { key: TopCategory; label: string }[] = [
   { key: 'mobility', label: 'Mobility' },
 ];
 
-function getPickerExercises(cat: PickerCategory, customExercises?: CustomExerciseData[]): Exercise[] {
+function getPickerExercises(cat: PickerCategory, customExercises?: CustomExerciseData[], hiddenIds?: string[]): Exercise[] {
   const custom = (customExercises ?? [])
     .filter(c => c.topCategories.includes(cat as TopCategory))
     .map(c => ({ id: c.id, name: c.name, muscles: c.muscles, category: c.type, equipment: c.equipment }));
+  let pool: Exercise[];
   switch (cat) {
-    case 'weight_lifting': return [...WEIGHT_EXERCISES, ...custom];
-    case 'circuit': return [...CIRCUIT_EXERCISES, ...custom];
-    case 'yoga': return [...YOGA_CORE_POSES, ...YOGA_FLEX_POSES, ...custom];
-    case 'cardio': return [...CARDIO_RUNNING, ...CARDIO_MIXED, ...custom];
-    case 'mobility': return [...MOBILITY_EXERCISES, ...custom];
+    case 'weight_lifting': pool = [...WEIGHT_EXERCISES, ...custom]; break;
+    case 'circuit': pool = [...CIRCUIT_EXERCISES, ...custom]; break;
+    case 'yoga': pool = [...YOGA_CORE_POSES, ...YOGA_FLEX_POSES, ...custom]; break;
+    case 'cardio': pool = [...CARDIO_RUNNING, ...CARDIO_MIXED, ...custom]; break;
+    case 'mobility': pool = [...MOBILITY_EXERCISES, ...custom]; break;
   }
+  if (hiddenIds?.length) pool = pool.filter(e => !hiddenIds.includes(e.id));
+  return pool;
 }
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -416,8 +420,8 @@ export default function WorkoutDetailScreen() {
     const isLastExercise = exerciseIndex === workout.exercises.length - 1;
     const isCoreSlot = isLastExercise && workout.includeCore;
     const replacement = isCoreSlot
-      ? findCoreReplacementExercise(target.exercise, usedIds, customExercises)
-      : findReplacementExercise(target.exercise, workout.topCategory, workout.subType, usedIds, customExercises);
+      ? findCoreReplacementExercise(target.exercise, usedIds, customExercises, hiddenIds)
+      : findReplacementExercise(target.exercise, workout.topCategory, workout.subType, usedIds, customExercises, hiddenIds);
     if (!replacement) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     const updated = { ...workout, exercises: [...workout.exercises] };
@@ -431,7 +435,7 @@ export default function WorkoutDetailScreen() {
     const pair = workout.supersets[supersetIndex];
     const target = slot === 'A' ? pair.exerciseA : pair.exerciseB;
     const usedIds = getAllUsedIds(workout);
-    const replacement = findReplacementExercise(target.exercise, workout.topCategory, workout.subType, usedIds, customExercises);
+    const replacement = findReplacementExercise(target.exercise, workout.topCategory, workout.subType, usedIds, customExercises, hiddenIds);
     if (!replacement) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     const updatedSupersets = [...workout.supersets];
@@ -449,7 +453,7 @@ export default function WorkoutDetailScreen() {
     const block = workout.circuitBlocks[blockIndex];
     const target = block.exercises[exIndex];
     const usedIds = getAllUsedIds(workout);
-    const replacement = findReplacementExercise(target.exercise, workout.topCategory, workout.subType, usedIds, customExercises);
+    const replacement = findReplacementExercise(target.exercise, workout.topCategory, workout.subType, usedIds, customExercises, hiddenIds);
     if (!replacement) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     const updatedBlocks = [...workout.circuitBlocks];
@@ -582,6 +586,7 @@ export default function WorkoutDetailScreen() {
   const [newExError, setNewExError] = useState('');
 
   const { customExercises, createExercise } = useCustomExercises();
+  const { hiddenIds } = useHiddenExercises();
 
   const resetNewExForm = () => {
     setNewExName('');
@@ -1165,7 +1170,7 @@ export default function WorkoutDetailScreen() {
               </View>
 
               <FlatList
-                data={getPickerExercises(pickerCategory, customExercises).filter(ex =>
+                data={getPickerExercises(pickerCategory, customExercises, hiddenIds).filter(ex =>
                   ex.name.toLowerCase().includes(pickerSearch.toLowerCase()) ||
                   ex.equipment.toLowerCase().includes(pickerSearch.toLowerCase())
                 )}
