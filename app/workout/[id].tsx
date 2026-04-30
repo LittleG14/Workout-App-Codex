@@ -541,6 +541,21 @@ function JustRunDetail({ workout }: { workout: GeneratedWorkout }) {
   );
 }
 
+type DragKind = "exercise" | "superset" | "circuitBlock";
+interface DragListItem {
+  kind: DragKind;
+  data: WorkoutExercise | SupersetPair | CircuitBlock;
+  origIdx: number;
+  key: string;
+}
+
+function reorderArray<T>(arr: T[], from: number, to: number): T[] {
+  const result = [...arr];
+  const [moved] = result.splice(from, 1);
+  result.splice(to, 0, moved);
+  return result;
+}
+
 export default function WorkoutDetailScreen() {
   const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -907,6 +922,161 @@ export default function WorkoutDetailScreen() {
     await updateWorkout(updated);
   };
 
+  const [scrollEnabled, setScrollEnabled] = useState(true);
+
+  const orderedItems = useMemo((): DragListItem[] => {
+    if (!workout) return [];
+    if (workout.circuitBlocks && workout.circuitBlocks.length > 0) {
+      return workout.circuitBlocks.map((block, i) => ({
+        kind: "circuitBlock" as const,
+        data: block,
+        origIdx: i,
+        key: `block-${i}-${block.name}`,
+      }));
+    }
+    if (workout.itemOrder) {
+      let ei = 0, si = 0;
+      return workout.itemOrder.map(({ kind }) => {
+        if (kind === "exercise") {
+          const ex = workout.exercises[ei++];
+          return { kind: "exercise" as const, data: ex, origIdx: ei - 1, key: `ex-${ex.exercise.id}` };
+        } else {
+          const ss = workout.supersets![si++];
+          return { kind: "superset" as const, data: ss, origIdx: si - 1, key: `ss-${ss.exerciseA.exercise.id}` };
+        }
+      });
+    }
+    if (workout.supersets && workout.supersets.length > 0) {
+      const items: DragListItem[] = [];
+      workout.exercises.forEach((ex, i) => {
+        if (ex.exercise.category === "compound")
+          items.push({ kind: "exercise", data: ex, origIdx: i, key: `ex-${ex.exercise.id}` });
+      });
+      workout.supersets.forEach((pair, i) => {
+        items.push({ kind: "superset", data: pair, origIdx: i, key: `ss-${pair.exerciseA.exercise.id}` });
+      });
+      workout.exercises.forEach((ex, i) => {
+        if (ex.exercise.category !== "compound")
+          items.push({ kind: "exercise", data: ex, origIdx: i, key: `ex-${ex.exercise.id}` });
+      });
+      return items;
+    }
+    return workout.exercises.map((ex, i) => ({
+      kind: "exercise" as const,
+      data: ex,
+      origIdx: i,
+      key: `ex-${ex.exercise.id}`,
+    }));
+  }, [workout]);
+
+  const handleReorder = useCallback(async (from: number, to: number) => {
+    if (!workout) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    const reordered = reorderArray(orderedItems, from, to);
+    if (reordered[0]?.kind === "circuitBlock") {
+      const newBlocks = reordered.map(i => i.data as CircuitBlock);
+      const updated: GeneratedWorkout = {
+        ...workout,
+        circuitBlocks: newBlocks,
+        exercises: newBlocks.flatMap(b => b.exercises),
+      };
+      setWorkout(updated);
+      await updateWorkout(updated);
+      return;
+    }
+    const exercises: WorkoutExercise[] = [];
+    const supersets: SupersetPair[] = [];
+    const itemOrder: Array<{ kind: "exercise" | "superset" }> = [];
+    reordered.forEach(item => {
+      if (item.kind === "exercise") {
+        exercises.push(item.data as WorkoutExercise);
+        itemOrder.push({ kind: "exercise" });
+      } else if (item.kind === "superset") {
+        supersets.push(item.data as SupersetPair);
+        itemOrder.push({ kind: "superset" });
+      }
+    });
+    const updated: GeneratedWorkout = {
+      ...workout,
+      exercises,
+      ...(supersets.length > 0 ? { supersets, itemOrder } : {}),
+    };
+    setWorkout(updated);
+    await updateWorkout(updated);
+  }, [workout, orderedItems]);
+
+  const sortableItems = useMemo((): SortableListItem[] => {
+    if (!workout) return [];
+    const ac = CATEGORY_COLORS[workout.topCategory] || Colors.primary;
+    const swl = workout.topCategory === "weight_lifting" || workout.topCategory === "circuit";
+    const snl = workout.topCategory === "yoga" || workout.topCategory === "cardio" || workout.topCategory === "mobility";
+    let exDisplayIdx = 0;
+    return orderedItems.map(item => {
+      if (item.kind === "exercise") {
+        const ex = item.data as WorkoutExercise;
+        const displayIdx = ++exDisplayIdx;
+        const origIdx = item.origIdx;
+        return {
+          key: item.key,
+          element: (
+            <ExerciseCard
+              item={ex}
+              index={displayIdx}
+              accentColor={ac}
+              onRefresh={() => handleRefreshExercise(origIdx)}
+              onPickExercise={() => openPicker({ type: "exercise", index: origIdx })}
+              showWeightLog={swl}
+              onLogWeight={() => openWeightModal(ex.exercise.name, { type: "exercise", index: origIdx }, ex.weight, ex.weightUnit)}
+              showNotesLog={snl}
+              onLogNotes={() => openNotesModal(ex.exercise.name, { type: "exercise", index: origIdx }, ex.userNotes)}
+            />
+          ),
+        };
+      }
+      if (item.kind === "superset") {
+        const pair = item.data as SupersetPair;
+        const origIdx = item.origIdx;
+        return {
+          key: item.key,
+          element: (
+            <SupersetCard
+              pair={pair}
+              index={origIdx}
+              accentColor={ac}
+              onRefreshA={() => handleRefreshSuperset(origIdx, "A")}
+              onRefreshB={() => handleRefreshSuperset(origIdx, "B")}
+              onLogWeightA={() => openWeightModal(pair.exerciseA.exercise.name, { type: "superset", index: origIdx, slot: "A" }, pair.exerciseA.weight, pair.exerciseA.weightUnit)}
+              onLogWeightB={() => openWeightModal(pair.exerciseB.exercise.name, { type: "superset", index: origIdx, slot: "B" }, pair.exerciseB.weight, pair.exerciseB.weightUnit)}
+              onPickA={() => openPicker({ type: "superset", index: origIdx, slot: "A" })}
+              onPickB={() => openPicker({ type: "superset", index: origIdx, slot: "B" })}
+            />
+          ),
+        };
+      }
+      const block = item.data as CircuitBlock;
+      const origIdx = item.origIdx;
+      return {
+        key: item.key,
+        element: (
+          <CircuitBlockCard
+            block={block}
+            index={origIdx}
+            accentColor={ac}
+            showWeightLog={swl}
+            onLogWeight={exIndex => openWeightModal(
+              block.exercises[exIndex].exercise.name,
+              { type: "circuit", blockIndex: origIdx, exIndex },
+              block.exercises[exIndex].weight,
+              block.exercises[exIndex].weightUnit,
+            )}
+            onRefreshExercise={exIndex => handleRefreshCircuitExercise(origIdx, exIndex)}
+            onPickExercise={exIndex => openPicker({ type: "circuit", blockIndex: origIdx, exIndex })}
+          />
+        ),
+      };
+    });
+  }, [orderedItems, workout]);
+
   if (!workout) {
     return (
       <View style={[styles.container, styles.loadingContainer]}>
@@ -940,183 +1110,6 @@ export default function WorkoutDetailScreen() {
     setWorkout(rebalanced);
     await updateWorkout(rebalanced);
   };
-
-  const [scrollEnabled, setScrollEnabled] = useState(true);
-
-  function reorderArray<T>(arr: T[], from: number, to: number): T[] {
-    const result = [...arr];
-    const [moved] = result.splice(from, 1);
-    result.splice(to, 0, moved);
-    return result;
-  }
-
-  type DragKind = "exercise" | "superset" | "circuitBlock";
-  interface DragListItem {
-    kind: DragKind;
-    data: WorkoutExercise | SupersetPair | CircuitBlock;
-    origIdx: number;
-    key: string;
-  }
-
-  const orderedItems = useMemo((): DragListItem[] => {
-    if (!workout) return [];
-
-    if (workout.circuitBlocks && workout.circuitBlocks.length > 0) {
-      return workout.circuitBlocks.map((block, i) => ({
-        kind: "circuitBlock" as const,
-        data: block,
-        origIdx: i,
-        key: `block-${i}-${block.name}`,
-      }));
-    }
-
-    if (workout.itemOrder) {
-      let ei = 0, si = 0;
-      return workout.itemOrder.map(({ kind }) => {
-        if (kind === "exercise") {
-          const ex = workout.exercises[ei];
-          ei++;
-          return { kind: "exercise" as const, data: ex, origIdx: ei - 1, key: `ex-${ex.exercise.id}` };
-        } else {
-          const ss = workout.supersets![si];
-          si++;
-          return { kind: "superset" as const, data: ss, origIdx: si - 1, key: `ss-${ss.exerciseA.exercise.id}` };
-        }
-      });
-    }
-
-    if (workout.supersets && workout.supersets.length > 0) {
-      const items: DragListItem[] = [];
-      workout.exercises.forEach((ex, i) => {
-        if (ex.exercise.category === "compound")
-          items.push({ kind: "exercise", data: ex, origIdx: i, key: `ex-${ex.exercise.id}` });
-      });
-      workout.supersets.forEach((pair, i) => {
-        items.push({ kind: "superset", data: pair, origIdx: i, key: `ss-${pair.exerciseA.exercise.id}` });
-      });
-      workout.exercises.forEach((ex, i) => {
-        if (ex.exercise.category !== "compound")
-          items.push({ kind: "exercise", data: ex, origIdx: i, key: `ex-${ex.exercise.id}` });
-      });
-      return items;
-    }
-
-    return workout.exercises.map((ex, i) => ({
-      kind: "exercise" as const,
-      data: ex,
-      origIdx: i,
-      key: `ex-${ex.exercise.id}`,
-    }));
-  }, [workout]);
-
-  const handleReorder = useCallback(async (from: number, to: number) => {
-    if (!workout) return;
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    const reordered = reorderArray(orderedItems, from, to);
-
-    if (reordered[0]?.kind === "circuitBlock") {
-      const newBlocks = reordered.map(i => i.data as CircuitBlock);
-      const updated: GeneratedWorkout = {
-        ...workout,
-        circuitBlocks: newBlocks,
-        exercises: newBlocks.flatMap(b => b.exercises),
-      };
-      setWorkout(updated);
-      await updateWorkout(updated);
-      return;
-    }
-
-    const exercises: WorkoutExercise[] = [];
-    const supersets: SupersetPair[] = [];
-    const itemOrder: Array<{ kind: "exercise" | "superset" }> = [];
-
-    reordered.forEach(item => {
-      if (item.kind === "exercise") {
-        exercises.push(item.data as WorkoutExercise);
-        itemOrder.push({ kind: "exercise" });
-      } else if (item.kind === "superset") {
-        supersets.push(item.data as SupersetPair);
-        itemOrder.push({ kind: "superset" });
-      }
-    });
-
-    const updated: GeneratedWorkout = {
-      ...workout,
-      exercises,
-      ...(supersets.length > 0 ? { supersets, itemOrder } : {}),
-    };
-    setWorkout(updated);
-    await updateWorkout(updated);
-  }, [workout, orderedItems]);
-
-  const sortableItems = useMemo((): SortableListItem[] => {
-    if (!workout) return [];
-    let exDisplayIdx = 0;
-    return orderedItems.map(item => {
-      if (item.kind === "exercise") {
-        const ex = item.data as WorkoutExercise;
-        const displayIdx = ++exDisplayIdx;
-        const origIdx = item.origIdx;
-        return {
-          key: item.key,
-          element: (
-            <ExerciseCard
-              item={ex}
-              index={displayIdx}
-              accentColor={accentColor}
-              onRefresh={() => handleRefreshExercise(origIdx)}
-              onPickExercise={() => openPicker({ type: "exercise", index: origIdx })}
-              showWeightLog={showWeightLog}
-              onLogWeight={() => openWeightModal(ex.exercise.name, { type: "exercise", index: origIdx }, ex.weight, ex.weightUnit)}
-              showNotesLog={showNotesLog}
-              onLogNotes={() => openNotesModal(ex.exercise.name, { type: "exercise", index: origIdx }, ex.userNotes)}
-            />
-          ),
-        };
-      }
-      if (item.kind === "superset") {
-        const pair = item.data as SupersetPair;
-        const origIdx = item.origIdx;
-        return {
-          key: item.key,
-          element: (
-            <SupersetCard
-              pair={pair}
-              index={origIdx}
-              accentColor={accentColor}
-              onRefreshA={() => handleRefreshSuperset(origIdx, "A")}
-              onRefreshB={() => handleRefreshSuperset(origIdx, "B")}
-              onLogWeightA={() => openWeightModal(pair.exerciseA.exercise.name, { type: "superset", index: origIdx, slot: "A" }, pair.exerciseA.weight, pair.exerciseA.weightUnit)}
-              onLogWeightB={() => openWeightModal(pair.exerciseB.exercise.name, { type: "superset", index: origIdx, slot: "B" }, pair.exerciseB.weight, pair.exerciseB.weightUnit)}
-              onPickA={() => openPicker({ type: "superset", index: origIdx, slot: "A" })}
-              onPickB={() => openPicker({ type: "superset", index: origIdx, slot: "B" })}
-            />
-          ),
-        };
-      }
-      const block = item.data as CircuitBlock;
-      const origIdx = item.origIdx;
-      return {
-        key: item.key,
-        element: (
-          <CircuitBlockCard
-            block={block}
-            index={origIdx}
-            accentColor={accentColor}
-            showWeightLog={showWeightLog}
-            onLogWeight={exIndex => openWeightModal(
-              block.exercises[exIndex].exercise.name,
-              { type: "circuit", blockIndex: origIdx, exIndex },
-              block.exercises[exIndex].weight,
-              block.exercises[exIndex].weightUnit,
-            )}
-            onRefreshExercise={exIndex => handleRefreshCircuitExercise(origIdx, exIndex)}
-            onPickExercise={exIndex => openPicker({ type: "circuit", blockIndex: origIdx, exIndex })}
-          />
-        ),
-      };
-    });
-  }, [orderedItems, workout, accentColor, showWeightLog, showNotesLog]);
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + webTopPad }]}>
