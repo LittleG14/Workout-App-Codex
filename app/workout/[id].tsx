@@ -1134,6 +1134,7 @@ export default function WorkoutDetailScreen() {
       <ScrollView
         contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + (Platform.OS === "web" ? 34 : 40) }]}
         showsVerticalScrollIndicator={false}
+        scrollEnabled={scrollEnabled}
       >
         <Animated.View entering={FadeIn.duration(500)}>
           <LinearGradient
@@ -1237,53 +1238,11 @@ export default function WorkoutDetailScreen() {
           {hasCircuitBlocks ? "Workout Structure" : workout.topCategory === "yoga" ? "Poses" : "Exercises"}
         </Text>
 
-        {hasCircuitBlocks ? (
-          workout.circuitBlocks!.map((block, bi) => (
-            <CircuitBlockCard
-              key={bi}
-              block={block}
-              index={bi}
-              accentColor={accentColor}
-              showWeightLog={showWeightLog}
-              onLogWeight={(exIndex) => openWeightModal(
-                block.exercises[exIndex].exercise.name,
-                { type: 'circuit', blockIndex: bi, exIndex },
-                block.exercises[exIndex].weight,
-                block.exercises[exIndex].weightUnit
-              )}
-              onRefreshExercise={(exIndex) => handleRefreshCircuitExercise(bi, exIndex)}
-              onPickExercise={(exIndex) => openPicker({ type: 'circuit', blockIndex: bi, exIndex })}
-            />
-          ))
-        ) : (
-          (() => {
-            if (hasSupersets) {
-              const compounds: { ex: WorkoutExercise; origIdx: number }[] = [];
-              const rest: { ex: WorkoutExercise; origIdx: number }[] = [];
-              workout.exercises.forEach((ex, i) => {
-                if (ex.exercise.category === 'compound') compounds.push({ ex, origIdx: i });
-                else rest.push({ ex, origIdx: i });
-              });
-              let idx = 0;
-              return (
-                <>
-                  {compounds.map(({ ex, origIdx }) => (
-                    <ExerciseCard key={ex.exercise.id + origIdx} item={ex} index={++idx} accentColor={accentColor} onRefresh={() => handleRefreshExercise(origIdx)} onPickExercise={() => openPicker({ type: 'exercise', index: origIdx })} showWeightLog={showWeightLog} onLogWeight={() => openWeightModal(ex.exercise.name, { type: 'exercise', index: origIdx }, ex.weight, ex.weightUnit)} />
-                  ))}
-                  {workout.supersets!.map((pair, i) => (
-                    <SupersetCard key={`ss-${i}`} pair={pair} index={i} accentColor={accentColor} onRefreshA={() => handleRefreshSuperset(i, 'A')} onRefreshB={() => handleRefreshSuperset(i, 'B')} onLogWeightA={() => openWeightModal(pair.exerciseA.exercise.name, { type: 'superset', index: i, slot: 'A' }, pair.exerciseA.weight, pair.exerciseA.weightUnit)} onLogWeightB={() => openWeightModal(pair.exerciseB.exercise.name, { type: 'superset', index: i, slot: 'B' }, pair.exerciseB.weight, pair.exerciseB.weightUnit)} onPickA={() => openPicker({ type: 'superset', index: i, slot: 'A' })} onPickB={() => openPicker({ type: 'superset', index: i, slot: 'B' })} />
-                  ))}
-                  {rest.map(({ ex, origIdx }) => (
-                    <ExerciseCard key={ex.exercise.id + origIdx} item={ex} index={++idx} accentColor={accentColor} onRefresh={() => handleRefreshExercise(origIdx)} onPickExercise={() => openPicker({ type: 'exercise', index: origIdx })} showWeightLog={showWeightLog} onLogWeight={() => openWeightModal(ex.exercise.name, { type: 'exercise', index: origIdx }, ex.weight, ex.weightUnit)} />
-                  ))}
-                </>
-              );
-            }
-            return workout.exercises.map((ex, i) => (
-              <ExerciseCard key={ex.exercise.id + i} item={ex} index={i + 1} accentColor={accentColor} onRefresh={() => handleRefreshExercise(i)} onPickExercise={() => openPicker({ type: 'exercise', index: i })} showWeightLog={showWeightLog} onLogWeight={() => openWeightModal(ex.exercise.name, { type: 'exercise', index: i }, ex.weight, ex.weightUnit)} showNotesLog={showNotesLog} onLogNotes={() => openNotesModal(ex.exercise.name, { type: 'exercise', index: i }, ex.userNotes)} />
-            ));
-          })()
-        )}
+        <SortableExerciseList
+          items={sortableItems}
+          onReorder={handleReorder}
+          onDragActive={(active) => setScrollEnabled(!active)}
+        />
       </ScrollView>
 
       {hasCircuitBlocks && (
