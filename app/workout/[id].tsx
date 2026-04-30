@@ -11,6 +11,7 @@ import {
   KeyboardAvoidingView,
   FlatList,
 } from "react-native";
+import MapView, { Polyline, PROVIDER_DEFAULT } from "react-native-maps";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLocalSearchParams, router } from "expo-router";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
@@ -25,6 +26,7 @@ import {
   CircuitBlock,
   SupersetPair,
   CircuitBalance,
+  RunData,
   TOP_CATEGORY_LABELS,
   getSubTypeLabel,
   findReplacementExercise,
@@ -386,6 +388,140 @@ function SupersetCard({ pair, index, accentColor, onRefreshA, onRefreshB, onLogW
   );
 }
 
+function formatRunTime(secs: number): string {
+  const h = Math.floor(secs / 3600);
+  const m = Math.floor((secs % 3600) / 60);
+  const s = secs % 60;
+  if (h > 0) return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+  return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+}
+
+function formatRunPace(secsPerUnit: number): string {
+  if (!isFinite(secsPerUnit) || secsPerUnit <= 0 || secsPerUnit > 3600) return "--:--";
+  const m = Math.floor(secsPerUnit / 60);
+  const s = Math.floor(secsPerUnit % 60);
+  return `${m}:${String(s).padStart(2, "0")}`;
+}
+
+function getRunMapRegion(runData: RunData) {
+  if (runData.coordinates.length === 0) {
+    return { latitude: 37.78825, longitude: -122.4324, latitudeDelta: 0.01, longitudeDelta: 0.01 };
+  }
+  const lats = runData.coordinates.map(c => c.latitude);
+  const lons = runData.coordinates.map(c => c.longitude);
+  const minLat = Math.min(...lats);
+  const maxLat = Math.max(...lats);
+  const minLon = Math.min(...lons);
+  const maxLon = Math.max(...lons);
+  const pad = 0.003;
+  return {
+    latitude: (minLat + maxLat) / 2,
+    longitude: (minLon + maxLon) / 2,
+    latitudeDelta: Math.max(maxLat - minLat + pad, 0.005),
+    longitudeDelta: Math.max(maxLon - minLon + pad, 0.005),
+  };
+}
+
+function JustRunDetail({ workout }: { workout: GeneratedWorkout }) {
+  const insets = useSafeAreaInsets();
+  const webTopPad = Platform.OS === "web" ? 67 : 0;
+  const runData = workout.runData;
+
+  const date = new Date(workout.createdAt);
+  const dateStr = date.toLocaleDateString("en-US", {
+    weekday: "long", month: "long", day: "numeric", year: "numeric",
+  });
+  const timeStr = date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+
+  if (!runData) {
+    return (
+      <View style={[styles.container, { paddingTop: insets.top + webTopPad }]}>
+        <Pressable onPress={() => router.back()} style={[styles.backBtnRun, { top: insets.top + webTopPad + 8 }]}>
+          <Ionicons name="chevron-back" size={24} color={Colors.text} />
+        </Pressable>
+        <Text style={[styles.loadingText, { marginTop: 80 }]}>Run data not available.</Text>
+      </View>
+    );
+  }
+
+  const unit = runData.unit;
+  const distInUnit = unit === "miles" ? runData.distanceMiles : runData.distanceKm;
+  const pacePerUnit = unit === "miles" ? runData.paceSecsPerMile : runData.paceSecsPerKm;
+  const unitLabel = unit === "miles" ? "mi" : "km";
+  const paceLabel = unit === "miles" ? "/mi" : "/km";
+  const mapRegion = getRunMapRegion(runData);
+
+  return (
+    <View style={[styles.container, { paddingTop: insets.top + webTopPad }]}>
+      <Pressable
+        onPress={() => router.back()}
+        style={[styles.backBtnRun, { top: insets.top + webTopPad + 8 }]}
+        hitSlop={8}
+      >
+        <Ionicons name="chevron-back" size={24} color={Colors.text} />
+      </Pressable>
+
+      <ScrollView
+        contentContainerStyle={[styles.runDetailScroll, { paddingBottom: insets.bottom + 24 }]}
+        showsVerticalScrollIndicator={false}
+      >
+        <Animated.View entering={FadeInDown.delay(0).duration(400)} style={styles.runDetailHeader}>
+          <View style={[styles.runDetailIconWrap, { backgroundColor: `${Colors.cardio}18` }]}>
+            <Ionicons name="location" size={32} color={Colors.cardio} />
+          </View>
+          <Text style={styles.runDetailTitle}>{workout.name}</Text>
+          <Text style={styles.runDetailDate}>{dateStr} at {timeStr}</Text>
+        </Animated.View>
+
+        {runData.coordinates.length > 1 && (
+          <Animated.View entering={FadeInDown.delay(80).duration(400)} style={styles.runMapCard}>
+            <MapView
+              style={styles.runMap}
+              provider={PROVIDER_DEFAULT}
+              initialRegion={mapRegion}
+              scrollEnabled
+              zoomEnabled
+              pitchEnabled={false}
+              rotateEnabled={false}
+              showsUserLocation={false}
+            >
+              <Polyline
+                coordinates={runData.coordinates.map(c => ({ latitude: c.latitude, longitude: c.longitude }))}
+                strokeColor="#FF8C00"
+                strokeWidth={5}
+                lineCap="round"
+                lineJoin="round"
+              />
+            </MapView>
+          </Animated.View>
+        )}
+
+        <Animated.View entering={FadeInDown.delay(160).duration(400)} style={styles.runStatsCard}>
+          <View style={styles.runStatRow}>
+            <View style={styles.runStatItem}>
+              <Ionicons name="location-outline" size={20} color={Colors.cardio} />
+              <Text style={styles.runStatValue}>{distInUnit.toFixed(2)}</Text>
+              <Text style={styles.runStatLabel}>{unitLabel}</Text>
+            </View>
+            <View style={styles.runStatDivider} />
+            <View style={styles.runStatItem}>
+              <Ionicons name="time-outline" size={20} color={Colors.cardio} />
+              <Text style={styles.runStatValue}>{formatRunTime(runData.durationSeconds)}</Text>
+              <Text style={styles.runStatLabel}>Time</Text>
+            </View>
+            <View style={styles.runStatDivider} />
+            <View style={styles.runStatItem}>
+              <Ionicons name="speedometer-outline" size={20} color={Colors.cardio} />
+              <Text style={styles.runStatValue}>{formatRunPace(pacePerUnit)}</Text>
+              <Text style={styles.runStatLabel}>Pace{paceLabel}</Text>
+            </View>
+          </View>
+        </Animated.View>
+      </ScrollView>
+    </View>
+  );
+}
+
 export default function WorkoutDetailScreen() {
   const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -677,6 +813,10 @@ export default function WorkoutDetailScreen() {
         <Text style={styles.loadingText}>Loading...</Text>
       </View>
     );
+  }
+
+  if (workout.subType === "just_run") {
+    return <JustRunDetail workout={workout} />;
   }
 
   const accentColor = CATEGORY_COLORS[workout.topCategory] || Colors.primary;
@@ -2054,5 +2194,93 @@ const styles = StyleSheet.create({
     fontFamily: 'Rubik_700Bold',
     color: '#FFFFFF',
     letterSpacing: 0.3,
+  },
+  backBtnRun: {
+    position: "absolute",
+    left: 16,
+    zIndex: 10,
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  runDetailScroll: {
+    paddingHorizontal: 20,
+    paddingTop: 60,
+    gap: 16,
+  },
+  runDetailHeader: {
+    alignItems: "center",
+    paddingBottom: 4,
+    gap: 6,
+  },
+  runDetailIconWrap: {
+    width: 68,
+    height: 68,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 6,
+  },
+  runDetailTitle: {
+    fontSize: 22,
+    fontFamily: "Rubik_700Bold",
+    color: Colors.text,
+    textAlign: "center",
+  },
+  runDetailDate: {
+    fontSize: 13,
+    fontFamily: "Rubik_400Regular",
+    color: Colors.textSecondary,
+    textAlign: "center",
+  },
+  runMapCard: {
+    borderRadius: 20,
+    overflow: "hidden",
+    height: 280,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  runMap: {
+    flex: 1,
+  },
+  runStatsCard: {
+    backgroundColor: Colors.surface,
+    borderRadius: 18,
+    padding: 24,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  runStatRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  runStatItem: {
+    flex: 1,
+    alignItems: "center",
+    gap: 6,
+  },
+  runStatValue: {
+    fontSize: 26,
+    fontFamily: "Rubik_700Bold",
+    color: Colors.text,
+    letterSpacing: -0.5,
+  },
+  runStatLabel: {
+    fontSize: 12,
+    fontFamily: "Rubik_500Medium",
+    color: Colors.textSecondary,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  runStatDivider: {
+    width: 1,
+    height: 50,
+    backgroundColor: Colors.border,
   },
 });

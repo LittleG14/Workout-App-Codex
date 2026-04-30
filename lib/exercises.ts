@@ -22,11 +22,28 @@ export type MuscleGroup = 'chest' | 'triceps' | 'back' | 'biceps' | 'shoulders' 
 export type WeightLiftingType = 'chest_triceps' | 'back_biceps' | 'shoulders_abs' | 'legs' | 'full_body' | 'push' | 'pull';
 export type CircuitStyle = 'amrap' | 'emom' | 'rounds_for_time' | 'hyrox';
 export type YogaStyle = 'core_strength' | 'flexibility';
-export type CardioStyle = 'running' | 'mixed_cardio';
+export type CardioStyle = 'running' | 'mixed_cardio' | 'just_run';
 export type MobilityStyle = 'full_body' | 'lower_body' | 'upper_body' | 'hips_and_spine';
 
 export type TrainingStyle = 'strength' | 'hypertrophy';
 export type ExerciseCategory = 'compound' | 'isolation';
+
+export interface RunCoordinate {
+  latitude: number;
+  longitude: number;
+  timestamp: number;
+}
+
+export interface RunData {
+  coordinates: RunCoordinate[];
+  distanceMiles: number;
+  distanceKm: number;
+  durationSeconds: number;
+  paceSecsPerMile: number;
+  paceSecsPerKm: number;
+  unit: 'miles' | 'km';
+  notifInterval: number;
+}
 
 export interface Exercise {
   id: string;
@@ -75,6 +92,7 @@ export interface GeneratedWorkout {
   circuitBalance?: CircuitBalance;
   includeCore?: boolean;
   createdAt: string;
+  runData?: RunData;
 }
 
 export const TOP_CATEGORY_LABELS: Record<TopCategory, string> = {
@@ -125,6 +143,7 @@ export const YOGA_STYLE_LABELS: Record<YogaStyle, string> = {
 export const CARDIO_STYLE_LABELS: Record<CardioStyle, string> = {
   running: 'Running',
   mixed_cardio: 'Mixed Cardio',
+  just_run: 'Just Run',
 };
 
 function toExercise(c: CustomExerciseData): Exercise {

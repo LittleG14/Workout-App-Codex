@@ -273,11 +273,18 @@ export default function GenerateScreen() {
     setSubTypes(prev => ({ ...prev, [selectedCategory]: val }));
   };
 
+  const isJustRun = selectedCategory === "cardio" && currentSubType === "just_run";
+
   const handleGenerate = useCallback(async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
     buttonScale.value = withSequence(withSpring(0.95, { damping: 15 }), withSpring(1, { damping: 10 }));
-    setGenerating(true);
 
+    if (isJustRun) {
+      router.push("/run/setup");
+      return;
+    }
+
+    setGenerating(true);
     await new Promise(r => setTimeout(r, 400));
 
     const style = selectedCategory === "weight_lifting" ? trainingStyle : currentSubType;
@@ -285,7 +292,7 @@ export default function GenerateScreen() {
     await saveWorkout(workout);
     setGenerating(false);
     router.push({ pathname: "/workout/[id]", params: { id: workout.id, fresh: "true" } });
-  }, [selectedCategory, currentSubType, trainingStyle, selectedDuration, includeSupersets, includeCore, customExercises, hiddenIds]);
+  }, [selectedCategory, currentSubType, trainingStyle, selectedDuration, includeSupersets, includeCore, customExercises, hiddenIds, isJustRun]);
 
   const webTopPad = Platform.OS === "web" ? 67 : 0;
 
@@ -401,15 +408,17 @@ export default function GenerateScreen() {
           </Animated.View>
         )}
 
-        <Animated.View entering={FadeIn.delay(300).duration(400)}>
-          <Text style={styles.sectionTitle}>Duration</Text>
-          <DurationPicker
-            duration={selectedDuration}
-            onSelect={setSelectedDuration}
-            color={catColor}
-            options={selectedCategory === "mobility" ? MOBILITY_DURATION_OPTIONS : DURATION_OPTIONS}
-          />
-        </Animated.View>
+        {!isJustRun && (
+          <Animated.View entering={FadeIn.delay(300).duration(400)}>
+            <Text style={styles.sectionTitle}>Duration</Text>
+            <DurationPicker
+              duration={selectedDuration}
+              onSelect={setSelectedDuration}
+              color={catColor}
+              options={selectedCategory === "mobility" ? MOBILITY_DURATION_OPTIONS : DURATION_OPTIONS}
+            />
+          </Animated.View>
+        )}
 
         <Animated.View
           entering={FadeIn.delay(350).duration(400)}
@@ -431,11 +440,24 @@ export default function GenerateScreen() {
                 <Ionicons name="options" size={14} color={catColor} />
                 <Text style={styles.summaryLabel}>{getSummaryLabel()}</Text>
               </View>
-              <View style={styles.summaryDivider} />
-              <View style={styles.summaryItem}>
-                <Ionicons name="time" size={14} color={Colors.accent} />
-                <Text style={styles.summaryLabel}>{selectedDuration} min</Text>
-              </View>
+              {!isJustRun && (
+                <>
+                  <View style={styles.summaryDivider} />
+                  <View style={styles.summaryItem}>
+                    <Ionicons name="time" size={14} color={Colors.accent} />
+                    <Text style={styles.summaryLabel}>{selectedDuration} min</Text>
+                  </View>
+                </>
+              )}
+              {isJustRun && (
+                <>
+                  <View style={styles.summaryDivider} />
+                  <View style={styles.summaryItem}>
+                    <Ionicons name="location" size={14} color={catColor} />
+                    <Text style={styles.summaryLabel}>GPS Tracked</Text>
+                  </View>
+                </>
+              )}
             </View>
           </LinearGradient>
         </Animated.View>
@@ -454,6 +476,11 @@ export default function GenerateScreen() {
             >
               {generating ? (
                 <Text style={styles.generateText}>Forging...</Text>
+              ) : isJustRun ? (
+                <>
+                  <Ionicons name="location" size={22} color="#FFF" />
+                  <Text style={styles.generateText}>Set Up Run</Text>
+                </>
               ) : (
                 <>
                   <Ionicons name="flash" size={22} color="#FFF" />

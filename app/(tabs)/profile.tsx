@@ -37,6 +37,7 @@ import {
   Exercise,
   WorkoutExercise,
   GeneratedWorkout,
+  RunData,
   WEIGHT_EXERCISES,
   CIRCUIT_EXERCISES,
   YOGA_CORE_POSES,
@@ -176,6 +177,55 @@ function formatDate(iso: string): string {
     day: "numeric",
     year: "numeric",
   });
+}
+
+function formatRunTime(secs: number): string {
+  const h = Math.floor(secs / 3600);
+  const m = Math.floor((secs % 3600) / 60);
+  const s = secs % 60;
+  if (h > 0) return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+  return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+}
+
+function formatRunPace(secsPerUnit: number): string {
+  if (!isFinite(secsPerUnit) || secsPerUnit <= 0 || secsPerUnit > 3600) return "--:--";
+  const m = Math.floor(secsPerUnit / 60);
+  const s = Math.floor(secsPerUnit % 60);
+  return `${m}:${String(s).padStart(2, "0")}`;
+}
+
+interface JustRunPRs {
+  fastestPaceRun: { pace: number; distance: number; time: number; unit: 'miles' | 'km'; date: string } | null;
+  farthestDistanceRun: { distance: number; pace: number; time: number; unit: 'miles' | 'km'; date: string } | null;
+}
+
+function computeJustRunPRs(workouts: GeneratedWorkout[]): JustRunPRs {
+  const runs = workouts.filter(w => w.subType === "just_run" && w.runData);
+
+  let fastestPaceRun: JustRunPRs["fastestPaceRun"] = null;
+  let farthestDistanceRun: JustRunPRs["farthestDistanceRun"] = null;
+
+  runs.forEach(w => {
+    const rd = w.runData!;
+    const unit = rd.unit;
+    const dist = unit === "miles" ? rd.distanceMiles : rd.distanceKm;
+    const pace = unit === "miles" ? rd.paceSecsPerMile : rd.paceSecsPerKm;
+    const time = rd.durationSeconds;
+
+    if (pace > 0 && isFinite(pace)) {
+      if (!fastestPaceRun || pace < fastestPaceRun.pace) {
+        fastestPaceRun = { pace, distance: dist, time, unit, date: w.createdAt };
+      }
+    }
+
+    if (dist > 0) {
+      if (!farthestDistanceRun || dist > farthestDistanceRun.distance) {
+        farthestDistanceRun = { distance: dist, pace, time, unit, date: w.createdAt };
+      }
+    }
+  });
+
+  return { fastestPaceRun, farthestDistanceRun };
 }
 
 function computeBMR(profile: UserProfile): number | null {
@@ -697,6 +747,7 @@ export default function ProfileScreen() {
   const [confirmLogout, setConfirmLogout] = useState(false);
   const [prCategory, setPrCategory] = useState<PRCategory>("weight_lifting");
   const [prData, setPrData] = useState<ExercisePR[]>([]);
+  const [justRunPRs, setJustRunPRs] = useState<JustRunPRs>({ fastestPaceRun: null, farthestDistanceRun: null });
   const [selectedExercise, setSelectedExercise] = useState<ExercisePR | null>(null);
   const [prSearch, setPrSearch] = useState("");
   const { hiddenIds, resetTimestamps, hideExercise, resetExercise } = useHiddenExercises();
@@ -727,7 +778,9 @@ export default function ProfileScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     const workouts = await getWorkouts();
     const data = computePRs(workouts, getExerciseListForCategory(prCategory), prCategory, hiddenIds, resetTimestamps);
+    const runPRs = computeJustRunPRs(workouts);
     setPrData(data);
+    setJustRunPRs(runPRs);
     setSelectedExercise(null);
     setPrSearch("");
     setShowPRModal(true);
@@ -739,7 +792,9 @@ export default function ProfileScreen() {
     setPrSearch("");
     const workouts = await getWorkouts();
     const data = computePRs(workouts, getExerciseListForCategory(cat), cat, hiddenIds, resetTimestamps);
+    const runPRs = computeJustRunPRs(workouts);
     setPrData(data);
+    setJustRunPRs(runPRs);
   };
 
   const handleDeletePRExercise = useCallback((id: string) => {
@@ -1221,22 +1276,69 @@ export default function ProfileScreen() {
               contentContainerStyle={styles.prListContent}
               keyboardShouldPersistTaps="handled"
               ListHeaderComponent={
-                <View style={styles.prSearchContainer}>
-                  <Ionicons name="search" size={16} color={Colors.textMuted} />
-                  <TextInput
-                    style={styles.prSearchInput}
-                    value={prSearch}
-                    onChangeText={setPrSearch}
-                    placeholder="Search exercises..."
-                    placeholderTextColor={Colors.textMuted}
-                    returnKeyType="search"
-                    autoCorrect={false}
-                  />
-                  {prSearch.length > 0 && (
-                    <Pressable onPress={() => setPrSearch("")} hitSlop={8}>
-                      <Ionicons name="close-circle" size={16} color={Colors.textMuted} />
-                    </Pressable>
+                <View>
+                  {prCategory === "cardio" && (justRunPRs.fastestPaceRun || justRunPRs.farthestDistanceRun) && (
+                    <View style={styles.justRunPRCard}>
+                      <View style={styles.justRunPRHeader}>
+                        <Ionicons name="location" size={16} color={Colors.cardio} />
+                        <Text style={styles.justRunPRTitle}>Just Run PRs</Text>
+                      </View>
+                      <View style={styles.justRunPRRow}>
+                        <View style={styles.justRunPRStat}>
+                          <Ionicons name="trophy" size={14} color="#FFD700" />
+                          <Text style={styles.justRunPRStatLabel}>Fastest Pace</Text>
+                          {justRunPRs.fastestPaceRun ? (
+                            <>
+                              <Text style={styles.justRunPRStatValue}>
+                                {formatRunPace(justRunPRs.fastestPaceRun.pace)}/{justRunPRs.fastestPaceRun.unit === "miles" ? "mi" : "km"}
+                              </Text>
+                              <Text style={styles.justRunPRStatSub}>
+                                {justRunPRs.fastestPaceRun.distance.toFixed(2)} {justRunPRs.fastestPaceRun.unit === "miles" ? "mi" : "km"} · {formatRunTime(justRunPRs.fastestPaceRun.time)}
+                              </Text>
+                              <Text style={styles.justRunPRStatDate}>{formatDate(justRunPRs.fastestPaceRun.date)}</Text>
+                            </>
+                          ) : (
+                            <Text style={styles.justRunPRStatEmpty}>No data</Text>
+                          )}
+                        </View>
+                        <View style={styles.justRunPRDivider} />
+                        <View style={styles.justRunPRStat}>
+                          <Ionicons name="navigate" size={14} color={Colors.cardio} />
+                          <Text style={styles.justRunPRStatLabel}>Farthest Run</Text>
+                          {justRunPRs.farthestDistanceRun ? (
+                            <>
+                              <Text style={styles.justRunPRStatValue}>
+                                {justRunPRs.farthestDistanceRun.distance.toFixed(2)} {justRunPRs.farthestDistanceRun.unit === "miles" ? "mi" : "km"}
+                              </Text>
+                              <Text style={styles.justRunPRStatSub}>
+                                {formatRunPace(justRunPRs.farthestDistanceRun.pace)}/{justRunPRs.farthestDistanceRun.unit === "miles" ? "mi" : "km"} · {formatRunTime(justRunPRs.farthestDistanceRun.time)}
+                              </Text>
+                              <Text style={styles.justRunPRStatDate}>{formatDate(justRunPRs.farthestDistanceRun.date)}</Text>
+                            </>
+                          ) : (
+                            <Text style={styles.justRunPRStatEmpty}>No data</Text>
+                          )}
+                        </View>
+                      </View>
+                    </View>
                   )}
+                  <View style={styles.prSearchContainer}>
+                    <Ionicons name="search" size={16} color={Colors.textMuted} />
+                    <TextInput
+                      style={styles.prSearchInput}
+                      value={prSearch}
+                      onChangeText={setPrSearch}
+                      placeholder="Search exercises..."
+                      placeholderTextColor={Colors.textMuted}
+                      returnKeyType="search"
+                      autoCorrect={false}
+                    />
+                    {prSearch.length > 0 && (
+                      <Pressable onPress={() => setPrSearch("")} hitSlop={8}>
+                        <Ionicons name="close-circle" size={16} color={Colors.textMuted} />
+                      </Pressable>
+                    )}
+                  </View>
                 </View>
               }
               renderItem={({ item, index }) => (
@@ -1647,6 +1749,74 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontFamily: "Rubik_600SemiBold",
     color: "#FF4757",
+  },
+  justRunPRCard: {
+    marginHorizontal: 16,
+    marginBottom: 14,
+    backgroundColor: `${Colors.cardio}10`,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: `${Colors.cardio}30`,
+    padding: 16,
+  },
+  justRunPRHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 14,
+  },
+  justRunPRTitle: {
+    fontSize: 14,
+    fontFamily: "Rubik_700Bold",
+    color: Colors.cardio,
+    letterSpacing: 0.3,
+  },
+  justRunPRRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+  },
+  justRunPRStat: {
+    flex: 1,
+    alignItems: "center",
+    gap: 4,
+  },
+  justRunPRStatLabel: {
+    fontSize: 11,
+    fontFamily: "Rubik_600SemiBold",
+    color: Colors.textMuted,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    marginTop: 4,
+  },
+  justRunPRStatValue: {
+    fontSize: 18,
+    fontFamily: "Rubik_700Bold",
+    color: Colors.text,
+    letterSpacing: -0.3,
+  },
+  justRunPRStatSub: {
+    fontSize: 12,
+    fontFamily: "Rubik_400Regular",
+    color: Colors.textSecondary,
+    textAlign: "center",
+  },
+  justRunPRStatDate: {
+    fontSize: 11,
+    fontFamily: "Rubik_400Regular",
+    color: Colors.textMuted,
+    textAlign: "center",
+  },
+  justRunPRStatEmpty: {
+    fontSize: 13,
+    fontFamily: "Rubik_400Regular",
+    color: Colors.textMuted,
+    fontStyle: "italic",
+  },
+  justRunPRDivider: {
+    width: 1,
+    backgroundColor: `${Colors.cardio}30`,
+    alignSelf: "stretch",
+    marginHorizontal: 12,
   },
   accountCard: {
     flexDirection: "row",

@@ -56,6 +56,7 @@ function SwipeableWorkoutItem({ item, index, onDelete }: {
   });
 
   const totalSets = item.exercises.reduce((sum, e) => sum + e.sets, 0);
+  const isJustRun = item.subType === "just_run";
 
   const CATEGORY_COLORS: Record<string, string> = {
     weight_lifting: Colors.primary,
@@ -65,6 +66,20 @@ function SwipeableWorkoutItem({ item, index, onDelete }: {
   };
   const catColor = CATEGORY_COLORS[item.topCategory] || Colors.primary;
   const catLabel = TOP_CATEGORY_LABELS[item.topCategory] || "Workout";
+
+  function formatRunTime(secs: number): string {
+    const h = Math.floor(secs / 3600);
+    const m = Math.floor((secs % 3600) / 60);
+    const s = secs % 60;
+    if (h > 0) return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+    return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+  }
+  const runDist = isJustRun && item.runData
+    ? item.runData.unit === "miles"
+      ? `${item.runData.distanceMiles.toFixed(2)} mi`
+      : `${item.runData.distanceKm.toFixed(2)} km`
+    : null;
+  const runTime = isJustRun && item.runData ? formatRunTime(item.runData.durationSeconds) : null;
 
   const triggerDelete = useCallback(() => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -169,20 +184,39 @@ function SwipeableWorkoutItem({ item, index, onDelete }: {
             </View>
 
             <View style={styles.historyCardStats}>
-              <View style={styles.historyStatItem}>
-                <Ionicons name="barbell-outline" size={14} color={Colors.textMuted} />
-                <Text style={styles.historyStatText}>
-                  {item.exercises.length} exercises
-                </Text>
-              </View>
-              <View style={styles.historyStatItem}>
-                <Ionicons name="layers-outline" size={14} color={Colors.textMuted} />
-                <Text style={styles.historyStatText}>{totalSets} sets</Text>
-              </View>
-              <View style={styles.historyStatItem}>
-                <Ionicons name="time-outline" size={14} color={Colors.textMuted} />
-                <Text style={styles.historyStatText}>{item.durationMinutes} min</Text>
-              </View>
+              {isJustRun ? (
+                <>
+                  <View style={styles.historyStatItem}>
+                    <Ionicons name="location-outline" size={14} color={Colors.textMuted} />
+                    <Text style={styles.historyStatText}>{runDist ?? "--"}</Text>
+                  </View>
+                  <View style={styles.historyStatItem}>
+                    <Ionicons name="time-outline" size={14} color={Colors.textMuted} />
+                    <Text style={styles.historyStatText}>{runTime ?? "--"}</Text>
+                  </View>
+                  <View style={styles.historyStatItem}>
+                    <Ionicons name="footsteps-outline" size={14} color={Colors.textMuted} />
+                    <Text style={styles.historyStatText}>GPS Run</Text>
+                  </View>
+                </>
+              ) : (
+                <>
+                  <View style={styles.historyStatItem}>
+                    <Ionicons name="barbell-outline" size={14} color={Colors.textMuted} />
+                    <Text style={styles.historyStatText}>
+                      {item.exercises.length} exercises
+                    </Text>
+                  </View>
+                  <View style={styles.historyStatItem}>
+                    <Ionicons name="layers-outline" size={14} color={Colors.textMuted} />
+                    <Text style={styles.historyStatText}>{totalSets} sets</Text>
+                  </View>
+                  <View style={styles.historyStatItem}>
+                    <Ionicons name="time-outline" size={14} color={Colors.textMuted} />
+                    <Text style={styles.historyStatText}>{item.durationMinutes} min</Text>
+                  </View>
+                </>
+              )}
             </View>
 
             <View style={styles.historyCardFooter}>
