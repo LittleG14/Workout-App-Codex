@@ -740,6 +740,86 @@ export default function WorkoutDetailScreen() {
   const [newExSaving, setNewExSaving] = useState(false);
   const [newExError, setNewExError] = useState('');
 
+  type SwState = 'idle' | 'countdown' | 'running' | 'paused';
+  const [swState, setSwState] = useState<SwState>('idle');
+  const [swCountdown, setSwCountdown] = useState(5);
+  const [swElapsed, setSwElapsed] = useState(0);
+  const [swIsHolding, setSwIsHolding] = useState(false);
+  const swIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const swElapsedRef = useRef(0);
+
+  useEffect(() => {
+    return () => { if (swIntervalRef.current) clearInterval(swIntervalRef.current); };
+  }, []);
+
+  function formatSwTime(secs: number): string {
+    const h = Math.floor(secs / 3600);
+    const m = Math.floor((secs % 3600) / 60);
+    const s = secs % 60;
+    if (h > 0) return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+    return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  }
+
+  function startSwRunning() {
+    setSwState('running');
+    swIntervalRef.current = setInterval(() => {
+      swElapsedRef.current += 1;
+      setSwElapsed(swElapsedRef.current);
+    }, 1000);
+  }
+
+  function handleSwPress() {
+    if (swState === 'idle') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      swElapsedRef.current = 0;
+      setSwElapsed(0);
+      setSwState('countdown');
+      setSwCountdown(5);
+      let count = 5;
+      swIntervalRef.current = setInterval(() => {
+        count -= 1;
+        if (count <= 0) {
+          clearInterval(swIntervalRef.current!);
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+          startSwRunning();
+        } else {
+          setSwCountdown(count);
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        }
+      }, 1000);
+    } else if (swState === 'running') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      if (swIntervalRef.current) clearInterval(swIntervalRef.current);
+      setSwState('paused');
+    } else if (swState === 'paused') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      startSwRunning();
+    }
+  }
+
+  async function handleSwLongPress() {
+    if (swState !== 'running' && swState !== 'paused') return;
+    if (swIntervalRef.current) clearInterval(swIntervalRef.current);
+    const finalElapsed = swElapsedRef.current;
+    setSwState('idle');
+    setSwIsHolding(false);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    setWorkout(prev => {
+      if (!prev) return prev;
+      const updated = { ...prev, elapsedSeconds: finalElapsed };
+      updateWorkout(updated);
+      return updated;
+    });
+  }
+
+  function handleSwPressIn() {
+    if (swState === 'running' || swState === 'paused') setSwIsHolding(true);
+  }
+
+  function handleSwPressOut() {
+    setSwIsHolding(false);
+  }
+
   const { customExercises, createExercise } = useCustomExercises();
   const { hiddenIds } = useHiddenExercises();
 
@@ -1027,6 +1107,45 @@ export default function WorkoutDetailScreen() {
           })()
         )}
       </ScrollView>
+
+      {hasCircuitBlocks && (
+        <View style={[styles.swFooter, { paddingBottom: insets.bottom + (Platform.OS === 'web' ? 34 : 8) }]}>
+          <Pressable
+            onPress={handleSwPress}
+            onLongPress={handleSwLongPress}
+            onPressIn={handleSwPressIn}
+            onPressOut={handleSwPressOut}
+            delayLongPress={2000}
+            style={[styles.swBtn, swIsHolding && styles.swBtnHolding, swState !== 'idle' && { borderColor: `${Colors.circuit}60` }]}
+          >
+            <Ionicons
+              name={swState === 'running' ? 'pause-outline' : swState === 'paused' ? 'play-outline' : 'stopwatch-outline'}
+              size={16}
+              color={swState === 'idle' ? Colors.textSecondary : Colors.circuit}
+            />
+            <Text style={[styles.swBtnText, swState !== 'idle' && { color: Colors.circuit }]}>
+              {swState === 'idle' ? 'Stopwatch' : swState === 'running' ? 'Pause' : swState === 'countdown' ? 'Starting…' : 'Resume'}
+            </Text>
+            {swIsHolding && <Text style={styles.swHoldLabel}>hold to stop</Text>}
+          </Pressable>
+
+          <View style={styles.swDisplay}>
+            {swState === 'idle' && (
+              workout.elapsedSeconds != null
+                ? <Text style={styles.swSavedTime}>{formatSwTime(workout.elapsedSeconds)}</Text>
+                : <Text style={styles.swDisplayIdle}>--:--</Text>
+            )}
+            {swState === 'countdown' && (
+              <Text style={styles.swCountdownNum}>{swCountdown}</Text>
+            )}
+            {(swState === 'running' || swState === 'paused') && (
+              <Text style={[styles.swElapsedText, swState === 'paused' && { opacity: 0.45 }]}>
+                {formatSwTime(swElapsed)}
+              </Text>
+            )}
+          </View>
+        </View>
+      )}
 
       <Modal
         visible={weightModal.visible}
@@ -1456,6 +1575,72 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "flex-end",
     marginBottom: 12,
+  },
+  swFooter: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+    backgroundColor: Colors.background,
+    gap: 8,
+  },
+  swBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 15,
+    borderRadius: 14,
+    backgroundColor: Colors.surfaceLight,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  swBtnHolding: {
+    backgroundColor: `${Colors.circuit}18`,
+    borderColor: Colors.circuit,
+  },
+  swBtnText: {
+    fontSize: 14,
+    fontFamily: "Rubik_600SemiBold",
+    color: Colors.textSecondary,
+  },
+  swHoldLabel: {
+    fontSize: 10,
+    fontFamily: "Rubik_400Regular",
+    color: Colors.circuit,
+    marginLeft: 4,
+  },
+  swDisplay: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 50,
+  },
+  swDisplayIdle: {
+    fontSize: 22,
+    fontFamily: "Rubik_600SemiBold",
+    color: Colors.textMuted,
+    letterSpacing: 2,
+  },
+  swSavedTime: {
+    fontSize: 22,
+    fontFamily: "Rubik_700Bold",
+    color: Colors.circuit,
+    letterSpacing: 1,
+  },
+  swCountdownNum: {
+    fontSize: 38,
+    fontFamily: "Rubik_700Bold",
+    color: Colors.circuit,
+  },
+  swElapsedText: {
+    fontSize: 28,
+    fontFamily: "Rubik_700Bold",
+    color: Colors.text,
+    letterSpacing: 1,
   },
   heroTitle: {
     fontSize: 26,

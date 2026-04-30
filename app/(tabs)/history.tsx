@@ -219,6 +219,13 @@ function SwipeableWorkoutItem({ item, index, onDelete }: {
               )}
             </View>
 
+            {item.topCategory === "circuit" && item.elapsedSeconds != null && (
+              <View style={styles.swTimeRow}>
+                <Ionicons name="stopwatch-outline" size={12} color={Colors.circuit} />
+                <Text style={styles.swTimeText}>{formatRunTime(item.elapsedSeconds)}</Text>
+              </View>
+            )}
+
             <View style={styles.historyCardFooter}>
               <Text style={styles.historyDateText}>{dateStr} at {timeStr}</Text>
               <Ionicons name="chevron-forward" size={16} color={Colors.textMuted} />
@@ -533,6 +540,22 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: "Rubik_400Regular",
     color: Colors.textMuted,
+  },
+  swTimeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+    borderRadius: 8,
+    backgroundColor: `${Colors.circuit}15`,
+    alignSelf: "flex-start",
+    marginBottom: 8,
+  },
+  swTimeText: {
+    fontSize: 12,
+    fontFamily: "Rubik_600SemiBold",
+    color: Colors.circuit,
   },
   headerRow: {
     flexDirection: "row",

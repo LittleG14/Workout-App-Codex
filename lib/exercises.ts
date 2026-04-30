@@ -93,6 +93,7 @@ export interface GeneratedWorkout {
   includeCore?: boolean;
   createdAt: string;
   runData?: RunData;
+  elapsedSeconds?: number;
 }
 
 export const TOP_CATEGORY_LABELS: Record<TopCategory, string> = {
