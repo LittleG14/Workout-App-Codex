@@ -42,7 +42,7 @@ function SortableItem({
     const ds = dragState.value;
     if (!ds.active) {
       return {
-        transform: [{ translateY: withTiming(0, { duration: 150, easing: Easing.out(Easing.quad) }) }],
+        transform: [{ translateY: withTiming(0, { duration: 220, easing: Easing.out(Easing.cubic) }) }],
         zIndex: 1,
         opacity: 1,
         shadowOpacity: 0,
@@ -73,14 +73,14 @@ function SortableItem({
       const draggedHeight = heights[fromIdx] ?? 100;
       const offset = fromIdx < toIdx ? -draggedHeight : draggedHeight;
       return {
-        transform: [{ translateY: withTiming(offset, { duration: 150, easing: Easing.out(Easing.quad) }) }],
+        transform: [{ translateY: withTiming(offset, { duration: 220, easing: Easing.out(Easing.cubic) }) }],
         zIndex: 1,
         opacity: 1,
       };
     }
 
     return {
-      transform: [{ translateY: withTiming(0, { duration: 150, easing: Easing.out(Easing.quad) }) }],
+      transform: [{ translateY: withTiming(0, { duration: 220, easing: Easing.out(Easing.cubic) }) }],
       zIndex: 1,
       opacity: 1,
     };
