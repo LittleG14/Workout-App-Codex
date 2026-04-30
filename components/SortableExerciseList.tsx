@@ -3,7 +3,8 @@ import { View, LayoutChangeEvent } from "react-native";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
-  withSpring,
+  withTiming,
+  Easing,
   runOnJS,
 } from "react-native-reanimated";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
@@ -41,7 +42,7 @@ function SortableItem({
     const ds = dragState.value;
     if (!ds.active) {
       return {
-        transform: [{ translateY: withSpring(0, { damping: 38, stiffness: 300 }) }],
+        transform: [{ translateY: withTiming(0, { duration: 150, easing: Easing.out(Easing.quad) }) }],
         zIndex: 1,
         opacity: 1,
         shadowOpacity: 0,
@@ -72,14 +73,14 @@ function SortableItem({
       const draggedHeight = heights[fromIdx] ?? 100;
       const offset = fromIdx < toIdx ? -draggedHeight : draggedHeight;
       return {
-        transform: [{ translateY: withSpring(offset, { damping: 38, stiffness: 300 }) }],
+        transform: [{ translateY: withTiming(offset, { duration: 150, easing: Easing.out(Easing.quad) }) }],
         zIndex: 1,
         opacity: 1,
       };
     }
 
     return {
-      transform: [{ translateY: withSpring(0, { damping: 38, stiffness: 300 }) }],
+      transform: [{ translateY: withTiming(0, { duration: 150, easing: Easing.out(Easing.quad) }) }],
       zIndex: 1,
       opacity: 1,
     };
