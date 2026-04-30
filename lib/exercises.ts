@@ -479,10 +479,6 @@ function getExerciseCount(durationMinutes: number, style: TrainingStyle): { comp
   return style === 'strength' ? { compounds: 5, isolations: 3 } : { compounds: 4, isolations: 5 };
 }
 
-function randomAdj(): string {
-  const a = ['Iron', 'Beast', 'Forge', 'Titan', 'Power', 'Blitz', 'Grind', 'Surge', 'Fire', 'Storm'];
-  return a[Math.floor(Math.random() * a.length)];
-}
 
 function generateWeightLifting(subType: WeightLiftingType, style: TrainingStyle, duration: number, includeSupersets: boolean = false, includeCore: boolean = false, customExercises?: CustomExerciseData[], hiddenIds?: string[]): GeneratedWorkout {
   const muscles = WORKOUT_TYPE_MUSCLES[subType];
@@ -579,7 +575,7 @@ function generateWeightLifting(subType: WeightLiftingType, style: TrainingStyle,
 
   return {
     id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-    name: `${randomAdj()} ${WEIGHT_LIFTING_LABELS[subType]}`,
+    name: `${WEIGHT_LIFTING_LABELS[subType]}`,
     topCategory: 'weight_lifting',
     subType,
     style,
@@ -736,7 +732,7 @@ function generateCircuit(circuitStyle: CircuitStyle, duration: number, customExe
   const styleNames: Record<CircuitStyle, string> = { amrap: 'AMRAP', emom: 'EMOM', rounds_for_time: 'RFT', hyrox: 'Hyrox' };
   return {
     id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-    name: `${randomAdj()} ${styleNames[circuitStyle]}`,
+    name: styleNames[circuitStyle],
     topCategory: 'circuit',
     subType: circuitStyle,
     style: circuitStyle,
@@ -770,7 +766,7 @@ function generateYoga(yogaStyle: YogaStyle, duration: number, customExercises?: 
   const label = yogaStyle === 'core_strength' ? 'Core Power' : 'Deep Stretch';
   return {
     id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-    name: `${randomAdj()} ${label}`,
+    name: label,
     topCategory: 'yoga',
     subType: yogaStyle,
     style: yogaStyle,
@@ -821,7 +817,7 @@ function generateCardio(cardioStyle: CardioStyle, duration: number, customExerci
 
     return {
       id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-      name: `${randomAdj()} Run`,
+      name: 'Run',
       topCategory: 'cardio',
       subType: 'running',
       style: 'running',
@@ -848,7 +844,7 @@ function generateCardio(cardioStyle: CardioStyle, duration: number, customExerci
 
   return {
     id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-    name: `${randomAdj()} Cardio Mix`,
+    name: 'Cardio Mix',
     topCategory: 'cardio',
     subType: 'mixed_cardio',
     style: 'mixed_cardio',
@@ -878,7 +874,7 @@ function generateMobility(subType: MobilityStyle, duration: number, customExerci
 
   return {
     id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-    name: `${randomAdj()} ${MOBILITY_STYLE_LABELS[subType]}`,
+    name: MOBILITY_STYLE_LABELS[subType],
     topCategory: 'mobility',
     subType,
     style: subType,
