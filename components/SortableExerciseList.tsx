@@ -63,7 +63,7 @@ function SortableItem({
         (fromIdx > toIdx && index < fromIdx && index >= toIdx);
 
       if (shifted) {
-        const draggedHeight = heights[fromIdx] ?? 100;
+        const draggedHeight = (heights[fromIdx] ?? 100) * 2;
         return fromIdx < toIdx ? -draggedHeight : draggedHeight;
       }
 
