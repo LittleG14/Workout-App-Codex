@@ -94,6 +94,7 @@ export interface GeneratedWorkout {
   createdAt: string;
   runData?: RunData;
   elapsedSeconds?: number;
+  itemOrder?: Array<{ kind: "exercise" | "superset" }>;
 }
 
 export const TOP_CATEGORY_LABELS: Record<TopCategory, string> = {
