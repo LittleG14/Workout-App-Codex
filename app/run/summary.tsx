@@ -18,6 +18,7 @@ import { RunData, GeneratedWorkout } from "@/lib/exercises";
 import { consumePendingRun } from "@/lib/run-store";
 import { saveWorkout } from "@/lib/workout-storage";
 import MapView, { Polyline, PROVIDER_DEFAULT } from "react-native-maps";
+import { ShareableRunCard, shareRunCard } from "@/components/ShareWorkoutCard";
 
 function formatTime(secs: number): string {
   const h = Math.floor(secs / 3600);
@@ -59,6 +60,8 @@ export default function RunSummaryScreen() {
   const insets = useSafeAreaInsets();
   const [runData, setRunData] = useState<RunData | null>(null);
   const [saving, setSaving] = useState(false);
+  const runShareRef = useRef<View>(null);
+  const [completedAt] = useState(new Date().toISOString());
 
   useEffect(() => {
     const data = consumePendingRun();
@@ -170,6 +173,16 @@ export default function RunSummaryScreen() {
         )}
 
         <Animated.View entering={FadeInDown.delay(160).duration(400)} style={styles.statsCard}>
+          <View style={styles.statsShareRow}>
+            <Pressable
+              onPress={() => shareRunCard(runShareRef)}
+              style={styles.shareBtn}
+              hitSlop={8}
+            >
+              <Ionicons name="share-outline" size={15} color={Colors.cardio} />
+              <Text style={styles.shareBtnText}>Share</Text>
+            </Pressable>
+          </View>
           <View style={styles.primaryStats}>
             <View style={styles.primaryStatItem}>
               <Text style={styles.primaryStatValue}>{distInUnit.toFixed(2)}</Text>
@@ -200,6 +213,7 @@ export default function RunSummaryScreen() {
           </Pressable>
         </Animated.View>
       </ScrollView>
+      {runData && <ShareableRunCard ref={runShareRef} runData={runData} date={completedAt} />}
     </View>
   );
 }
@@ -248,6 +262,27 @@ const styles = StyleSheet.create({
     padding: 24,
     borderWidth: 1,
     borderColor: Colors.border,
+  },
+  statsShareRow: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    marginBottom: 12,
+  },
+  shareBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 10,
+    backgroundColor: "rgba(255,255,255,0.06)",
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  shareBtnText: {
+    fontSize: 12,
+    fontFamily: "Rubik_600SemiBold",
+    color: Colors.cardio,
   },
   primaryStats: {
     flexDirection: "row",

@@ -72,6 +72,15 @@ Preferred communication style: Simple, everyday language.
 - **Access**: Accessible via the Profile tab, with backend enforcement based on `ADMIN_EMAILS`.
 - **Features**: Provides tools to check email domain status, verify DNS, and send test emails.
 
+### Workout Sharing
+
+- **Trigger**: Small "Share" button in the top-right corner of the workout summary tile (hero card), available both right after generation and when viewing from History.
+- **Regular workouts**: Captures a styled share card (off-screen) showing workout name, type, exercise/set/duration stats, category badges, and exercise names as comma-separated text at the bottom. Background uses the category accent gradient.
+- **Just Run workouts**: Captures a transparent-background PNG card showing distance, time, pace, and date — designed to layer over photos/videos (Strava-style). Share button lives in the run stats card on both the post-run summary screen and the history detail view.
+- **Actions**: Native OS share sheet (covers iMessage, Instagram, Twitter/X, WhatsApp, etc.) plus "Copy Image" for clipboard pasting.
+- **Libraries**: `react-native-view-shot` (captureRef), `expo-sharing` (shareAsync), `expo-clipboard` (setImageAsync).
+- **Components**: `components/ShareWorkoutCard.tsx` exports `ShareableRegularCard`, `ShareableRunCard`, `shareWorkoutCard`, `shareRunCard`, and `getExerciseNamesForShare`.
+
 ### Contact Us & Feedback
 
 - **Functionality**: Dedicated tab for submitting feedback through a modal form.

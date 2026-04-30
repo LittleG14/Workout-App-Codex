@@ -50,6 +50,12 @@ import {
 import { getLocalWorkoutsOnly, updateWorkout } from "@/lib/workout-storage";
 import { useCustomExercises } from "@/lib/useCustomExercises";
 import { useHiddenExercises } from "@/lib/useHiddenExercises";
+import {
+  ShareableRegularCard,
+  ShareableRunCard,
+  shareWorkoutCard,
+  shareRunCard,
+} from "@/components/ShareWorkoutCard";
 
 type PickerCategory = 'weight_lifting' | 'circuit' | 'yoga' | 'cardio' | 'mobility';
 
@@ -425,6 +431,7 @@ function getRunMapRegion(runData: RunData) {
 function JustRunDetail({ workout }: { workout: GeneratedWorkout }) {
   const insets = useSafeAreaInsets();
   const webTopPad = Platform.OS === "web" ? 67 : 0;
+  const runShareRef = useRef<View>(null);
   const runData = workout.runData;
 
   const date = new Date(workout.createdAt);
@@ -497,6 +504,16 @@ function JustRunDetail({ workout }: { workout: GeneratedWorkout }) {
         )}
 
         <Animated.View entering={FadeInDown.delay(160).duration(400)} style={styles.runStatsCard}>
+          <View style={styles.runStatsShareRow}>
+            <Pressable
+              onPress={() => shareRunCard(runShareRef)}
+              style={styles.shareBtn}
+              hitSlop={8}
+            >
+              <Ionicons name="share-outline" size={15} color={Colors.cardio} />
+              <Text style={[styles.shareBtnText, { color: Colors.cardio }]}>Share</Text>
+            </Pressable>
+          </View>
           <View style={styles.runStatRow}>
             <View style={styles.runStatItem}>
               <Ionicons name="location-outline" size={20} color={Colors.cardio} />
@@ -518,6 +535,7 @@ function JustRunDetail({ workout }: { workout: GeneratedWorkout }) {
           </View>
         </Animated.View>
       </ScrollView>
+      <ShareableRunCard ref={runShareRef} runData={runData} date={workout.createdAt} />
     </View>
   );
 }
@@ -526,6 +544,7 @@ export default function WorkoutDetailScreen() {
   const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [workout, setWorkout] = useState<GeneratedWorkout | null>(null);
+  const shareCardRef = useRef<View>(null);
   const webTopPad = Platform.OS === "web" ? 67 : 0;
 
   useEffect(() => { loadWorkout(); }, [id]);
@@ -863,8 +882,20 @@ export default function WorkoutDetailScreen() {
             colors={[`${accentColor}22`, `${accentColor}05`]}
             style={styles.heroCard}
           >
-            <Text style={styles.heroTitle}>{workout.name}</Text>
-            <Text style={styles.heroType}>{subLabel}</Text>
+            <View style={styles.heroTitleRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.heroTitle}>{workout.name}</Text>
+                <Text style={styles.heroType}>{subLabel}</Text>
+              </View>
+              <Pressable
+                onPress={() => shareWorkoutCard(shareCardRef)}
+                style={styles.shareBtn}
+                hitSlop={8}
+              >
+                <Ionicons name="share-outline" size={15} color={Colors.textSecondary} />
+                <Text style={styles.shareBtnText}>Share</Text>
+              </Pressable>
+            </View>
 
             <View style={styles.heroStats}>
               <View style={styles.heroStatItem}>
@@ -1350,6 +1381,8 @@ export default function WorkoutDetailScreen() {
           )}
         </View>
       </Modal>
+
+      {workout && <ShareableRegularCard ref={shareCardRef} workout={workout} />}
     </View>
   );
 }
@@ -1395,6 +1428,34 @@ const styles = StyleSheet.create({
     marginBottom: 24,
     borderWidth: 1,
     borderColor: Colors.border,
+  },
+  heroTitleRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    marginBottom: 4,
+  },
+  shareBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 10,
+    backgroundColor: "rgba(255,255,255,0.06)",
+    borderWidth: 1,
+    borderColor: Colors.border,
+    marginLeft: 8,
+    marginTop: 2,
+  },
+  shareBtnText: {
+    fontSize: 12,
+    fontFamily: "Rubik_600SemiBold",
+    color: Colors.textSecondary,
+  },
+  runStatsShareRow: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    marginBottom: 12,
   },
   heroTitle: {
     fontSize: 26,
