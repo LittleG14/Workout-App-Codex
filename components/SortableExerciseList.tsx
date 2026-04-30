@@ -23,9 +23,10 @@ interface SortableItemProps {
   count: number;
   dragState: ReturnType<typeof useSharedValue<DragState>>;
   itemHeights: ReturnType<typeof useSharedValue<number[]>>;
+  itemPositions: ReturnType<typeof useSharedValue<number[]>>;
   onDragStart: (index: number) => void;
   onDragEnd: (from: number, to: number) => void;
-  onMeasure: (index: number, height: number) => void;
+  onMeasure: (index: number, height: number, y: number) => void;
   children: React.ReactNode;
 }
 
@@ -36,6 +37,7 @@ function SortableItem({
   count,
   dragState,
   itemHeights,
+  itemPositions,
   onDragStart,
   onDragEnd,
   onMeasure,
@@ -43,37 +45,46 @@ function SortableItem({
 }: SortableItemProps) {
   const visualOffset = useSharedValue(0);
 
-  // Compute the target offset this tile should sit at.
-  // Returns null while this tile is the one being dragged (handled separately).
   useAnimatedReaction(
     () => {
       const ds = dragState.value;
       const { active, fromIdx, toIdx } = ds;
 
-      // This tile is being dragged — its position is driven by the pan gesture directly
+      // This tile is being dragged — position driven by pan gesture
       if (active && index === fromIdx) return null;
 
-      // Drag ended or never started — everyone goes home
+      // Drag ended or never started — everyone returns home
       if (!active) return 0;
 
-      // Someone else is being dragged: should this tile shift?
-      const heights = itemHeights.value;
+      // Determine if this tile should shift to fill the dragged tile's slot
       const shifted =
         (fromIdx < toIdx && index > fromIdx && index <= toIdx) ||
         (fromIdx > toIdx && index < fromIdx && index >= toIdx);
 
-      if (shifted) {
-        const draggedHeight = (heights[fromIdx] ?? 100) * 2;
-        return fromIdx < toIdx ? -draggedHeight : draggedHeight;
+      if (!shifted) return 0;
+
+      // Compute the exact slot height of the dragged tile from real Y positions.
+      // slotHeight = distance from dragged tile's top to the next tile's top
+      // (includes the card height + any gap/margin between cards).
+      const positions = itemPositions.value;
+      const heights = itemHeights.value;
+      const n = count;
+
+      let slotHeight: number;
+      if (fromIdx + 1 < n && positions[fromIdx + 1] !== undefined && positions[fromIdx] !== undefined) {
+        slotHeight = positions[fromIdx + 1] - positions[fromIdx];
+      } else if (fromIdx > 0 && positions[fromIdx] !== undefined && positions[fromIdx - 1] !== undefined) {
+        // Dragged tile is the last one — use the gap above it instead
+        slotHeight = positions[fromIdx] - positions[fromIdx - 1];
+      } else {
+        slotHeight = heights[fromIdx] ?? 100;
       }
 
-      return 0;
+      return fromIdx < toIdx ? -slotHeight : slotHeight;
     },
     (target, prev) => {
       "worklet";
-      // null means this is the dragged tile — skip
       if (target === null) return;
-      // Only start a new animation when the target actually changed
       if (target !== prev) {
         visualOffset.value = withTiming(target, TIMING_CONFIG);
       }
@@ -83,7 +94,6 @@ function SortableItem({
   const animatedStyle = useAnimatedStyle(() => {
     const ds = dragState.value;
 
-    // Actively dragged tile: follows the finger raw, floats above everything
     if (ds.active && index === ds.fromIdx) {
       return {
         transform: [{ translateY: ds.translateY }],
@@ -97,7 +107,6 @@ function SortableItem({
       };
     }
 
-    // All other tiles: driven by visualOffset (animated via useAnimatedReaction)
     return {
       transform: [{ translateY: visualOffset.value }],
       zIndex: 1,
@@ -172,7 +181,9 @@ function SortableItem({
   }, [index, count, dragState, itemHeights, onDragStart, onDragEnd]);
 
   const handleLayout = useCallback(
-    (e: LayoutChangeEvent) => onMeasure(index, e.nativeEvent.layout.height),
+    (e: LayoutChangeEvent) => {
+      onMeasure(index, e.nativeEvent.layout.height, e.nativeEvent.layout.y);
+    },
     [index, onMeasure]
   );
 
@@ -208,6 +219,7 @@ export default function SortableExerciseList({
     translateY: 0,
   });
   const itemHeights = useSharedValue<number[]>([]);
+  const itemPositions = useSharedValue<number[]>([]);
 
   const handleDragStart = useCallback(
     (index: number) => {
@@ -226,12 +238,16 @@ export default function SortableExerciseList({
   );
 
   const handleMeasure = useCallback(
-    (index: number, height: number) => {
-      const next = [...itemHeights.value];
-      next[index] = height;
-      itemHeights.value = next;
+    (index: number, height: number, y: number) => {
+      const nextH = [...itemHeights.value];
+      nextH[index] = height;
+      itemHeights.value = nextH;
+
+      const nextP = [...itemPositions.value];
+      nextP[index] = y;
+      itemPositions.value = nextP;
     },
-    [itemHeights]
+    [itemHeights, itemPositions]
   );
 
   return (
@@ -243,6 +259,7 @@ export default function SortableExerciseList({
           count={items.length}
           dragState={dragState}
           itemHeights={itemHeights}
+          itemPositions={itemPositions}
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
           onMeasure={handleMeasure}
