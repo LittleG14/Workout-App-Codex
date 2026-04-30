@@ -73,14 +73,14 @@ function SortableItem({
       const draggedHeight = heights[fromIdx] ?? 100;
       const offset = fromIdx < toIdx ? -draggedHeight : draggedHeight;
       return {
-        transform: [{ translateY: withTiming(offset, { duration: 220, easing: Easing.out(Easing.cubic) }) }],
+        transform: [{ translateY: offset }],
         zIndex: 1,
         opacity: 1,
       };
     }
 
     return {
-      transform: [{ translateY: withTiming(0, { duration: 220, easing: Easing.out(Easing.cubic) }) }],
+      transform: [{ translateY: 0 }],
       zIndex: 1,
       opacity: 1,
     };
