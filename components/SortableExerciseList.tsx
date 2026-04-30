@@ -3,6 +3,7 @@ import { View, LayoutChangeEvent } from "react-native";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
+  useAnimatedReaction,
   withTiming,
   Easing,
   runOnJS,
@@ -28,6 +29,8 @@ interface SortableItemProps {
   children: React.ReactNode;
 }
 
+const TIMING_CONFIG = { duration: 220, easing: Easing.out(Easing.cubic) };
+
 function SortableItem({
   index,
   count,
@@ -38,23 +41,52 @@ function SortableItem({
   onMeasure,
   children,
 }: SortableItemProps) {
+  const visualOffset = useSharedValue(0);
+
+  // Compute the target offset this tile should sit at.
+  // Returns null while this tile is the one being dragged (handled separately).
+  useAnimatedReaction(
+    () => {
+      const ds = dragState.value;
+      const { active, fromIdx, toIdx } = ds;
+
+      // This tile is being dragged — its position is driven by the pan gesture directly
+      if (active && index === fromIdx) return null;
+
+      // Drag ended or never started — everyone goes home
+      if (!active) return 0;
+
+      // Someone else is being dragged: should this tile shift?
+      const heights = itemHeights.value;
+      const shifted =
+        (fromIdx < toIdx && index > fromIdx && index <= toIdx) ||
+        (fromIdx > toIdx && index < fromIdx && index >= toIdx);
+
+      if (shifted) {
+        const draggedHeight = heights[fromIdx] ?? 100;
+        return fromIdx < toIdx ? -draggedHeight : draggedHeight;
+      }
+
+      return 0;
+    },
+    (target, prev) => {
+      "worklet";
+      // null means this is the dragged tile — skip
+      if (target === null) return;
+      // Only start a new animation when the target actually changed
+      if (target !== prev) {
+        visualOffset.value = withTiming(target, TIMING_CONFIG);
+      }
+    }
+  );
+
   const animatedStyle = useAnimatedStyle(() => {
     const ds = dragState.value;
-    if (!ds.active) {
-      return {
-        transform: [{ translateY: withTiming(0, { duration: 220, easing: Easing.out(Easing.cubic) }) }],
-        zIndex: 1,
-        opacity: 1,
-        shadowOpacity: 0,
-      };
-    }
 
-    const { fromIdx, toIdx, translateY } = ds;
-    const heights = itemHeights.value;
-
-    if (index === fromIdx) {
+    // Actively dragged tile: follows the finger raw, floats above everything
+    if (ds.active && index === ds.fromIdx) {
       return {
-        transform: [{ translateY }],
+        transform: [{ translateY: ds.translateY }],
         zIndex: 100,
         opacity: 0.9,
         shadowColor: "#000",
@@ -65,24 +97,12 @@ function SortableItem({
       };
     }
 
-    const shifted =
-      (fromIdx < toIdx && index > fromIdx && index <= toIdx) ||
-      (fromIdx > toIdx && index < fromIdx && index >= toIdx);
-
-    if (shifted) {
-      const draggedHeight = heights[fromIdx] ?? 100;
-      const offset = fromIdx < toIdx ? -draggedHeight : draggedHeight;
-      return {
-        transform: [{ translateY: offset }],
-        zIndex: 1,
-        opacity: 1,
-      };
-    }
-
+    // All other tiles: driven by visualOffset (animated via useAnimatedReaction)
     return {
-      transform: [{ translateY: 0 }],
+      transform: [{ translateY: visualOffset.value }],
       zIndex: 1,
       opacity: 1,
+      shadowOpacity: 0,
     };
   });
 
