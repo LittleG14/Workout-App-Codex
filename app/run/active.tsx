@@ -119,14 +119,15 @@ export default function ActiveRunScreen() {
         coordinatesRef.current = [...coordinatesRef.current, newCoord];
         setCoordinates([...coordinatesRef.current]);
 
-        if (mapRef.current && coordinatesRef.current.length > 1) {
-          mapRef.current.animateToRegion({
+        mapRef.current?.animateToRegion(
+          {
             latitude: newCoord.latitude,
             longitude: newCoord.longitude,
             latitudeDelta: 0.005,
             longitudeDelta: 0.005,
-          }, 500);
-        }
+          },
+          500
+        );
 
         if (notifInterval > 0) {
           const distInUnit = unit === "miles"
@@ -149,6 +150,22 @@ export default function ActiveRunScreen() {
   }, [unit, notifInterval]);
 
   useEffect(() => {
+    // Center the map on the user's actual position as soon as the screen opens,
+    // before watchPositionAsync fires its first event.
+    Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced })
+      .then((loc) => {
+        mapRef.current?.animateToRegion(
+          {
+            latitude: loc.coords.latitude,
+            longitude: loc.coords.longitude,
+            latitudeDelta: 0.005,
+            longitudeDelta: 0.005,
+          },
+          300
+        );
+      })
+      .catch(() => {});
+
     startTimer();
     startLocationWatch();
     return () => {
