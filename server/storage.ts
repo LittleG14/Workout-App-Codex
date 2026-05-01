@@ -8,8 +8,9 @@ export interface IStorage {
   getWorkout(id: string, userId: string): Promise<WorkoutRow | undefined>;
   updateWorkout(id: string, userId: string, workoutData: string): Promise<WorkoutRow | undefined>;
   deleteWorkout(id: string, userId: string): Promise<void>;
-  saveFeedback(userId: string, id: string, date: string, selection: string, category: string, submission: string): Promise<FeedbackRow>;
+  saveFeedback(userId: string, userEmail: string, id: string, date: string, selection: string, category: string, submission: string): Promise<FeedbackRow>;
   getFeedback(userId: string): Promise<FeedbackRow[]>;
+  getAllFeedback(): Promise<FeedbackRow[]>;
   saveCustomExercise(userId: string, id: string, name: string, muscles: string, equipment: string, type: string, topCategories: string, weightSubCategories: string, createdAt: string): Promise<CustomExerciseRow>;
   getCustomExercises(userId: string): Promise<CustomExerciseRow[]>;
   deleteCustomExercise(id: string, userId: string): Promise<void>;
@@ -70,13 +71,14 @@ export class DbStorage implements IStorage {
 
   async saveFeedback(
     userId: string,
+    userEmail: string,
     id: string,
     date: string,
     selection: string,
     category: string,
     submission: string
   ): Promise<FeedbackRow> {
-    const row = { id, userId, date, selection, category, submission };
+    const row = { id, userId, userEmail, date, selection, category, submission };
     await db.insert(feedback).values(row);
     return row;
   }
@@ -86,6 +88,13 @@ export class DbStorage implements IStorage {
       .select()
       .from(feedback)
       .where(eq(feedback.userId, userId))
+      .orderBy(desc(feedback.date));
+  }
+
+  async getAllFeedback(): Promise<FeedbackRow[]> {
+    return db
+      .select()
+      .from(feedback)
       .orderBy(desc(feedback.date));
   }
 

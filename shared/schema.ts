@@ -15,6 +15,7 @@ export type WorkoutRow = typeof workouts.$inferSelect;
 export const feedback = pgTable("feedback", {
   id: text("id").primaryKey(),
   userId: text("user_id").notNull(),
+  userEmail: text("user_email").notNull().default(""),
   date: text("date").notNull(),
   selection: text("selection").notNull(),
   category: text("category").notNull(),

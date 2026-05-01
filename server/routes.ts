@@ -140,7 +140,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       const id = crypto.randomUUID();
       const date = new Date().toISOString();
-      await storage.saveFeedback(req.userId!, id, date, selection, category, submission);
+      await storage.saveFeedback(req.userId!, req.userEmail ?? "", id, date, selection, category, submission);
+
+      // Admin notification email — fires and forgets, never blocks the response
+      resend.emails.send({
+        from: "Swole House <noreply@swolehousefitness.com>",
+        to: "swolehousefitness@gmail.com",
+        subject: `[Feedback] ${escapeHtml(selection)} — ${escapeHtml(category)}`,
+        html: `
+          <div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;background:#111;color:#f0f0f0;border-radius:12px;overflow:hidden;">
+            <div style="background:#C0392B;padding:24px 32px;">
+              <h1 style="margin:0;font-size:22px;color:#fff;letter-spacing:1px;">SWOLE HOUSE — New Feedback</h1>
+            </div>
+            <div style="padding:32px;">
+              <table style="width:100%;border-collapse:collapse;margin:0 0 20px;">
+                <tr>
+                  <td style="padding:10px 14px;background:#1a1a1a;border-radius:6px 6px 0 0;color:#999;font-size:13px;text-transform:uppercase;letter-spacing:0.5px;width:110px;">From</td>
+                  <td style="padding:10px 14px;background:#1a1a1a;border-radius:6px 6px 0 0;color:#fff;font-size:14px;">${escapeHtml(req.userEmail ?? "Unknown")}</td>
+                </tr>
+                <tr>
+                  <td style="padding:10px 14px;background:#222;color:#999;font-size:13px;text-transform:uppercase;letter-spacing:0.5px;">Type</td>
+                  <td style="padding:10px 14px;background:#222;color:#fff;font-size:14px;">${escapeHtml(selection)}</td>
+                </tr>
+                <tr>
+                  <td style="padding:10px 14px;background:#1a1a1a;color:#999;font-size:13px;text-transform:uppercase;letter-spacing:0.5px;">Category</td>
+                  <td style="padding:10px 14px;background:#1a1a1a;color:#fff;font-size:14px;">${escapeHtml(category)}</td>
+                </tr>
+                <tr>
+                  <td style="padding:10px 14px;background:#222;border-radius:0 0 6px 6px;color:#999;font-size:13px;text-transform:uppercase;letter-spacing:0.5px;">Message</td>
+                  <td style="padding:10px 14px;background:#222;border-radius:0 0 6px 6px;color:#fff;font-size:14px;">${escapeHtml(submission)}</td>
+                </tr>
+              </table>
+              <p style="color:#888;font-size:12px;margin-top:24px;border-top:1px solid #333;padding-top:16px;">Submitted ${new Date(date).toLocaleString()} · User ID: ${escapeHtml(req.userId ?? "")}</p>
+            </div>
+          </div>
+        `,
+      }).catch((err: unknown) => {
+        console.error("Failed to send admin notification email:", err);
+      });
 
       if (req.userEmail) {
         resend.emails.send({
@@ -190,6 +227,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const adminEmails = (process.env.ADMIN_EMAILS ?? "").split(",").map((e) => e.trim()).filter(Boolean);
     const isAdmin = adminEmails.length > 0 && !!req.userEmail && adminEmails.includes(req.userEmail);
     res.json({ isAdmin });
+  });
+
+  app.get("/api/admin/feedback", authMiddleware, async (req: AuthRequest, res) => {
+    const adminEmails = (process.env.ADMIN_EMAILS ?? "").split(",").map((e) => e.trim()).filter(Boolean);
+    if (adminEmails.length === 0 || !req.userEmail || !adminEmails.includes(req.userEmail)) {
+      res.status(403).json({ error: "Forbidden" });
+      return;
+    }
+    try {
+      const rows = await storage.getAllFeedback();
+      res.json({ feedback: rows });
+    } catch (err) {
+      console.error("Admin get feedback error:", err);
+      res.status(500).json({ message: "Failed to fetch feedback" });
+    }
   });
 
   app.get("/api/admin/email-domain-status", authMiddleware, async (req: AuthRequest, res) => {

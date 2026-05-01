@@ -20,6 +20,16 @@ import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/query-client";
 import { useAuth } from "@/contexts/AuthContext";
 
+interface FeedbackRow {
+  id: string;
+  userId: string;
+  userEmail: string;
+  date: string;
+  selection: string;
+  category: string;
+  submission: string;
+}
+
 interface DomainStatusResponse {
   domain: string;
   id?: string;
@@ -52,6 +62,7 @@ export default function AdminScreen() {
   const [lastTestResult, setLastTestResult] = useState<string | null>(null);
   const [, setTick] = useState(0);
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [expandedFeedback, setExpandedFeedback] = useState<string | null>(null);
 
   const {
     data: domainStatus,
@@ -66,6 +77,16 @@ export default function AdminScreen() {
     gcTime: 0,
     refetchInterval: (query) =>
       query.state.data?.verified === true ? false : 60_000,
+  });
+
+  const {
+    data: allFeedback,
+    isFetching: feedbackLoading,
+    refetch: refetchFeedback,
+  } = useQuery<{ feedback: FeedbackRow[] }>({
+    queryKey: ["/api/admin/feedback"],
+    enabled: !isLoading && !!user,
+    staleTime: 60_000,
   });
 
   useEffect(() => {
@@ -175,6 +196,69 @@ export default function AdminScreen() {
         showsVerticalScrollIndicator={false}
       >
         <Animated.View entering={FadeInDown.delay(50).duration(400)}>
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Ionicons name="chatbox-ellipses" size={18} color={Colors.primary} />
+              <Text style={styles.sectionTitle}>
+                Feedback Inbox
+                {allFeedback?.feedback?.length ? (
+                  <Text style={styles.feedbackCount}> ({allFeedback.feedback.length})</Text>
+                ) : null}
+              </Text>
+              <Pressable onPress={() => refetchFeedback()} hitSlop={8} style={{ marginLeft: "auto" }}>
+                {feedbackLoading
+                  ? <ActivityIndicator size="small" color={Colors.primary} />
+                  : <Ionicons name="refresh" size={16} color={Colors.textMuted} />}
+              </Pressable>
+            </View>
+
+            {!allFeedback?.feedback?.length && !feedbackLoading && (
+              <View style={styles.emptyFeedback}>
+                <Ionicons name="chatbox-outline" size={28} color={Colors.textMuted} />
+                <Text style={styles.emptyFeedbackText}>No submissions yet</Text>
+              </View>
+            )}
+
+            {allFeedback?.feedback?.map((item) => {
+              const isExpanded = expandedFeedback === item.id;
+              const date = new Date(item.date);
+              const dateStr = date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+              const timeStr = date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+              return (
+                <Pressable
+                  key={item.id}
+                  style={styles.feedbackItem}
+                  onPress={() => setExpandedFeedback(isExpanded ? null : item.id)}
+                >
+                  <View style={styles.feedbackItemHeader}>
+                    <View style={styles.feedbackMeta}>
+                      <View style={styles.feedbackTypePill}>
+                        <Text style={styles.feedbackTypePillText}>{item.selection}</Text>
+                      </View>
+                      <Text style={styles.feedbackCategory}>{item.category}</Text>
+                    </View>
+                    <Ionicons
+                      name={isExpanded ? "chevron-up" : "chevron-down"}
+                      size={16}
+                      color={Colors.textMuted}
+                    />
+                  </View>
+                  <Text style={styles.feedbackEmail} numberOfLines={1}>
+                    {item.userEmail || "Unknown user"}
+                  </Text>
+                  <Text style={styles.feedbackDate}>{dateStr} · {timeStr}</Text>
+                  {isExpanded && (
+                    <View style={styles.feedbackBody}>
+                      <Text style={styles.feedbackBodyText}>{item.submission}</Text>
+                    </View>
+                  )}
+                </Pressable>
+              );
+            })}
+          </View>
+        </Animated.View>
+
+        <Animated.View entering={FadeInDown.delay(100).duration(400)}>
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Ionicons name="mail" size={18} color={Colors.primary} />
@@ -599,5 +683,82 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     textAlign: "center",
     paddingHorizontal: 40,
+  },
+  feedbackCount: {
+    fontFamily: "Rubik_400Regular",
+    fontSize: 14,
+    color: Colors.textMuted,
+  },
+  emptyFeedback: {
+    alignItems: "center",
+    paddingVertical: 20,
+    gap: 8,
+  },
+  emptyFeedbackText: {
+    fontFamily: "Rubik_400Regular",
+    fontSize: 14,
+    color: Colors.textMuted,
+  },
+  feedbackItem: {
+    backgroundColor: Colors.background,
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  feedbackItemHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 6,
+  },
+  feedbackMeta: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    flex: 1,
+    flexWrap: "wrap",
+  },
+  feedbackTypePill: {
+    backgroundColor: `${Colors.primary}20`,
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  feedbackTypePillText: {
+    fontFamily: "Rubik_600SemiBold",
+    fontSize: 11,
+    color: Colors.primary,
+  },
+  feedbackCategory: {
+    fontFamily: "Rubik_400Regular",
+    fontSize: 13,
+    color: Colors.textSecondary,
+  },
+  feedbackEmail: {
+    fontFamily: "Rubik_500Medium",
+    fontSize: 13,
+    color: Colors.text,
+    marginBottom: 2,
+  },
+  feedbackDate: {
+    fontFamily: "Rubik_400Regular",
+    fontSize: 12,
+    color: Colors.textMuted,
+  },
+  feedbackBody: {
+    marginTop: 10,
+    backgroundColor: `${Colors.primary}08`,
+    borderRadius: 8,
+    padding: 12,
+    borderLeftWidth: 3,
+    borderLeftColor: Colors.primary,
+  },
+  feedbackBodyText: {
+    fontFamily: "Rubik_400Regular",
+    fontSize: 14,
+    color: Colors.text,
+    lineHeight: 20,
   },
 });

@@ -62,6 +62,10 @@ async function migrate() {
       submission TEXT NOT NULL
     )
   `;
+  await sql`
+    ALTER TABLE feedback
+      ADD COLUMN IF NOT EXISTS user_email TEXT NOT NULL DEFAULT ''
+  `;
   console.log("✓ feedback table ready");
 
   await sql`
