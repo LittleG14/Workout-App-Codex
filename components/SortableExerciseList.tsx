@@ -30,7 +30,7 @@ interface SortableItemProps {
   children: React.ReactNode;
 }
 
-const TIMING_CONFIG = { duration: 220, easing: Easing.out(Easing.cubic) };
+const TIMING_CONFIG = { duration: 200, easing: Easing.out(Easing.cubic) };
 
 function SortableItem({
   index,
@@ -50,32 +50,35 @@ function SortableItem({
       const ds = dragState.value;
       const { active, fromIdx, toIdx } = ds;
 
-      // This tile is being dragged — position driven by pan gesture
       if (active && index === fromIdx) return null;
-
-      // Drag ended or never started — everyone returns home
       if (!active) return 0;
 
-      // Determine if this tile should shift to fill the dragged tile's slot
       const shifted =
         (fromIdx < toIdx && index > fromIdx && index <= toIdx) ||
         (fromIdx > toIdx && index < fromIdx && index >= toIdx);
 
       if (!shifted) return 0;
 
-      // Compute the exact slot height of the dragged tile from real Y positions.
-      // slotHeight = distance from dragged tile's top to the next tile's top
-      // (includes the card height + any gap/margin between cards).
+      // Slot height = exact pixel distance from the dragged tile's top to the
+      // next tile's top (captures card height + any gap/margin automatically).
       const positions = itemPositions.value;
       const heights = itemHeights.value;
       const n = count;
 
       let slotHeight: number;
-      if (fromIdx + 1 < n && positions[fromIdx + 1] !== undefined && positions[fromIdx] !== undefined) {
-        slotHeight = positions[fromIdx + 1] - positions[fromIdx];
-      } else if (fromIdx > 0 && positions[fromIdx] !== undefined && positions[fromIdx - 1] !== undefined) {
-        // Dragged tile is the last one — use the gap above it instead
-        slotHeight = positions[fromIdx] - positions[fromIdx - 1];
+      const pFrom = positions[fromIdx];
+      const pNext = positions[fromIdx + 1];
+      const pPrev = positions[fromIdx - 1];
+
+      if (fromIdx + 1 < n && pNext !== undefined && pFrom !== undefined) {
+        // Normal case: use distance to the tile immediately below the dragged one
+        slotHeight = pNext - pFrom;
+      } else if (fromIdx > 0 && pFrom !== undefined && pPrev !== undefined) {
+        // Dragged tile is the LAST tile — its slot = its own height + gap above.
+        // Compute gap from the previous consecutive pair, then add to own height.
+        const ownHeight = heights[fromIdx] ?? 100;
+        const gapAbove = (pFrom - pPrev) - (heights[fromIdx - 1] ?? 0);
+        slotHeight = ownHeight + Math.max(0, gapAbove);
       } else {
         slotHeight = heights[fromIdx] ?? 100;
       }
@@ -138,23 +141,26 @@ function SortableItem({
 
         const newTranslateY = ds.translateY + e.changeY;
         const heights = itemHeights.value;
+        const positions = itemPositions.value;
         const n = count;
         const fromIdx = ds.fromIdx;
+        const fromPos = positions[fromIdx] ?? 0;
         let newToIdx = fromIdx;
 
         if (newTranslateY > 0) {
-          let cumDist = 0;
+          // Dragging down: threshold = distance to tile i's top + 40% of tile i's height
           for (let i = fromIdx + 1; i < n; i++) {
+            const dist = (positions[i] ?? 0) - fromPos;
             const h = heights[i] ?? 100;
-            if (newTranslateY > cumDist + h * 0.4) newToIdx = i;
-            cumDist += h;
+            if (newTranslateY > dist + h * 0.4) newToIdx = i;
           }
         } else if (newTranslateY < 0) {
-          let cumDist = 0;
+          // Dragging up: threshold = distance from tile i's top to fromIdx's top,
+          // minus 40% of tile i's height (triggers when 40% from the top of tile i)
           for (let i = fromIdx - 1; i >= 0; i--) {
+            const dist = fromPos - (positions[i] ?? 0);
             const h = heights[i] ?? 100;
-            if (-newTranslateY > cumDist + h * 0.4) newToIdx = i;
-            cumDist += h;
+            if (-newTranslateY > dist - h * 0.4) newToIdx = i;
           }
         }
 
@@ -178,7 +184,7 @@ function SortableItem({
       });
 
     return Gesture.Simultaneous(longPress, pan);
-  }, [index, count, dragState, itemHeights, onDragStart, onDragEnd]);
+  }, [index, count, dragState, itemHeights, itemPositions, onDragStart, onDragEnd]);
 
   const handleLayout = useCallback(
     (e: LayoutChangeEvent) => {
