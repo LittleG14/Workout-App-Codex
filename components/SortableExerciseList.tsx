@@ -145,24 +145,30 @@ function SortableItem({
         const n = count;
         const fromIdx = ds.fromIdx;
         const fromPos = positions[fromIdx] ?? 0;
-        let newToIdx = fromIdx;
 
+        // Compute where the drag position "wants" to land (position-accurate thresholds)
+        let desiredToIdx = fromIdx;
         if (newTranslateY > 0) {
-          // Dragging down: threshold = distance to tile i's top + 40% of tile i's height
           for (let i = fromIdx + 1; i < n; i++) {
             const dist = (positions[i] ?? 0) - fromPos;
             const h = heights[i] ?? 100;
-            if (newTranslateY > dist + h * 0.4) newToIdx = i;
+            if (newTranslateY > dist + h * 0.4) desiredToIdx = i;
           }
         } else if (newTranslateY < 0) {
-          // Dragging up: threshold = distance from tile i's top to fromIdx's top,
-          // minus 40% of tile i's height (triggers when 40% from the top of tile i)
           for (let i = fromIdx - 1; i >= 0; i--) {
             const dist = fromPos - (positions[i] ?? 0);
             const h = heights[i] ?? 100;
-            if (-newTranslateY > dist - h * 0.4) newToIdx = i;
+            if (-newTranslateY > dist - h * 0.4) desiredToIdx = i;
           }
         }
+
+        // Clamp to ±1 step from current toIdx so only one tile displaces per event.
+        // This prevents tall tiles (supersets) from jumping over multiple regular tiles
+        // at once when the drag distance threshold for two tiles is crossed in one frame.
+        const newToIdx = Math.max(
+          ds.toIdx - 1,
+          Math.min(ds.toIdx + 1, desiredToIdx)
+        );
 
         dragState.value = { ...ds, translateY: newTranslateY, toIdx: newToIdx };
       })
