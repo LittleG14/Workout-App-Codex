@@ -145,11 +145,6 @@ function ExerciseCard({ item, index, accentColor, onRefresh, onPickExercise, onL
             </View>
           </View>
           <View style={styles.exerciseActions}>
-            {onPickExercise && (
-              <Pressable onPress={onPickExercise} hitSlop={8} testID="pick-exercise">
-                <Ionicons name="pencil-outline" size={18} color={Colors.textMuted} />
-              </Pressable>
-            )}
             {showWeightLog && (
               <Pressable onPress={onLogWeight} hitSlop={8} testID="log-weight" style={styles.weightLogBtn}>
                 {item.weight ? (
@@ -182,6 +177,11 @@ function ExerciseCard({ item, index, accentColor, onRefresh, onPickExercise, onL
                     </View>
                   </View>
                 )}
+              </Pressable>
+            )}
+            {onPickExercise && (
+              <Pressable onPress={onPickExercise} hitSlop={8} testID="pick-exercise">
+                <Ionicons name="pencil-outline" size={18} color={Colors.textMuted} />
               </Pressable>
             )}
             {onRefresh && (
