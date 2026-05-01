@@ -48,36 +48,43 @@ function SortableItem({
   useAnimatedReaction(
     () => {
       const ds = dragState.value;
-      const { active, fromIdx, toIdx } = ds;
+      const { active, fromIdx, toIdx, translateY } = ds;
 
       if (active && index === fromIdx) return null;
       if (!active) return 0;
 
-      const shifted =
+      // Only tiles in the displaced range (between fromIdx and toIdx) can shift
+      const inRange =
         (fromIdx < toIdx && index > fromIdx && index <= toIdx) ||
         (fromIdx > toIdx && index < fromIdx && index >= toIdx);
+      if (!inRange) return 0;
 
-      if (!shifted) return 0;
-
-      // Slot height = exact pixel distance from the dragged tile's top to the
-      // next tile's top (captures card height + any gap/margin automatically).
       const positions = itemPositions.value;
       const heights = itemHeights.value;
       const n = count;
 
-      let slotHeight: number;
+      // Per-tile center check: this tile only visually shifts when the dragged tile's
+      // center has physically crossed this tile's center. This guarantees only one tile
+      // displaces at a time — tall tiles (supersets) can no longer skip over a regular
+      // tile's threshold and displace two tiles simultaneously in one pan event.
+      const draggedCenter =
+        (positions[fromIdx] ?? 0) + (heights[fromIdx] ?? 100) / 2 + translateY;
+      const thisMid = (positions[index] ?? 0) + (heights[index] ?? 100) / 2;
+      const crossed =
+        fromIdx < toIdx ? draggedCenter > thisMid : draggedCenter < thisMid;
+      if (!crossed) return 0;
+
+      // Slot height of the dragged tile (distance from its top to the next tile's top,
+      // which includes the gap/margin automatically).
       const pFrom = positions[fromIdx];
       const pNext = positions[fromIdx + 1];
       const pPrev = positions[fromIdx - 1];
-
+      let slotHeight: number;
       if (fromIdx + 1 < n && pNext !== undefined && pFrom !== undefined) {
-        // Normal case: use distance to the tile immediately below the dragged one
         slotHeight = pNext - pFrom;
       } else if (fromIdx > 0 && pFrom !== undefined && pPrev !== undefined) {
-        // Dragged tile is the LAST tile — its slot = its own height + gap above.
-        // Compute gap from the previous consecutive pair, then add to own height.
         const ownHeight = heights[fromIdx] ?? 100;
-        const gapAbove = (pFrom - pPrev) - (heights[fromIdx - 1] ?? 0);
+        const gapAbove = pFrom - pPrev - (heights[fromIdx - 1] ?? 0);
         slotHeight = ownHeight + Math.max(0, gapAbove);
       } else {
         slotHeight = heights[fromIdx] ?? 100;
@@ -146,25 +153,26 @@ function SortableItem({
         const fromIdx = ds.fromIdx;
         const fromPos = positions[fromIdx] ?? 0;
 
-        // Compute where the drag position "wants" to land (position-accurate thresholds)
+        // Use dragged tile's center for threshold — consistent with the visual shift check.
+        const draggedCenter = fromPos + (heights[fromIdx] ?? 100) / 2 + newTranslateY;
+
         let desiredToIdx = fromIdx;
         if (newTranslateY > 0) {
           for (let i = fromIdx + 1; i < n; i++) {
-            const dist = (positions[i] ?? 0) - fromPos;
-            const h = heights[i] ?? 100;
-            if (newTranslateY > dist + h * 0.4) desiredToIdx = i;
+            const tileMid = (positions[i] ?? 0) + (heights[i] ?? 100) / 2;
+            if (draggedCenter > tileMid) desiredToIdx = i;
           }
         } else if (newTranslateY < 0) {
           for (let i = fromIdx - 1; i >= 0; i--) {
-            const dist = fromPos - (positions[i] ?? 0);
-            const h = heights[i] ?? 100;
-            if (-newTranslateY > dist - h * 0.4) desiredToIdx = i;
+            const tileMid = (positions[i] ?? 0) + (heights[i] ?? 100) / 2;
+            if (draggedCenter < tileMid) desiredToIdx = i;
           }
         }
 
-        // Clamp to ±1 step from current toIdx so only one tile displaces per event.
-        // This prevents tall tiles (supersets) from jumping over multiple regular tiles
-        // at once when the drag distance threshold for two tiles is crossed in one frame.
+        // Clamp to ±1 step from current toIdx so the drop target advances one slot at a
+        // time even if a very fast swipe crosses multiple tile-center thresholds in one
+        // pan event. The visual shift (via the center-crossing check above) is independent
+        // of this and will only displace tiles one by one as the drag physically reaches them.
         const newToIdx = Math.max(
           ds.toIdx - 1,
           Math.min(ds.toIdx + 1, desiredToIdx)
