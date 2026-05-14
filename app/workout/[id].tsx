@@ -122,7 +122,7 @@ const CATEGORY_COLORS: Record<string, string> = {
   mobility: Colors.mobility,
 };
 
-function ExerciseCard({ item, index, accentColor, onRefresh, onPickExercise, onLogWeight, showWeightLog, onLogNotes, showNotesLog, onRemove }: { item: WorkoutExercise; index: number; accentColor: string; onRefresh?: () => void; onPickExercise?: () => void; onLogWeight?: () => void; showWeightLog?: boolean; onLogNotes?: () => void; showNotesLog?: boolean; onRemove?: () => void }) {
+function ExerciseCard({ item, index, accentColor, onRefresh, onPickExercise, onLogWeight, showWeightLog, onLogNotes, showNotesLog, onRemove, onConvertToSuperset }: { item: WorkoutExercise; index: number; accentColor: string; onRefresh?: () => void; onPickExercise?: () => void; onLogWeight?: () => void; showWeightLog?: boolean; onLogNotes?: () => void; showNotesLog?: boolean; onRemove?: () => void; onConvertToSuperset?: () => void }) {
   const isCompound = item.exercise.category === "compound";
 
   return (
@@ -239,10 +239,19 @@ function ExerciseCard({ item, index, accentColor, onRefresh, onPickExercise, onL
               </View>
             ))}
           </View>
-          {onRemove && (
-            <Pressable onPress={onRemove} style={styles.removeExerciseBtn} hitSlop={6} testID="remove-exercise">
-              <Text style={styles.removeExerciseBtnText}>Remove</Text>
-            </Pressable>
+          {(onConvertToSuperset || onRemove) && (
+            <View style={styles.exerciseBtnRow}>
+              {onConvertToSuperset && (
+                <Pressable onPress={onConvertToSuperset} style={styles.removeExerciseBtn} hitSlop={6} testID="superset-exercise">
+                  <Text style={styles.removeExerciseBtnText}>Superset</Text>
+                </Pressable>
+              )}
+              {onRemove && (
+                <Pressable onPress={onRemove} style={styles.removeExerciseBtn} hitSlop={6} testID="remove-exercise">
+                  <Text style={styles.removeExerciseBtnText}>Remove</Text>
+                </Pressable>
+              )}
+            </View>
           )}
         </View>
       </View>
@@ -1038,6 +1047,7 @@ export default function WorkoutDetailScreen() {
               showNotesLog={snl}
               onLogNotes={() => openNotesModal(ex.exercise.name, { type: "exercise", index: origIdx }, ex.userNotes)}
               onRemove={() => handleRemoveExercise(origIdx)}
+              onConvertToSuperset={workout.topCategory === 'weight_lifting' ? () => handleConvertToSuperset(origIdx) : undefined}
             />
           ),
         };
@@ -1189,6 +1199,55 @@ export default function WorkoutDetailScreen() {
       });
       updated = { ...updated, itemOrder: newItemOrder };
     }
+    setWorkout(updated);
+    await updateWorkout(updated);
+  };
+
+  const handleConvertToSuperset = async (exerciseIndex: number) => {
+    if (!workout) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    const targetExercise = workout.exercises[exerciseIndex];
+    const usedIds = getAllUsedIds(workout);
+    const partnerExercise = pickRandomNewExercise(workout.topCategory, workout.subType, usedIds, customExercises, hiddenIds);
+    if (!partnerExercise) return;
+
+    const isStrength = workout.style === 'strength';
+    const ssRest = isStrength ? 120 : 60;
+    const pair: SupersetPair = {
+      exerciseA: { ...targetExercise, restSeconds: 0, notes: 'Superset - go straight to next exercise' },
+      exerciseB: {
+        exercise: partnerExercise,
+        sets: targetExercise.sets,
+        reps: targetExercise.reps,
+        restSeconds: ssRest,
+        notes: `Superset - rest ${ssRest}s after both exercises`,
+      },
+    };
+
+    const newExercises = workout.exercises.filter((_, i) => i !== exerciseIndex);
+    const newSupersets = [...(workout.supersets ?? []), pair];
+
+    // Derive current itemOrder if one doesn't exist yet
+    const baseOrder: Array<{ kind: 'exercise' | 'superset' }> = workout.itemOrder
+      ? workout.itemOrder
+      : workout.exercises.map(() => ({ kind: 'exercise' as const }));
+
+    // Replace the exerciseIndex-th 'exercise' entry with 'superset'
+    let exCount = 0;
+    const newItemOrder = baseOrder.map(entry => {
+      if (entry.kind === 'exercise') {
+        if (exCount === exerciseIndex) { exCount++; return { kind: 'superset' as const }; }
+        exCount++;
+      }
+      return entry;
+    });
+
+    const updated: GeneratedWorkout = {
+      ...workout,
+      exercises: newExercises,
+      supersets: newSupersets,
+      itemOrder: newItemOrder,
+    };
     setWorkout(updated);
     await updateWorkout(updated);
   };
@@ -1968,6 +2027,11 @@ const styles = StyleSheet.create({
     alignItems: "flex-end",
     justifyContent: "space-between",
     gap: 8,
+  },
+  exerciseBtnRow: {
+    flexDirection: "row",
+    gap: 6,
+    flexShrink: 0,
   },
   removeExerciseBtn: {
     paddingHorizontal: 10,
