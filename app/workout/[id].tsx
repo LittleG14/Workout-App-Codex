@@ -32,6 +32,7 @@ import {
   getSubTypeLabel,
   findReplacementExercise,
   findCoreReplacementExercise,
+  pickRandomNewExercise,
   rebalanceCircuit,
   WEIGHT_EXERCISES,
   CIRCUIT_EXERCISES,
@@ -1111,6 +1112,58 @@ export default function WorkoutDetailScreen() {
     await updateWorkout(rebalanced);
   };
 
+  const handleAddExercise = async () => {
+    if (!workout) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    const usedIds = getAllUsedIds(workout);
+    const newExercise = pickRandomNewExercise(workout.topCategory, workout.subType, usedIds, customExercises, hiddenIds);
+    if (!newExercise) return;
+
+    const { topCategory, subType, style } = workout;
+    let newWorkoutExercise: WorkoutExercise;
+    if (topCategory === 'weight_lifting') {
+      const isStrength = style === 'strength';
+      if (newExercise.category === 'compound') {
+        newWorkoutExercise = { exercise: newExercise, sets: 4, reps: isStrength ? '4-6' : '8-12', restSeconds: isStrength ? 180 : 90 };
+      } else {
+        newWorkoutExercise = { exercise: newExercise, sets: 3, reps: isStrength ? '6-8' : '12-15', restSeconds: isStrength ? 120 : 60 };
+      }
+    } else if (topCategory === 'yoga') {
+      newWorkoutExercise = {
+        exercise: newExercise,
+        sets: subType === 'core_strength' ? 3 : 2,
+        reps: subType === 'core_strength' ? '30-45s' : '45-60s',
+        restSeconds: subType === 'core_strength' ? 15 : 10,
+        notes: subType === 'core_strength' ? 'Hold with engagement' : 'Breathe and relax into pose',
+      };
+    } else if (topCategory === 'cardio') {
+      newWorkoutExercise = {
+        exercise: newExercise,
+        sets: 1,
+        reps: '10 min',
+        restSeconds: subType === 'running' ? 0 : 60,
+        notes: 'Moderate-high intensity',
+      };
+    } else {
+      newWorkoutExercise = {
+        exercise: newExercise,
+        sets: 2,
+        reps: newExercise.category === 'compound' ? '8-10 reps' : '45 sec hold',
+        restSeconds: 20,
+        notes: 'Move slowly and with control',
+      };
+    }
+
+    const newExercises = [...workout.exercises, newWorkoutExercise];
+    const updated: GeneratedWorkout = {
+      ...workout,
+      exercises: newExercises,
+      ...(workout.itemOrder ? { itemOrder: [...workout.itemOrder, { kind: 'exercise' as const }] } : {}),
+    };
+    setWorkout(updated);
+    await updateWorkout(updated);
+  };
+
   return (
     <View style={[styles.container, { paddingTop: insets.top + webTopPad }]}>
       <View style={styles.topBar}>
@@ -1236,6 +1289,17 @@ export default function WorkoutDetailScreen() {
           onReorder={handleReorder}
           onDragActive={(active) => setScrollEnabled(!active)}
         />
+
+        {!hasCircuitBlocks && workout.subType !== 'just_run' && (
+          <Pressable
+            style={[styles.addExerciseBtn, { borderColor: accentColor }]}
+            onPress={handleAddExercise}
+            testID="add-exercise-btn"
+          >
+            <Ionicons name="add" size={16} color={accentColor} />
+            <Text style={[styles.addExerciseBtnText, { color: accentColor }]}>Add Exercise</Text>
+          </Pressable>
+        )}
       </ScrollView>
 
       {hasCircuitBlocks && (
@@ -1869,6 +1933,22 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
     letterSpacing: 1.2,
     marginBottom: 14,
+  },
+  addExerciseBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    marginTop: 4,
+    marginBottom: 8,
+    paddingVertical: 14,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    backgroundColor: "transparent",
+  },
+  addExerciseBtnText: {
+    fontSize: 14,
+    fontFamily: "Rubik_600SemiBold",
   },
   exerciseCard: {
     backgroundColor: Colors.surface,

@@ -193,6 +193,19 @@ function getExercisePool(topCategory: TopCategory, subType: string, customExerci
   return pool;
 }
 
+export function pickRandomNewExercise(
+  topCategory: TopCategory,
+  subType: string,
+  usedIds: string[],
+  customExercises?: CustomExerciseData[],
+  hiddenIds?: string[]
+): Exercise | null {
+  const pool = getExercisePool(topCategory, subType, customExercises, hiddenIds);
+  const candidates = pool.filter(e => !usedIds.includes(e.id));
+  if (candidates.length === 0) return null;
+  return candidates[Math.floor(Math.random() * candidates.length)];
+}
+
 export function findReplacementExercise(
   current: Exercise,
   topCategory: TopCategory,
