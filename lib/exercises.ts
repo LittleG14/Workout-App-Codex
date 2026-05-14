@@ -251,7 +251,7 @@ export const WORKOUT_TYPE_MUSCLES: Record<WeightLiftingType, MuscleGroup[]> = {
   shoulders_abs: ['shoulders', 'abs'],
   legs: ['quads', 'hamstrings', 'glutes', 'calves'],
   full_body: ['chest', 'back', 'shoulders', 'quads', 'hamstrings', 'glutes'],
-  push: ['chest', 'shoulders', 'triceps', 'quads'],
+  push: ['chest', 'shoulders', 'triceps'],
   pull: ['back', 'biceps', 'hamstrings', 'glutes'],
 };
 

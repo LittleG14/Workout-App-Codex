@@ -84,9 +84,17 @@ export async function saveWorkout(workout: GeneratedWorkout): Promise<void> {
 }
 
 /**
- * Get workouts, preferring server data when available.
- * Falls back to local cache if the server is unreachable or returns empty
- * but local has data (protects against false-empty responses).
+ * Get workouts, merging server and local data.
+ *
+ * Problem this solves: saveWorkout() fires the server POST without awaiting it,
+ * so when the history tab immediately calls getWorkouts(), the server GET may
+ * return before the POST completes — meaning the server list is missing the
+ * freshly saved workout. The old "overwrite local with server" strategy then
+ * permanently erased that workout from local storage too.
+ *
+ * Fix: after getting the server list, re-read local and include any IDs that
+ * are local-only (not yet synced). This preserves workouts saved offline or
+ * saved moments ago before the POST could complete.
  */
 export async function getWorkouts(): Promise<GeneratedWorkout[]> {
   const local = await readLocalWorkouts();
@@ -103,14 +111,25 @@ export async function getWorkouts(): Promise<GeneratedWorkout[]> {
 
   const serverWorkouts: GeneratedWorkout[] = result.workouts.map(migrateWorkout);
 
-  if (serverWorkouts.length > 0) {
-    await writeLocalWorkouts(serverWorkouts);
-    return serverWorkouts;
+  if (serverWorkouts.length === 0) {
+    // Server returned empty — keep local data to avoid wiping workouts
+    // that failed to sync (e.g. FK errors, temporary network issues).
+    return local;
   }
 
-  // Server returned empty — keep local data to avoid wiping workouts
-  // that failed to sync (e.g. FK errors, temporary network issues).
-  return local;
+  // Merge: include local-only workouts not yet reflected on the server
+  // (e.g. a run saved seconds ago whose POST is still in-flight).
+  const serverIds = new Set(serverWorkouts.map((w) => w.id));
+  const localOnly = local.filter((w) => !serverIds.has(w.id));
+  const merged = [...localOnly, ...serverWorkouts];
+
+  // Sort newest-first by createdAt to maintain consistent display order.
+  merged.sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
+
+  await writeLocalWorkouts(merged);
+  return merged;
 }
 
 export async function updateWorkout(workout: GeneratedWorkout): Promise<void> {
