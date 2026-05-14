@@ -1047,7 +1047,7 @@ export default function WorkoutDetailScreen() {
               showNotesLog={snl}
               onLogNotes={() => openNotesModal(ex.exercise.name, { type: "exercise", index: origIdx }, ex.userNotes)}
               onRemove={() => handleRemoveExercise(origIdx)}
-              onConvertToSuperset={workout.topCategory === 'weight_lifting' ? () => handleConvertToSuperset(origIdx) : undefined}
+              onConvertToSuperset={workout.topCategory === 'weight_lifting' ? () => handleConvertToSuperset(origIdx, ex) : undefined}
             />
           ),
         };
@@ -1203,10 +1203,9 @@ export default function WorkoutDetailScreen() {
     await updateWorkout(updated);
   };
 
-  const handleConvertToSuperset = async (exerciseIndex: number) => {
+  const handleConvertToSuperset = async (exerciseIndex: number, targetExercise: WorkoutExercise) => {
     if (!workout) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    const targetExercise = workout.exercises[exerciseIndex];
     const usedIds = getAllUsedIds(workout);
     const partnerExercise = pickRandomNewExercise(workout.topCategory, workout.subType, usedIds, customExercises, hiddenIds);
     if (!partnerExercise) return;
