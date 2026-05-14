@@ -122,7 +122,7 @@ const CATEGORY_COLORS: Record<string, string> = {
   mobility: Colors.mobility,
 };
 
-function ExerciseCard({ item, index, accentColor, onRefresh, onPickExercise, onLogWeight, showWeightLog, onLogNotes, showNotesLog }: { item: WorkoutExercise; index: number; accentColor: string; onRefresh?: () => void; onPickExercise?: () => void; onLogWeight?: () => void; showWeightLog?: boolean; onLogNotes?: () => void; showNotesLog?: boolean }) {
+function ExerciseCard({ item, index, accentColor, onRefresh, onPickExercise, onLogWeight, showWeightLog, onLogNotes, showNotesLog, onRemove }: { item: WorkoutExercise; index: number; accentColor: string; onRefresh?: () => void; onPickExercise?: () => void; onLogWeight?: () => void; showWeightLog?: boolean; onLogNotes?: () => void; showNotesLog?: boolean; onRemove?: () => void }) {
   const isCompound = item.exercise.category === "compound";
 
   return (
@@ -229,14 +229,21 @@ function ExerciseCard({ item, index, accentColor, onRefresh, onPickExercise, onL
           </View>
         )}
 
-        <View style={styles.muscleRow}>
-          {item.exercise.muscles.map((m) => (
-            <View key={m} style={[styles.musclePill, { backgroundColor: `${accentColor}12` }]}>
-              <Text style={[styles.musclePillText, { color: accentColor }]}>
-                {m === "full_body" ? "Full Body" : m.charAt(0).toUpperCase() + m.slice(1)}
-              </Text>
-            </View>
-          ))}
+        <View style={styles.muscleAndRemoveRow}>
+          <View style={styles.muscleRow}>
+            {item.exercise.muscles.map((m) => (
+              <View key={m} style={[styles.musclePill, { backgroundColor: `${accentColor}12` }]}>
+                <Text style={[styles.musclePillText, { color: accentColor }]}>
+                  {m === "full_body" ? "Full Body" : m.charAt(0).toUpperCase() + m.slice(1)}
+                </Text>
+              </View>
+            ))}
+          </View>
+          {onRemove && (
+            <Pressable onPress={onRemove} style={styles.removeExerciseBtn} hitSlop={6} testID="remove-exercise">
+              <Text style={styles.removeExerciseBtnText}>Remove</Text>
+            </Pressable>
+          )}
         </View>
       </View>
     </Animated.View>
@@ -1030,6 +1037,7 @@ export default function WorkoutDetailScreen() {
               onLogWeight={() => openWeightModal(ex.exercise.name, { type: "exercise", index: origIdx }, ex.weight, ex.weightUnit)}
               showNotesLog={snl}
               onLogNotes={() => openNotesModal(ex.exercise.name, { type: "exercise", index: origIdx }, ex.userNotes)}
+              onRemove={() => handleRemoveExercise(origIdx)}
             />
           ),
         };
@@ -1160,6 +1168,27 @@ export default function WorkoutDetailScreen() {
       exercises: newExercises,
       ...(workout.itemOrder ? { itemOrder: [...workout.itemOrder, { kind: 'exercise' as const }] } : {}),
     };
+    setWorkout(updated);
+    await updateWorkout(updated);
+  };
+
+  const handleRemoveExercise = async (exerciseIndex: number) => {
+    if (!workout) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    const newExercises = workout.exercises.filter((_, i) => i !== exerciseIndex);
+    let updated: GeneratedWorkout = { ...workout, exercises: newExercises };
+    if (workout.itemOrder) {
+      let exCount = 0;
+      const newItemOrder = workout.itemOrder.filter(item => {
+        if (item.kind === 'exercise') {
+          const keep = exCount !== exerciseIndex;
+          exCount++;
+          return keep;
+        }
+        return true;
+      });
+      updated = { ...updated, itemOrder: newItemOrder };
+    }
     setWorkout(updated);
     await updateWorkout(updated);
   };
@@ -1933,6 +1962,25 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
     letterSpacing: 1.2,
     marginBottom: 14,
+  },
+  muscleAndRemoveRow: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    justifyContent: "space-between",
+    gap: 8,
+  },
+  removeExerciseBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.3)",
+    flexShrink: 0,
+  },
+  removeExerciseBtnText: {
+    fontSize: 11,
+    fontFamily: "Rubik_500Medium",
+    color: "rgba(255,255,255,0.6)",
   },
   addExerciseBtn: {
     flexDirection: "row",
