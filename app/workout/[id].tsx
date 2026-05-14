@@ -326,7 +326,7 @@ function CircuitBlockCard({ block, index, accentColor, showWeightLog, onLogWeigh
   );
 }
 
-function SupersetCard({ pair, index, accentColor, onRefreshA, onRefreshB, onLogWeightA, onLogWeightB, onPickA, onPickB }: { pair: SupersetPair; index: number; accentColor: string; onRefreshA?: () => void; onRefreshB?: () => void; onLogWeightA?: () => void; onLogWeightB?: () => void; onPickA?: () => void; onPickB?: () => void }) {
+function SupersetCard({ pair, index, accentColor, onRefreshA, onRefreshB, onLogWeightA, onLogWeightB, onPickA, onPickB, onRemove }: { pair: SupersetPair; index: number; accentColor: string; onRefreshA?: () => void; onRefreshB?: () => void; onLogWeightA?: () => void; onLogWeightB?: () => void; onPickA?: () => void; onPickB?: () => void; onRemove?: () => void }) {
   const renderMiniExercise = (item: WorkoutExercise, label: string, onRefresh?: () => void, onLogWeight?: () => void, onPick?: () => void) => (
     <View style={styles.ssExercise}>
       <View style={styles.ssExerciseHeader}>
@@ -407,6 +407,14 @@ function SupersetCard({ pair, index, accentColor, onRefreshA, onRefreshB, onLogW
         </View>
 
         {renderMiniExercise(pair.exerciseB, "B", onRefreshB, onLogWeightB, onPickB)}
+
+        {onRemove && (
+          <View style={styles.ssRemoveRow}>
+            <Pressable onPress={onRemove} style={styles.removeExerciseBtn} hitSlop={6} testID="remove-superset">
+              <Text style={styles.removeExerciseBtnText}>Remove</Text>
+            </Pressable>
+          </View>
+        )}
       </View>
     </Animated.View>
   );
@@ -1068,6 +1076,7 @@ export default function WorkoutDetailScreen() {
               onLogWeightB={() => openWeightModal(pair.exerciseB.exercise.name, { type: "superset", index: origIdx, slot: "B" }, pair.exerciseB.weight, pair.exerciseB.weightUnit)}
               onPickA={() => openPicker({ type: "superset", index: origIdx, slot: "A" })}
               onPickB={() => openPicker({ type: "superset", index: origIdx, slot: "B" })}
+              onRemove={() => handleRemoveSuperset(origIdx)}
             />
           ),
         };
@@ -1193,6 +1202,30 @@ export default function WorkoutDetailScreen() {
         if (item.kind === 'exercise') {
           const keep = exCount !== exerciseIndex;
           exCount++;
+          return keep;
+        }
+        return true;
+      });
+      updated = { ...updated, itemOrder: newItemOrder };
+    }
+    setWorkout(updated);
+    await updateWorkout(updated);
+  };
+
+  const handleRemoveSuperset = async (supersetIndex: number) => {
+    if (!workout || !workout.supersets) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    const newSupersets = workout.supersets.filter((_, i) => i !== supersetIndex);
+    let updated: GeneratedWorkout = {
+      ...workout,
+      supersets: newSupersets.length > 0 ? newSupersets : undefined,
+    };
+    if (workout.itemOrder) {
+      let ssCount = 0;
+      const newItemOrder = workout.itemOrder.filter(entry => {
+        if (entry.kind === 'superset') {
+          const keep = ssCount !== supersetIndex;
+          ssCount++;
           return keep;
         }
         return true;
@@ -2026,6 +2059,12 @@ const styles = StyleSheet.create({
     alignItems: "flex-end",
     justifyContent: "space-between",
     gap: 8,
+  },
+  ssRemoveRow: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    paddingTop: 10,
+    paddingHorizontal: 4,
   },
   exerciseBtnRow: {
     flexDirection: "row",
