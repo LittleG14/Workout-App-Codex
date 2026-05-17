@@ -145,7 +145,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Admin notification email — fires and forgets, never blocks the response
       resend.emails.send({
         from: "Swole House <noreply@swolehousefitness.com>",
-        to: "swolehousefitness@gmail.com",
+        to: process.env.ADMIN_EMAIL ?? "swolehousefitness@gmail.com",
         subject: `[Feedback] ${escapeHtml(selection)} — ${escapeHtml(category)}`,
         html: `
           <div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;background:#111;color:#f0f0f0;border-radius:12px;overflow:hidden;">
@@ -175,6 +175,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
             </div>
           </div>
         `,
+      }).then((result) => {
+        if (result.error) {
+          console.error("Admin email rejected by Resend:", JSON.stringify(result.error));
+        } else {
+          console.log("Admin email sent OK, id:", result.data?.id);
+        }
       }).catch((err: unknown) => {
         console.error("Failed to send admin notification email:", err);
       });
@@ -211,6 +217,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
               </div>
             </div>
           `,
+        }).then((result) => {
+          if (result.error) {
+            console.error("Confirmation email rejected by Resend:", JSON.stringify(result.error));
+          } else {
+            console.log("Confirmation email sent OK, id:", result.data?.id);
+          }
         }).catch((err: unknown) => {
           console.error("Failed to send confirmation email:", err);
         });
