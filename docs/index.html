@@ -203,6 +203,78 @@
 
     footer a { color: #666; }
     footer a:hover { color: #888; }
+
+    /* ── Privacy Policy ─────────────────────────────────── */
+    .policy {
+      background: #0d0d0d;
+      border-top: 1px solid #1e1e1e;
+      padding: 64px 24px;
+    }
+
+    .policy-inner {
+      max-width: 720px;
+      margin: 0 auto;
+    }
+
+    .policy-inner h2 {
+      font-size: 26px;
+      font-weight: 800;
+      color: #fff;
+      margin-bottom: 6px;
+    }
+
+    .policy-meta {
+      font-size: 13px;
+      color: #555;
+      margin-bottom: 36px;
+    }
+
+    .policy-inner h3 {
+      font-size: 16px;
+      font-weight: 700;
+      color: #e0e0e0;
+      margin: 28px 0 10px;
+    }
+
+    .policy-inner p {
+      font-size: 14px;
+      color: #888;
+      line-height: 1.75;
+      margin-bottom: 12px;
+    }
+
+    .policy-inner ul {
+      padding-left: 20px;
+      margin-bottom: 12px;
+    }
+
+    .policy-inner ul li {
+      font-size: 14px;
+      color: #888;
+      line-height: 1.75;
+      margin-bottom: 6px;
+    }
+
+    .policy-inner strong {
+      color: #bbb;
+    }
+
+    .policy-tips {
+      margin-top: 40px;
+      background: #141414;
+      border: 1px solid #1e1e1e;
+      border-radius: 14px;
+      padding: 24px 24px 20px;
+    }
+
+    .policy-tips h4 {
+      font-size: 14px;
+      font-weight: 700;
+      color: #c0392b;
+      margin-bottom: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
   </style>
 </head>
 <body>
@@ -277,9 +349,67 @@
     <a class="email-link" href="mailto:swolehousefitness@gmail.com">swolehousefitness@gmail.com</a>
   </section>
 
+  <!-- Privacy Policy -->
+  <section class="policy" id="privacy">
+    <div class="policy-inner">
+      <h2>Privacy Policy for Swole House</h2>
+      <p class="policy-meta"><strong>Last Updated:</strong> 5/4/2026</p>
+
+      <h3>1. Introduction</h3>
+      <p>We value your privacy. This Privacy Policy explains how Swole House ("we," "our," or "us") collects, uses, and protects your information when you use our mobile application. By using the app, you agree to the collection and use of information in accordance with this policy.</p>
+
+      <h3>2. Information We Collect</h3>
+      <p>To provide a personalized workout experience and maintain your history, we collect the following:</p>
+      <ul>
+        <li><strong>Account Information:</strong> When you create a profile, we collect your email address and name to sync your data across devices.</li>
+        <li><strong>Fitness &amp; Workout Data:</strong> We collect and store your workout logs, including exercises performed, sets, reps, weights, and dates.</li>
+        <li><strong>Profile Stats:</strong> Information such as height, weight, or fitness goals provided by you to calculate workout metrics.</li>
+        <li><strong>Device Information:</strong> Basic technical data (OS version, device model) to ensure app stability.</li>
+      </ul>
+
+      <h3>3. How We Use Your Information</h3>
+      <p>Your data is used strictly for the following purposes:</p>
+      <ul>
+        <li><strong>Data Persistence:</strong> To ensure your workout history and profile stats are saved and accessible after you log in.</li>
+        <li><strong>App Functionality:</strong> To generate randomized workouts and track progress over time.</li>
+        <li><strong>Service Improvement:</strong> To troubleshoot bugs and improve the user interface.</li>
+      </ul>
+
+      <h3>4. Data Storage and Security</h3>
+      <p>We use industry-standard encryption to protect your data during transmission and storage. Your workout history is stored securely on our backend servers to allow for multi-device synchronization. We do not sell your fitness or personal data to third parties.</p>
+
+      <h3>5. Account Deletion (Mandatory)</h3>
+      <p>In compliance with Apple's requirements, you have full control over your data.</p>
+      <ul>
+        <li><strong>How to Delete:</strong> You may initiate account deletion at any time through the <strong>Settings</strong> menu within the app.</li>
+        <li><strong>Data Removal:</strong> Upon requesting account deletion, all your personal information, profile stats, and workout history will be permanently erased from our servers within [e.g., 30 days]. This action cannot be undone.</li>
+      </ul>
+
+      <h3>6. Third-Party Services</h3>
+      <p>If you use "Sign in with Apple," we receive a unique identifier and, optionally, your email address. We do not share your health or fitness data with third-party advertisers or data brokers.</p>
+
+      <h3>7. Changes to This Policy</h3>
+      <p>We may update our Privacy Policy from time to time. We will notify you of any changes by posting the new Privacy Policy on this page and updating the "Last Updated" date.</p>
+
+      <h3>8. Contact Us</h3>
+      <p>If you have any questions about this Privacy Policy or your data, please contact us at:</p>
+      <p><strong>Email:</strong> SwoleHouseFitness@gmail.com<br>
+      <strong>Website:</strong> [Your Support/Marketing URL]</p>
+
+      <div class="policy-tips">
+        <h4>Pro-Tips for a Smooth Review</h4>
+        <ul>
+          <li><strong>The "Delete" Button:</strong> Make sure the button in your app is actually labeled "Delete Account." Apple reviewers often reject apps if the button only says "Log Out" or "Deactivate."</li>
+          <li><strong>Sign in with Apple:</strong> If you use the template above and offer a login, ensure you have the "Sign in with Apple" REST API configured to revoke user tokens when they delete their account.</li>
+          <li><strong>Transparency:</strong> In the App Store Connect dashboard, when filling out the <strong>App Privacy</strong> section, ensure your answers match this document exactly. If you say you collect "Contact Info" in the dashboard, it must be listed in this policy.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
   <!-- Footer -->
   <footer>
-    <p>&copy; 2025 Swole House &nbsp;·&nbsp; <a href="#support">Contact</a></p>
+    <p>&copy; 2025 Swole House &nbsp;·&nbsp; <a href="#support">Contact</a> &nbsp;·&nbsp; <a href="#privacy">Privacy Policy</a></p>
   </footer>
 
 </body>

@@ -1,0 +1,34 @@
+# Privacy Policy for Swole House
+**Last Updated:** 5/4/2026
+
+## 1. Introduction
+We value your privacy. This Privacy Policy explains how Swole House ("we," "our," or "us") collects, uses, and protects your information when you use our mobile application. By using the app, you agree to the collection and use of information in accordance with this policy.
+## 2. Information We Collect
+To provide a personalized workout experience and maintain your history, we collect the following:
+ * **Account Information:** When you create a profile, we collect your email address and name to sync your data across devices.
+ * **Fitness & Workout Data:** We collect and store your workout logs, including exercises performed, sets, reps, weights, and dates.
+ * **Profile Stats:** Information such as height, weight, or fitness goals provided by you to calculate workout metrics.
+ * **Device Information:** Basic technical data (OS version, device model) to ensure app stability.
+## 3. How We Use Your Information
+Your data is used strictly for the following purposes:
+ * **Data Persistence:** To ensure your workout history and profile stats are saved and accessible after you log in.
+ * **App Functionality:** To generate randomized workouts and track progress over time.
+ * **Service Improvement:** To troubleshoot bugs and improve the user interface.
+## 4. Data Storage and Security
+We use industry-standard encryption to protect your data during transmission and storage. Your workout history is stored securely on our backend servers to allow for multi-device synchronization. We do not sell your fitness or personal data to third parties.
+## 5. Account Deletion (Mandatory)
+In compliance with Apple’s requirements, you have full control over your data.
+ * **How to Delete:** You may initiate account deletion at any time through the **Settings** menu within the app.
+ * **Data Removal:** Upon requesting account deletion, all your personal information, profile stats, and workout history will be permanently erased from our servers within [e.g., 30 days]. This action cannot be undone.
+## 6. Third-Party Services
+If you use "Sign in with Apple," we receive a unique identifier and, optionally, your email address. We do not share your health or fitness data with third-party advertisers or data brokers.
+## 7. Changes to This Policy
+We may update our Privacy Policy from time to time. We will notify you of any changes by posting the new Privacy Policy on this page and updating the "Last Updated" date.
+## 8. Contact Us
+If you have any questions about this Privacy Policy or your data, please contact us at:
+**Email:** SwoleHouseFitness@gmail.com
+**Website:** [Your Support/Marketing URL]
+### Pro-Tips for a Smooth Review
+ * **The "Delete" Button:** Make sure the button in your app is actually labeled "Delete Account." Apple reviewers often reject apps if the button only says "Log Out" or "Deactivate."
+ * **Sign in with Apple:** If you use the template above and offer a login, ensure you have the "Sign in with Apple" REST API configured to revoke user tokens when they delete their account.
+ * **Transparency:** In the App Store Connect dashboard, when filling out the **App Privacy** section, ensure your answers match this document exactly. If you say you collect "Contact Info" in the dashboard, it must be listed in this policy.
