@@ -1,416 +1,549 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Swole House — Workout Generator</title>
-  <meta name="description" content="Swole House generates personalized workout routines across five categories: Weight Lifting, Circuit Training, Yoga, Cardio, and Mobility." />
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Swole House — Workout Generator</title>
+    <meta
+      name="description"
+      content="Swole House generates personalized workout routines across five categories: Weight Lifting, Circuit Training, Yoga, Cardio, and Mobility."
+    />
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
 
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      background: #0d0d0d;
-      color: #f0f0f0;
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-    }
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica,
+          Arial, sans-serif;
+        background: #0d0d0d;
+        color: #f0f0f0;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+      }
 
-    a { color: inherit; text-decoration: none; }
+      a {
+        color: inherit;
+        text-decoration: none;
+      }
 
-    /* ── Header ─────────────────────────────────────────── */
-    header {
-      padding: 48px 24px 32px;
-      text-align: center;
-      border-bottom: 1px solid #1e1e1e;
-    }
+      /* ── Header ─────────────────────────────────────────── */
+      header {
+        padding: 48px 24px 32px;
+        text-align: center;
+        border-bottom: 1px solid #1e1e1e;
+      }
 
-    .logo-mark {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      width: 80px;
-      height: 80px;
-      background: linear-gradient(135deg, #c0392b, #8b1a1a);
-      border-radius: 22px;
-      margin-bottom: 20px;
-      box-shadow: 0 8px 32px rgba(192, 57, 43, 0.35);
-    }
+      .logo-mark {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 80px;
+        height: 80px;
+        background: linear-gradient(135deg, #c0392b, #8b1a1a);
+        border-radius: 22px;
+        margin-bottom: 20px;
+        box-shadow: 0 8px 32px rgba(192, 57, 43, 0.35);
+      }
 
-    .logo-mark svg {
-      width: 44px;
-      height: 44px;
-      fill: #fff;
-    }
+      .logo-mark svg {
+        width: 44px;
+        height: 44px;
+        fill: #fff;
+      }
 
-    h1 {
-      font-size: clamp(28px, 5vw, 42px);
-      font-weight: 800;
-      letter-spacing: -0.5px;
-      color: #fff;
-      margin-bottom: 8px;
-    }
+      h1 {
+        font-size: clamp(28px, 5vw, 42px);
+        font-weight: 800;
+        letter-spacing: -0.5px;
+        color: #fff;
+        margin-bottom: 8px;
+      }
 
-    .tagline {
-      font-size: 17px;
-      color: #888;
-      max-width: 400px;
-      margin: 0 auto;
-      line-height: 1.5;
-    }
+      .tagline {
+        font-size: 17px;
+        color: #888;
+        max-width: 400px;
+        margin: 0 auto;
+        line-height: 1.5;
+      }
 
-    /* ── Hero CTA ───────────────────────────────────────── */
-    .hero {
-      padding: 56px 24px;
-      text-align: center;
-    }
+      /* ── Hero CTA ───────────────────────────────────────── */
+      .hero {
+        padding: 56px 24px;
+        text-align: center;
+      }
 
-    .hero-text {
-      max-width: 560px;
-      margin: 0 auto 36px;
-      font-size: 17px;
-      color: #aaa;
-      line-height: 1.7;
-    }
+      .hero-text {
+        max-width: 560px;
+        margin: 0 auto 36px;
+        font-size: 17px;
+        color: #aaa;
+        line-height: 1.7;
+      }
 
-    .app-store-btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 12px;
-      background: #fff;
-      color: #000;
-      border-radius: 14px;
-      padding: 14px 28px;
-      font-size: 15px;
-      font-weight: 600;
-      transition: opacity 0.15s;
-    }
+      .app-store-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
+        background: #fff;
+        color: #000;
+        border-radius: 14px;
+        padding: 14px 28px;
+        font-size: 15px;
+        font-weight: 600;
+        transition: opacity 0.15s;
+      }
 
-    .app-store-btn:hover { opacity: 0.85; }
+      .app-store-btn:hover {
+        opacity: 0.85;
+      }
 
-    .app-store-btn svg {
-      width: 24px;
-      height: 24px;
-      fill: #000;
-      flex-shrink: 0;
-    }
+      .app-store-btn svg {
+        width: 24px;
+        height: 24px;
+        fill: #000;
+        flex-shrink: 0;
+      }
 
-    .app-store-btn-labels {
-      text-align: left;
-    }
+      .app-store-btn-labels {
+        text-align: left;
+      }
 
-    .app-store-btn-sub {
-      display: block;
-      font-size: 11px;
-      font-weight: 400;
-      color: #444;
-      line-height: 1;
-      margin-bottom: 2px;
-    }
+      .app-store-btn-sub {
+        display: block;
+        font-size: 11px;
+        font-weight: 400;
+        color: #444;
+        line-height: 1;
+        margin-bottom: 2px;
+      }
 
-    .app-store-btn-main {
-      display: block;
-      font-size: 18px;
-      font-weight: 700;
-      color: #000;
-      line-height: 1;
-    }
+      .app-store-btn-main {
+        display: block;
+        font-size: 18px;
+        font-weight: 700;
+        color: #000;
+        line-height: 1;
+      }
 
-    /* ── Feature grid ───────────────────────────────────── */
-    .features {
-      max-width: 760px;
-      margin: 0 auto;
-      padding: 0 24px 64px;
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 16px;
-    }
+      /* ── Feature grid ───────────────────────────────────── */
+      .features {
+        max-width: 760px;
+        margin: 0 auto;
+        padding: 0 24px 64px;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 16px;
+      }
 
-    .feature-card {
-      background: #141414;
-      border: 1px solid #1e1e1e;
-      border-radius: 16px;
-      padding: 24px 20px;
-    }
+      .feature-card {
+        background: #141414;
+        border: 1px solid #1e1e1e;
+        border-radius: 16px;
+        padding: 24px 20px;
+      }
 
-    .feature-icon {
-      font-size: 28px;
-      margin-bottom: 12px;
-    }
+      .feature-icon {
+        font-size: 28px;
+        margin-bottom: 12px;
+      }
 
-    .feature-title {
-      font-size: 15px;
-      font-weight: 700;
-      color: #fff;
-      margin-bottom: 6px;
-    }
+      .feature-title {
+        font-size: 15px;
+        font-weight: 700;
+        color: #fff;
+        margin-bottom: 6px;
+      }
 
-    .feature-desc {
-      font-size: 13px;
-      color: #777;
-      line-height: 1.5;
-    }
+      .feature-desc {
+        font-size: 13px;
+        color: #777;
+        line-height: 1.5;
+      }
 
-    /* ── Support ────────────────────────────────────────── */
-    .support {
-      background: #111;
-      border-top: 1px solid #1e1e1e;
-      padding: 56px 24px;
-      text-align: center;
-    }
+      /* ── Support ────────────────────────────────────────── */
+      .support {
+        background: #111;
+        border-top: 1px solid #1e1e1e;
+        padding: 56px 24px;
+        text-align: center;
+      }
 
-    .support h2 {
-      font-size: 22px;
-      font-weight: 700;
-      color: #fff;
-      margin-bottom: 12px;
-    }
+      .support h2 {
+        font-size: 22px;
+        font-weight: 700;
+        color: #fff;
+        margin-bottom: 12px;
+      }
 
-    .support p {
-      font-size: 15px;
-      color: #888;
-      margin-bottom: 24px;
-      max-width: 420px;
-      margin-left: auto;
-      margin-right: auto;
-      line-height: 1.6;
-    }
+      .support p {
+        font-size: 15px;
+        color: #888;
+        margin-bottom: 24px;
+        max-width: 420px;
+        margin-left: auto;
+        margin-right: auto;
+        line-height: 1.6;
+      }
 
-    .email-link {
-      display: inline-block;
-      background: #1a1a1a;
-      border: 1px solid #2a2a2a;
-      border-radius: 10px;
-      padding: 12px 24px;
-      font-size: 15px;
-      font-weight: 600;
-      color: #c0392b;
-      transition: border-color 0.15s;
-    }
+      .email-link {
+        display: inline-block;
+        background: #1a1a1a;
+        border: 1px solid #2a2a2a;
+        border-radius: 10px;
+        padding: 12px 24px;
+        font-size: 15px;
+        font-weight: 600;
+        color: #c0392b;
+        transition: border-color 0.15s;
+      }
 
-    .email-link:hover { border-color: #c0392b; }
+      .email-link:hover {
+        border-color: #c0392b;
+      }
 
-    /* ── Footer ─────────────────────────────────────────── */
-    footer {
-      margin-top: auto;
-      border-top: 1px solid #1a1a1a;
-      padding: 24px;
-      text-align: center;
-      font-size: 13px;
-      color: #444;
-    }
+      /* ── Footer ─────────────────────────────────────────── */
+      footer {
+        margin-top: auto;
+        border-top: 1px solid #1a1a1a;
+        padding: 24px;
+        text-align: center;
+        font-size: 13px;
+        color: #444;
+      }
 
-    footer a { color: #666; }
-    footer a:hover { color: #888; }
+      footer a {
+        color: #666;
+      }
+      footer a:hover {
+        color: #888;
+      }
 
-    /* ── Privacy Policy ─────────────────────────────────── */
-    .policy {
-      background: #0d0d0d;
-      border-top: 1px solid #1e1e1e;
-      padding: 64px 24px;
-    }
+      /* ── Privacy Policy ─────────────────────────────────── */
+      .policy {
+        background: #0d0d0d;
+        border-top: 1px solid #1e1e1e;
+        padding: 64px 24px;
+      }
 
-    .policy-inner {
-      max-width: 720px;
-      margin: 0 auto;
-    }
+      .policy-inner {
+        max-width: 720px;
+        margin: 0 auto;
+      }
 
-    .policy-inner h2 {
-      font-size: 26px;
-      font-weight: 800;
-      color: #fff;
-      margin-bottom: 6px;
-    }
+      .policy-inner h2 {
+        font-size: 26px;
+        font-weight: 800;
+        color: #fff;
+        margin-bottom: 6px;
+      }
 
-    .policy-meta {
-      font-size: 13px;
-      color: #555;
-      margin-bottom: 36px;
-    }
+      .policy-meta {
+        font-size: 13px;
+        color: #555;
+        margin-bottom: 36px;
+      }
 
-    .policy-inner h3 {
-      font-size: 16px;
-      font-weight: 700;
-      color: #e0e0e0;
-      margin: 28px 0 10px;
-    }
+      .policy-inner h3 {
+        font-size: 16px;
+        font-weight: 700;
+        color: #e0e0e0;
+        margin: 28px 0 10px;
+      }
 
-    .policy-inner p {
-      font-size: 14px;
-      color: #888;
-      line-height: 1.75;
-      margin-bottom: 12px;
-    }
+      .policy-inner p {
+        font-size: 14px;
+        color: #888;
+        line-height: 1.75;
+        margin-bottom: 12px;
+      }
 
-    .policy-inner ul {
-      padding-left: 20px;
-      margin-bottom: 12px;
-    }
+      .policy-inner ul {
+        padding-left: 20px;
+        margin-bottom: 12px;
+      }
 
-    .policy-inner ul li {
-      font-size: 14px;
-      color: #888;
-      line-height: 1.75;
-      margin-bottom: 6px;
-    }
+      .policy-inner ul li {
+        font-size: 14px;
+        color: #888;
+        line-height: 1.75;
+        margin-bottom: 6px;
+      }
 
-    .policy-inner strong {
-      color: #bbb;
-    }
+      .policy-inner strong {
+        color: #bbb;
+      }
 
-    .policy-tips {
-      margin-top: 40px;
-      background: #141414;
-      border: 1px solid #1e1e1e;
-      border-radius: 14px;
-      padding: 24px 24px 20px;
-    }
+      .policy-tips {
+        margin-top: 40px;
+        background: #141414;
+        border: 1px solid #1e1e1e;
+        border-radius: 14px;
+        padding: 24px 24px 20px;
+      }
 
-    .policy-tips h4 {
-      font-size: 14px;
-      font-weight: 700;
-      color: #c0392b;
-      margin-bottom: 14px;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-  </style>
-</head>
-<body>
-
-  <!-- Header -->
-  <header>
-    <div class="logo-mark">
-      <!-- Dumbbell icon -->
-      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-        <path d="M20.57 14.86L22 13.43 20.57 12 17 15.57 8.43 7 12 3.43 10.57 2 9.14 3.43 7.71 2 5.57 4.14 4.14 2.71 2.71 4.14l1.43 1.43L2 7.71l1.43 1.43L2 10.57 3.43 12 7 8.43 15.57 17 12 20.57 13.43 22l1.43-1.43L16.29 22l2.14-2.14 1.43 1.43 1.43-1.43-1.43-1.43L22 16.29l-1.43-1.43z"/>
-      </svg>
-    </div>
-    <h1>Swole House</h1>
-    <p class="tagline">Your personalized workout generator for every training style.</p>
-  </header>
-
-  <!-- Hero -->
-  <section class="hero">
-    <p class="hero-text">
-      Swole House creates tailored workouts across five categories — Weight Lifting, Circuit Training, Yoga, Cardio, and Mobility. Pick your focus, set your duration, and get a fresh routine every time.
-    </p>
-    <!-- TODO: Replace href with your actual App Store link before publishing -->
-    <a class="app-store-btn" href="#" onclick="return false;" style="opacity:0.5;cursor:default;" aria-disabled="true">
-      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-        <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/>
-      </svg>
-      <span class="app-store-btn-labels">
-        <span class="app-store-btn-sub">Download on the</span>
-        <span class="app-store-btn-main">App Store</span>
-      </span>
-    </a>
-  </section>
-
-  <!-- Features -->
-  <section class="features">
-    <div class="feature-card">
-      <div class="feature-icon">🏋️</div>
-      <div class="feature-title">Weight Lifting</div>
-      <div class="feature-desc">Traditional splits with strength and hypertrophy modes, supersets, and core finishers.</div>
-    </div>
-    <div class="feature-card">
-      <div class="feature-icon">⚡</div>
-      <div class="feature-title">Circuit Training</div>
-      <div class="feature-desc">AMRAP, EMOM, Rounds for Time, and Hyrox-style workouts to push your limits.</div>
-    </div>
-    <div class="feature-card">
-      <div class="feature-icon">🧘</div>
-      <div class="feature-title">Yoga</div>
-      <div class="feature-desc">Core strength and flexibility flows tailored to your session length.</div>
-    </div>
-    <div class="feature-card">
-      <div class="feature-icon">🏃</div>
-      <div class="feature-title">Cardio & GPS Running</div>
-      <div class="feature-desc">Structured cardio routines or live GPS-tracked outdoor runs with pace and distance.</div>
-    </div>
-    <div class="feature-card">
-      <div class="feature-icon">🔄</div>
-      <div class="feature-title">Mobility</div>
-      <div class="feature-desc">Full body, lower body, upper body, and hips & spine restore sessions.</div>
-    </div>
-    <div class="feature-card">
-      <div class="feature-icon">📊</div>
-      <div class="feature-title">History & PRs</div>
-      <div class="feature-desc">Track your saved workouts, personal records, and run stats all in one place.</div>
-    </div>
-  </section>
-
-  <!-- Support -->
-  <section class="support" id="support">
-    <h2>Support</h2>
-    <p>Have a question, found a bug, or want to request a feature? We'd love to hear from you.</p>
-    <a class="email-link" href="mailto:swolehousefitness@gmail.com">swolehousefitness@gmail.com</a>
-  </section>
-
-  <!-- Privacy Policy -->
-  <section class="policy" id="privacy">
-    <div class="policy-inner">
-      <h2>Privacy Policy for Swole House</h2>
-      <p class="policy-meta"><strong>Last Updated:</strong> 5/4/2026</p>
-
-      <h3>1. Introduction</h3>
-      <p>We value your privacy. This Privacy Policy explains how Swole House ("we," "our," or "us") collects, uses, and protects your information when you use our mobile application. By using the app, you agree to the collection and use of information in accordance with this policy.</p>
-
-      <h3>2. Information We Collect</h3>
-      <p>To provide a personalized workout experience and maintain your history, we collect the following:</p>
-      <ul>
-        <li><strong>Account Information:</strong> When you create a profile, we collect your email address and name to sync your data across devices.</li>
-        <li><strong>Fitness &amp; Workout Data:</strong> We collect and store your workout logs, including exercises performed, sets, reps, weights, and dates.</li>
-        <li><strong>Profile Stats:</strong> Information such as height, weight, or fitness goals provided by you to calculate workout metrics.</li>
-        <li><strong>Device Information:</strong> Basic technical data (OS version, device model) to ensure app stability.</li>
-      </ul>
-
-      <h3>3. How We Use Your Information</h3>
-      <p>Your data is used strictly for the following purposes:</p>
-      <ul>
-        <li><strong>Data Persistence:</strong> To ensure your workout history and profile stats are saved and accessible after you log in.</li>
-        <li><strong>App Functionality:</strong> To generate randomized workouts and track progress over time.</li>
-        <li><strong>Service Improvement:</strong> To troubleshoot bugs and improve the user interface.</li>
-      </ul>
-
-      <h3>4. Data Storage and Security</h3>
-      <p>We use industry-standard encryption to protect your data during transmission and storage. Your workout history is stored securely on our backend servers to allow for multi-device synchronization. We do not sell your fitness or personal data to third parties.</p>
-
-      <h3>5. Account Deletion (Mandatory)</h3>
-      <p>In compliance with Apple's requirements, you have full control over your data.</p>
-      <ul>
-        <li><strong>How to Delete:</strong> You may initiate account deletion at any time through the <strong>Settings</strong> menu within the app.</li>
-        <li><strong>Data Removal:</strong> Upon requesting account deletion, all your personal information, profile stats, and workout history will be permanently erased from our servers within [e.g., 30 days]. This action cannot be undone.</li>
-      </ul>
-
-      <h3>6. Third-Party Services</h3>
-      <p>If you use "Sign in with Apple," we receive a unique identifier and, optionally, your email address. We do not share your health or fitness data with third-party advertisers or data brokers.</p>
-
-      <h3>7. Changes to This Policy</h3>
-      <p>We may update our Privacy Policy from time to time. We will notify you of any changes by posting the new Privacy Policy on this page and updating the "Last Updated" date.</p>
-
-      <h3>8. Contact Us</h3>
-      <p>If you have any questions about this Privacy Policy or your data, please contact us at:</p>
-      <p><strong>Email:</strong> SwoleHouseFitness@gmail.com<br>
-      <strong>Website:</strong> [Your Support/Marketing URL]</p>
-
-      <div class="policy-tips">
-        <h4>Pro-Tips for a Smooth Review</h4>
-        <ul>
-          <li><strong>The "Delete" Button:</strong> Make sure the button in your app is actually labeled "Delete Account." Apple reviewers often reject apps if the button only says "Log Out" or "Deactivate."</li>
-          <li><strong>Sign in with Apple:</strong> If you use the template above and offer a login, ensure you have the "Sign in with Apple" REST API configured to revoke user tokens when they delete their account.</li>
-          <li><strong>Transparency:</strong> In the App Store Connect dashboard, when filling out the <strong>App Privacy</strong> section, ensure your answers match this document exactly. If you say you collect "Contact Info" in the dashboard, it must be listed in this policy.</li>
-        </ul>
+      .policy-tips h4 {
+        font-size: 14px;
+        font-weight: 700;
+        color: #c0392b;
+        margin-bottom: 14px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Header -->
+    <header>
+      <div class="logo-mark">
+        <!-- Dumbbell icon -->
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path
+            d="M20.57 14.86L22 13.43 20.57 12 17 15.57 8.43 7 12 3.43 10.57 2 9.14 3.43 7.71 2 5.57 4.14 4.14 2.71 2.71 4.14l1.43 1.43L2 7.71l1.43 1.43L2 10.57 3.43 12 7 8.43 15.57 17 12 20.57 13.43 22l1.43-1.43L16.29 22l2.14-2.14 1.43 1.43 1.43-1.43-1.43-1.43L22 16.29l-1.43-1.43z"
+          />
+        </svg>
       </div>
-    </div>
-  </section>
+      <h1>Swole House</h1>
+      <p class="tagline">
+        Your personalized workout generator for every training style.
+      </p>
+    </header>
 
-  <!-- Footer -->
-  <footer>
-    <p>&copy; 2025 Swole House &nbsp;·&nbsp; <a href="#support">Contact</a> &nbsp;·&nbsp; <a href="#privacy">Privacy Policy</a></p>
-  </footer>
+    <!-- Hero -->
+    <section class="hero">
+      <p class="hero-text">
+        Swole House creates tailored workouts across five categories — Weight
+        Lifting, Circuit Training, Yoga, Cardio, and Mobility. Pick your focus,
+        set your duration, and get a fresh routine every time.
+      </p>
+      <!-- TODO: Replace href with your actual App Store link before publishing -->
+      <a
+        class="app-store-btn"
+        href="#"
+        onclick="return false;"
+        style="opacity: 0.5; cursor: default"
+        aria-disabled="true"
+      >
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path
+            d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"
+          />
+        </svg>
+        <span class="app-store-btn-labels">
+          <span class="app-store-btn-sub">Download on the</span>
+          <span class="app-store-btn-main">App Store</span>
+        </span>
+      </a>
+    </section>
 
-</body>
+    <!-- Features -->
+    <section class="features">
+      <div class="feature-card">
+        <div class="feature-icon">🏋️</div>
+        <div class="feature-title">Weight Lifting</div>
+        <div class="feature-desc">
+          Traditional splits with strength and hypertrophy modes, supersets, and
+          core finishers.
+        </div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">⚡</div>
+        <div class="feature-title">Circuit Training</div>
+        <div class="feature-desc">
+          AMRAP, EMOM, Rounds for Time, and Hyrox-style workouts to push your
+          limits.
+        </div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🧘</div>
+        <div class="feature-title">Yoga</div>
+        <div class="feature-desc">
+          Core strength and flexibility flows tailored to your session length.
+        </div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🏃</div>
+        <div class="feature-title">Cardio & GPS Running</div>
+        <div class="feature-desc">
+          Structured cardio routines or live GPS-tracked outdoor runs with pace
+          and distance.
+        </div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🔄</div>
+        <div class="feature-title">Mobility</div>
+        <div class="feature-desc">
+          Full body, lower body, upper body, and hips & spine restore sessions.
+        </div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">📊</div>
+        <div class="feature-title">History & PRs</div>
+        <div class="feature-desc">
+          Track your saved workouts, personal records, and run stats all in one
+          place.
+        </div>
+      </div>
+    </section>
+
+    <!-- Support -->
+    <section class="support" id="support">
+      <h2>Support</h2>
+      <p>
+        Have a question, found a bug, or want to request a feature? We'd love to
+        hear from you.
+      </p>
+      <a class="email-link" href="mailto:swolehousefitness@gmail.com"
+        >swolehousefitness@gmail.com</a
+      >
+    </section>
+
+    <!-- Privacy Policy -->
+    <section class="policy" id="privacy">
+      <div class="policy-inner">
+        <h2>Privacy Policy for Swole House</h2>
+        <p class="policy-meta"><strong>Last Updated:</strong> 5/4/2026</p>
+
+        <h3>1. Introduction</h3>
+        <p>
+          We value your privacy. This Privacy Policy explains how Swole House
+          ("we," "our," or "us") collects, uses, and protects your information
+          when you use our mobile application. By using the app, you agree to
+          the collection and use of information in accordance with this policy.
+        </p>
+
+        <h3>2. Information We Collect</h3>
+        <p>
+          To provide a personalized workout experience and maintain your
+          history, we collect the following:
+        </p>
+        <ul>
+          <li>
+            <strong>Account Information:</strong> When you create a profile, we
+            collect your email address and name to sync your data across
+            devices.
+          </li>
+          <li>
+            <strong>Fitness &amp; Workout Data:</strong> We collect and store
+            your workout logs, including exercises performed, sets, reps,
+            weights, and dates.
+          </li>
+          <li>
+            <strong>Profile Stats:</strong> Information such as height, weight,
+            or fitness goals provided by you to calculate workout metrics.
+          </li>
+          <li>
+            <strong>Device Information:</strong> Basic technical data (OS
+            version, device model) to ensure app stability.
+          </li>
+        </ul>
+
+        <h3>3. How We Use Your Information</h3>
+        <p>Your data is used strictly for the following purposes:</p>
+        <ul>
+          <li>
+            <strong>Data Persistence:</strong> To ensure your workout history
+            and profile stats are saved and accessible after you log in.
+          </li>
+          <li>
+            <strong>App Functionality:</strong> To generate randomized workouts
+            and track progress over time.
+          </li>
+          <li>
+            <strong>Service Improvement:</strong> To troubleshoot bugs and
+            improve the user interface.
+          </li>
+        </ul>
+
+        <h3>4. Data Storage and Security</h3>
+        <p>
+          We use industry-standard encryption to protect your data during
+          transmission and storage. Your workout history is stored securely on
+          our backend servers to allow for multi-device synchronization. We do
+          not sell your fitness or personal data to third parties.
+        </p>
+
+        <h3>5. Account Deletion (Mandatory)</h3>
+        <p>
+          In compliance with Apple's requirements, you have full control over
+          your data.
+        </p>
+        <ul>
+          <li>
+            <strong>How to Delete:</strong> You may initiate account deletion at
+            any time through the <strong>Settings</strong> menu within the app.
+          </li>
+          <li>
+            <strong>Data Removal:</strong> Upon requesting account deletion, all
+            your personal information, profile stats, and workout history will
+            be permanently erased from our servers within [e.g., 30 days]. This
+            action cannot be undone.
+          </li>
+        </ul>
+
+        <h3>6. Third-Party Services</h3>
+        <p>
+          If you use "Sign in with Apple," we receive a unique identifier and,
+          optionally, your email address. We do not share your health or fitness
+          data with third-party advertisers or data brokers.
+        </p>
+
+        <h3>7. Changes to This Policy</h3>
+        <p>
+          We may update our Privacy Policy from time to time. We will notify you
+          of any changes by posting the new Privacy Policy on this page and
+          updating the "Last Updated" date.
+        </p>
+
+        <h3>8. Contact Us</h3>
+        <p>
+          If you have any questions about this Privacy Policy or your data,
+          please contact us at:
+        </p>
+        <p>
+          <strong>Email:</strong> SwoleHouseFitness@gmail.com<br />
+          <strong>Website:</strong> https://littleg14.github.io/Workout-App/
+        </p>
+
+        <div class="policy-tips">
+          <h4>Pro-Tips for a Smooth Review</h4>
+          <ul>
+            <li>
+              <strong>The "Delete" Button:</strong> Make sure the button in your
+              app is actually labeled "Delete Account." Apple reviewers often
+              reject apps if the button only says "Log Out" or "Deactivate."
+            </li>
+            <li>
+              <strong>Sign in with Apple:</strong> If you use the template above
+              and offer a login, ensure you have the "Sign in with Apple" REST
+              API configured to revoke user tokens when they delete their
+              account.
+            </li>
+            <li>
+              <strong>Transparency:</strong> In the App Store Connect dashboard,
+              when filling out the <strong>App Privacy</strong> section, ensure
+              your answers match this document exactly. If you say you collect
+              "Contact Info" in the dashboard, it must be listed in this policy.
+            </li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+      <p>
+        &copy; 2025 Swole House &nbsp;·&nbsp;
+        <a href="#support">Contact</a> &nbsp;·&nbsp;
+        <a href="#privacy">Privacy Policy</a>
+      </p>
+    </footer>
+  </body>
 </html>
