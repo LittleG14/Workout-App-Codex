@@ -1,0 +1,282 @@
+[
+  {
+    "path": ".easignore",
+    "sha256": "0b7fd43c5b7e6d8cbba13d4021b7702aa7852a06f68d0a006f1fa53f04c7eebe"
+  },
+  {
+    "path": ".github/workflows/quality.yml",
+    "sha256": "e13ec50c8e46564d55d9cf75d870f6e5f10b62a57239081d82ce5159c42fcf17"
+  },
+  {
+    "path": ".gitignore",
+    "sha256": "e964eed0346a5c990c99309d4496fa6fadbe704d5c56efcd965cec6e34328ac7"
+  },
+  {
+    "path": ".replit",
+    "sha256": "2a3eac20a7356665f468caa5419533ce387e9e89e7b2b7fb8da4c4c5c8cb3c06"
+  },
+  {
+    "path": "app/_layout.tsx",
+    "sha256": "19598a9d2281cfa21287827719969109f82d0c18a6c7ffa0592e17c0a87ff8ec"
+  },
+  {
+    "path": "app/(auth)/index.tsx",
+    "sha256": "4fb892d59a4be680aedd9c966faa4ef4b18c4f399f290a566784261af52870ba"
+  },
+  {
+    "path": "app/(tabs)/contact.tsx",
+    "sha256": "0ef200efff8371c8ba7e3db1d6f4d2528ece399c005435310c0b15a193fd19dd"
+  },
+  {
+    "path": "app/(tabs)/history.tsx",
+    "sha256": "fd69e8852dc206feaf30d8eaadac97da598a5ddbd87e46b298673815249bab9c"
+  },
+  {
+    "path": "app/(tabs)/index.tsx",
+    "sha256": "53e9df34385a78608d4867e66226684fa8ef0939e6ddb1e743d7e2aa7fec1b2b"
+  },
+  {
+    "path": "app/(tabs)/profile.tsx",
+    "sha256": "79c81240fe19ca7dd79515ec74bcca4bc880bb15bc4ce7a35f8e5982a2fc69ed"
+  },
+  {
+    "path": "app/admin.tsx",
+    "sha256": "243ff7439fc617288a8eabaff14614df667f615ade0f6b5b61063bdcd0f72db0"
+  },
+  {
+    "path": "app/run/active.tsx",
+    "sha256": "985b78558ef541aea44e61bd199f14c0543bf3ea838c079f46a5dc24fd7ac79d"
+  },
+  {
+    "path": "app/run/setup.tsx",
+    "sha256": "924ffd062ec4bfb0dcda8632b16b35b5139122e0870f242e30bc6e94f436c16e"
+  },
+  {
+    "path": "app/run/summary.tsx",
+    "sha256": "b50eab4ad2ae3782c4c1241c15a43bb24779a60bbcd64f9c21e798343c0bb5ef"
+  },
+  {
+    "path": "app/workout/[id].tsx",
+    "sha256": "4624a5be157a9a2d1c803d3c80d8d8dba9928d23b544c1f7d0a1ab1c537e6368"
+  },
+  {
+    "path": "components/ShareWorkoutCard.tsx",
+    "sha256": "1751f7c215a7d8bc8e4dd37384d53b09971e548e12581680c477df6193289642"
+  },
+  {
+    "path": "contexts/AuthContext.tsx",
+    "sha256": "15c19befc1f4cf8530e78373d0634037dabad2ea2ee63f35d3bdedfe40b6173d"
+  },
+  {
+    "path": "docs/release-readiness/AUDIT_REPORT.md",
+    "sha256": "e00356b2af47e2db0d2607fc4c517f314c8d209b88c66bcd24f2b66319b77631"
+  },
+  {
+    "path": "docs/release-readiness/CHANGELOG_RELEASE_PREP.md",
+    "sha256": "4ae04abea07611de219ea62a95980670fde6309883675728f3adcf2bf3394636"
+  },
+  {
+    "path": "docs/release-readiness/evidence/archive-inventory.json",
+    "sha256": "a349826dde4b102afc0027152abaf51de5da27f915532540434755c015bd7247"
+  },
+  {
+    "path": "docs/release-readiness/evidence/archive-secret-scan.json",
+    "sha256": "27505266cd65b7f0966ac30cfdeaa7ee248ab4d8a04efb579a0fa75a6e9fc161"
+  },
+  {
+    "path": "docs/release-readiness/evidence/audit-checks.cjs",
+    "sha256": "f3f60908a101e0c86e1bbe3b64f2650716f0022d12b5bc30027da65e7a3101a9"
+  },
+  {
+    "path": "docs/release-readiness/evidence/baseline-online-npm-audit.json",
+    "sha256": "8c15ad854f33ee339fa73e0d0abd15033bcefc1be46f3beb6e4ed813f2dfa80a"
+  },
+  {
+    "path": "docs/release-readiness/evidence/final-validation.json",
+    "sha256": "faca77efc174eabe1710089eb41539c2f573823812f8ef6ae46b7b8bed47afb7"
+  },
+  {
+    "path": "docs/release-readiness/evidence/remaining-advisories.json",
+    "sha256": "f33983f9be6529b7e88fd8626649ae58eafa1a2e5379adad81f3030c1b86d768"
+  },
+  {
+    "path": "docs/release-readiness/evidence/remediation-expo-doctor.log",
+    "sha256": "2ead5ee475e49a83d1db1e8e3babf7b2e8f58776c0b9fd740584d1efdd8b4455"
+  },
+  {
+    "path": "docs/release-readiness/evidence/remediation-npm-audit.json",
+    "sha256": "04e15b12870c2fb20b2f149017e1e975a7a856bace61a6a4b9d52cc3d777def4"
+  },
+  {
+    "path": "docs/release-readiness/evidence/remediation-tests.tap",
+    "sha256": "65027a334be49283b528e078e4fce0bd26eeddfe6b587642bd12cdebf7096905"
+  },
+  {
+    "path": "docs/release-readiness/evidence/remediation-validation.json",
+    "sha256": "38c62045d799a1fbf1a3d99f2d4147c8efe567225a4021a8786a89ae507f5b00"
+  },
+  {
+    "path": "docs/release-readiness/evidence/repository-inventory.json",
+    "sha256": "448c845c1ac5167ba1559dd8bb4dec8244cbff31aba7153f3e1e96674af38e69"
+  },
+  {
+    "path": "docs/release-readiness/evidence/reproduction-results.json",
+    "sha256": "6ac6eecbbe0e9ee0d4a668ee10e15e63ae3e6ecb46ea4d135a8ce592f6439a50"
+  },
+  {
+    "path": "docs/release-readiness/evidence/secret-scan.json",
+    "sha256": "1bf1a78c9533572f3f69c65d3dbd5a80c2c1060b0df08990f86f5bc68c9af20f"
+  },
+  {
+    "path": "docs/release-readiness/evidence/static-analysis.json",
+    "sha256": "e634ba6282fb1ddb8e4fab3a857dd8c0f6fe8d8ecbf9b041e81d010cebe4acee"
+  },
+  {
+    "path": "docs/release-readiness/IOS_RELEASE_CHECKLIST.md",
+    "sha256": "cc6bf36ed19a7351791cd49bb37a6899c23757eccc97d7d1121ba58146cefe3b"
+  },
+  {
+    "path": "docs/release-readiness/RELEASE_READINESS_SUMMARY.md",
+    "sha256": "bc25310d624e1b94783e13df5e89c7974ff64d0a8507533c9e67bbed155ecbbf"
+  },
+  {
+    "path": "docs/release-readiness/REMEDIATION_PLAN.md",
+    "sha256": "74fe0ff8e6329eb5206b0248f198394b97d760040a242c17be6dd07d65fcacd4"
+  },
+  {
+    "path": "docs/release-readiness/REMEDIATION_PROGRESS.md",
+    "sha256": "39bb3b953760b0fed42e6536497c8932478afcb399b8377eee0c587eaf19ddfa"
+  },
+  {
+    "path": "docs/release-readiness/SECURITY_PRIVACY_REVIEW.md",
+    "sha256": "41f3b8b0b9ecd49e86969b039210c80a6713ed8a95f51f3d5b2bd4796034b764"
+  },
+  {
+    "path": "docs/release-readiness/TEST_REPORT.md",
+    "sha256": "fd50b47d8c41f9f7592c1fbcf66cef51353ae6811b9e8c90273d02264578b9dd"
+  },
+  {
+    "path": "eslint.config.js",
+    "sha256": "3c78ff72ac033abd48c60993c010d5a0b200c6358dd236afa16372ef3503466f"
+  },
+  {
+    "path": "lib/account-scope.ts",
+    "sha256": "209d62cd32d9c3c4d53f75390f888fe83d43fdfdc43971295001068ecfbb1608"
+  },
+  {
+    "path": "lib/api-url.ts",
+    "sha256": "7ece577b2abc3aa2ed78641ea44094200a56876a34703d4cc260e3869a7b6822"
+  },
+  {
+    "path": "lib/auth-storage.ts",
+    "sha256": "214f2277a5c86f2ec048a5cd1e5e1b4d0a8fbc4810a1cfff4226f5909879dfe8"
+  },
+  {
+    "path": "lib/exercises.ts",
+    "sha256": "911f18b5e75007ca52a00c8fb7e31ba777e48df57d1558b94b3b5467589b3b2c"
+  },
+  {
+    "path": "lib/personal-records.ts",
+    "sha256": "8f6232d2de0ebf4996c01bb801a80a54580c252122d979e7cd5c55fd0998bd22"
+  },
+  {
+    "path": "lib/profile-storage.ts",
+    "sha256": "a08508953c2b5fb4df74ffcf459a942d52a3184a0fa35dd2473c653d2922b85d"
+  },
+  {
+    "path": "lib/query-client.ts",
+    "sha256": "5301cb3baf4432b3b318d2de9be7f8ef1b1a507fda6512d523c62252742840b0"
+  },
+  {
+    "path": "lib/request-timeout.ts",
+    "sha256": "a2d683788f54f2b9242212f86dcc0fbec8f6cc67288ed774f2038cc424434aa9"
+  },
+  {
+    "path": "lib/run-store.ts",
+    "sha256": "1173a6ae31e7bae8954c49c842b56a08f6e474f85381c4bd6f8c602fe1b51ea0"
+  },
+  {
+    "path": "lib/secure-session-storage.ts",
+    "sha256": "93fedc561041a29ee157f7fa9deb290d2c4aee428e7d32e37077df3e142c9cd0"
+  },
+  {
+    "path": "lib/supabase.ts",
+    "sha256": "8cf74add97a0e75a731c96fa0f9cb4d06df30de2d620c96c908dbb24c7ebdd8f"
+  },
+  {
+    "path": "lib/useCustomExercises.ts",
+    "sha256": "c8e556e7a7135ee8544bb96817eb04aeee71935dcb129b0c1bd6a1ac03f25298"
+  },
+  {
+    "path": "lib/useHiddenExercises.ts",
+    "sha256": "cb7585b0e09ac57fc841dcfd14e0d4873beafaea4662b454ade54e57e81cbb13"
+  },
+  {
+    "path": "lib/workout-order.ts",
+    "sha256": "b063b910d5f8b322069f24098539b45ecf028e3fd84a8042db65a2a4bf30b39b"
+  },
+  {
+    "path": "lib/workout-repository.ts",
+    "sha256": "80015d97d5a90b280b39eee51b9930e566ff95c168f88ecc3af6d095f6e112b4"
+  },
+  {
+    "path": "lib/workout-storage.ts",
+    "sha256": "5b9bb023826e985a7c0fc9b7e7103c19d39c563b3753259bb9c8df9e2ab58741"
+  },
+  {
+    "path": "package-lock.json",
+    "sha256": "d70c94e358bf84cc7ab8d97bc0402d5cf1f1e504ced4846188ad3e9716258ad8"
+  },
+  {
+    "path": "package.json",
+    "sha256": "0362afc1993c19526277d9fb0d527ad347422daa45e0614a0e7391e36ca07c09"
+  },
+  {
+    "path": "patches/expo-asset+12.0.14.patch",
+    "sha256": "460d8386773491a716df1559d93486b674bc7023c07483988861f705563f1d06"
+  },
+  {
+    "path": "scripts/post-merge.sh",
+    "sha256": "7a9f207036acb551e0a08c195ff27723c8b13d6184a8f9360a14101c0a06be1f"
+  },
+  {
+    "path": "server/index.ts",
+    "sha256": "16cb2250d71fc03fb7ef7cb90b3deee6b879decfaad7cab2b01df12f63feb283"
+  },
+  {
+    "path": "server/routes.ts",
+    "sha256": "03dd8a4f7ae3c89887eb6a5763a229e7121043b48e0a38872bb5136a0288e66f"
+  },
+  {
+    "path": "tests/account-scope.test.ts",
+    "sha256": "2228f711ef220ed62b9a5915451ca4019f4614efe19084d6c8cbb163b2cba946"
+  },
+  {
+    "path": "tests/generator.test.ts",
+    "sha256": "7aed44e447c78d3cc8cc2aa365e9571cd6ca0e5055e6beebfe3ce736c73ff149"
+  },
+  {
+    "path": "tests/personal-records.test.ts",
+    "sha256": "5b1c78c5a204aaac32b578e3078217d06706846cba33d93296f5a93246c76213"
+  },
+  {
+    "path": "tests/request-timeout.test.ts",
+    "sha256": "52f6a81f5939413efca8c44ab24cb610082fc4e9ab05a7965a3b6a9a49161e7d"
+  },
+  {
+    "path": "tests/run-store.test.ts",
+    "sha256": "cc92f0659be0748c43a936eff3dc30e51f0841545f3c7423e649708fd054be9f"
+  },
+  {
+    "path": "tests/secure-session-storage.test.ts",
+    "sha256": "4fabf360f4626e7a6a14e244d557b5b0613fadccd922078fabbeaa6b9446a77a"
+  },
+  {
+    "path": "tests/workout-order.test.ts",
+    "sha256": "9f79b00368176977ba6ab466a1701c434ddcd1919ef57bc5e15b94d18c632d83"
+  },
+  {
+    "path": "tests/workout-repository.test.ts",
+    "sha256": "7de0d83cdd704f3a9b05e341f97d9282067f00de78f4a1fbc576534e0900619d"
+  }
+]

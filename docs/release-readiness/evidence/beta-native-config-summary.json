@@ -1,0 +1,13 @@
+{
+  "bundleIdentifier": "com.forge.app",
+  "scheme": "swolehouse",
+  "iosIcon": "./assets/images/icon-ios.png",
+  "backgroundModes": [
+    "location"
+  ],
+  "usageDescriptions": {
+    "NSLocationAlwaysAndWhenInUseUsageDescription": "Allow Swole House to continue recording your route, distance, and pace during a run or walk when the screen is locked or you use another app. Tracking stops when you pause or end the workout.",
+    "NSLocationWhenInUseUsageDescription": "Swole House uses your location during a run or walk to record your route, distance, and pace."
+  },
+  "projectLinked": false
+}

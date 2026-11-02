@@ -1,0 +1,420 @@
+{
+  "root": "C:\\Users\\geare\\Desktop\\Jobs\\Swole House\\codex_review\\Workout-App-Codex",
+  "commit": "93bd1f356cee4708fafb44850b4c8a4312a390bd",
+  "files": [
+    {
+      "path": ".gitignore",
+      "bytes": 458,
+      "sha256": "9f3d3f11e79961adb6d96e3aed00e36eee22e797d3d0f9b2bc17b96b1fea4be1",
+      "lines": null
+    },
+    {
+      "path": ".replit",
+      "bytes": 1384,
+      "sha256": "1cfba2a8eace74bb590a3ce006ec95c6140662c741e6dc432905c1f159530f4c",
+      "lines": null
+    },
+    {
+      "path": "Workout-Generator.zip",
+      "bytes": 5867329,
+      "sha256": "a29b821a659681d8d6bc7d6f23a8dfc2e8ee3e27a46c379e21e719537d41c99b",
+      "lines": null
+    },
+    {
+      "path": "app.json",
+      "bytes": 1059,
+      "sha256": "f23a3a4513b7ebc99aecc95f0b5c3eb4195746a4eac37174108367a160177806",
+      "lines": 45
+    },
+    {
+      "path": "app/(auth)/_layout.tsx",
+      "bytes": 487,
+      "sha256": "69a93e60b04d21f3459a2bf1f9048889390bfb4d078a82b24a22fed787379f9b",
+      "lines": 18
+    },
+    {
+      "path": "app/(auth)/index.tsx",
+      "bytes": 7396,
+      "sha256": "36b0c9ecd71b026872339e55bf73741cff9c9d90acaae83bb6e0426c24e7d166",
+      "lines": 260
+    },
+    {
+      "path": "app/(auth)/signup.tsx",
+      "bytes": 8834,
+      "sha256": "50788d3fe581050c4b9c4c0a2f8245625af6b4d0bac4b9b18f432ff0e3893cab",
+      "lines": 300
+    },
+    {
+      "path": "app/(tabs)/_layout.tsx",
+      "bytes": 3539,
+      "sha256": "9cee0e6ea18a99d506a724d863eca67fe1e39c0e8729ef79ce36dd2901827364",
+      "lines": 120
+    },
+    {
+      "path": "app/(tabs)/contact.tsx",
+      "bytes": 20294,
+      "sha256": "8cf79134eb73f5b18440e417a2efdfbb0bd4b213ba9ed1f5c9ea7d8961d2b462",
+      "lines": 723
+    },
+    {
+      "path": "app/(tabs)/history.tsx",
+      "bytes": 20612,
+      "sha256": "d30062f942d45fc812c1688f1a47b79dcde8233773393b5393150a41046ae8cb",
+      "lines": 664
+    },
+    {
+      "path": "app/(tabs)/index.tsx",
+      "bytes": 27633,
+      "sha256": "4f1d8d500e2c6042f4c6de763464bd0279b8ab2f126f07e3e3445640cfa19a21",
+      "lines": 795
+    },
+    {
+      "path": "app/(tabs)/profile.tsx",
+      "bytes": 73864,
+      "sha256": "08b909aec63a36ef8b6c29b6114fed5196ae0482c949064a0578d64f67db30d9",
+      "lines": 2182
+    },
+    {
+      "path": "app/+native-intent.tsx",
+      "bytes": 119,
+      "sha256": "771f68125faddbe475aa0b307215442efcc532065af66499a7a90eb0f9f271b8",
+      "lines": 7
+    },
+    {
+      "path": "app/+not-found.tsx",
+      "bytes": 853,
+      "sha256": "ee308fb8c76e202a8e3c79919852d51a6cd73329a86fc1e9c48ed9ba5c30a67f",
+      "lines": 40
+    },
+    {
+      "path": "app/_layout.tsx",
+      "bytes": 2520,
+      "sha256": "5ed0ebbde590e9b5c9fcda01f83bb2a684e1f81c3272752fc59fef6fc4a30066",
+      "lines": 89
+    },
+    {
+      "path": "app/admin.tsx",
+      "bytes": 24664,
+      "sha256": "bbedfbd6af62ab74ab7432bff0fe72a228dc77b88ba66b57bcb67cd1b1015b32",
+      "lines": 765
+    },
+    {
+      "path": "app/index.tsx",
+      "bytes": 293,
+      "sha256": "e9cc813e7a4350fb5a5c3f6fd086adabd5a1f9f2f2d5d0569e2bdb24b2987c6b",
+      "lines": 10
+    },
+    {
+      "path": "app/run/active.tsx",
+      "bytes": 14852,
+      "sha256": "06a5c9a879d6d4565e505792e61aaa63bb851e9f7008b34067905e2f65b26a6e",
+      "lines": 495
+    },
+    {
+      "path": "app/run/setup.tsx",
+      "bytes": 12459,
+      "sha256": "d798e4ca8ad845ceeaa29eafe9795409bb9a46aab934696e96fd425636a785ee",
+      "lines": 401
+    },
+    {
+      "path": "app/run/summary.tsx",
+      "bytes": 11379,
+      "sha256": "aa4d38a38208b63f4255f686e7198a0f07edde794e5fe93704ec834e2c8168de",
+      "lines": 356
+    },
+    {
+      "path": "app/workout/[id].tsx",
+      "bytes": 105149,
+      "sha256": "90819fbf90130db57eb4c27b91b65dbc2a8820e403f4b8dd073fb31f0d0d3300",
+      "lines": 2893
+    },
+    {
+      "path": "assets/images/android-icon-background.png",
+      "bytes": 17549,
+      "sha256": "fb139c2dee362ebf2070e23b96da6fc0d43f8492de38b8af1fd7223e19b5861d",
+      "lines": null
+    },
+    {
+      "path": "assets/images/android-icon-foreground.png",
+      "bytes": 173091,
+      "sha256": "02b4d37d7391a0cdbfcc1a1529f3e0419a97a33eae8089245d98b75b8d821e6f",
+      "lines": null
+    },
+    {
+      "path": "assets/images/android-icon-monochrome.png",
+      "bytes": 4140,
+      "sha256": "6371fc2c12e33ad2215a86c281db3d682a81bebe7c957a842c13b8bf00cceb83",
+      "lines": null
+    },
+    {
+      "path": "assets/images/favicon.png",
+      "bytes": 173091,
+      "sha256": "02b4d37d7391a0cdbfcc1a1529f3e0419a97a33eae8089245d98b75b8d821e6f",
+      "lines": null
+    },
+    {
+      "path": "assets/images/icon.png",
+      "bytes": 173091,
+      "sha256": "02b4d37d7391a0cdbfcc1a1529f3e0419a97a33eae8089245d98b75b8d821e6f",
+      "lines": null
+    },
+    {
+      "path": "assets/images/logo-transparent.png",
+      "bytes": 32350,
+      "sha256": "9e400f278e54b615f67e0dce9d0ebc0014559ae102ef9909eea270153cfe98ec",
+      "lines": null
+    },
+    {
+      "path": "assets/images/splash-icon.png",
+      "bytes": 173091,
+      "sha256": "02b4d37d7391a0cdbfcc1a1529f3e0419a97a33eae8089245d98b75b8d821e6f",
+      "lines": null
+    },
+    {
+      "path": "attached_assets/IMG_6927_1777406964822.png",
+      "bytes": 173091,
+      "sha256": "02b4d37d7391a0cdbfcc1a1529f3e0419a97a33eae8089245d98b75b8d821e6f",
+      "lines": null
+    },
+    {
+      "path": "attached_assets/IMG_6928_1777407385997.png",
+      "bytes": 42311,
+      "sha256": "a2d9696c06b79f32511c5ce3ff0908a77cb98738b0d1bf5b4922a9f8cfe5d10d",
+      "lines": null
+    },
+    {
+      "path": "attached_assets/Pasted--Privacy-Policy-for-Swole-House-Last-Updated-5-4-2026-1_1779474846730.txt",
+      "bytes": 3368,
+      "sha256": "0c96e115d97a0ae2d3ab60984b64c750a00fc1d095561c8656cd9d724a297113",
+      "lines": 35
+    },
+    {
+      "path": "attached_assets/Pasted-For-the-next-update-I-want-to-make-a-major-functional-u_1777489934918.txt",
+      "bytes": 2886,
+      "sha256": "f550a057fa37b5606e9705948449da2cc61c8b68087f1727cf2ef781b8615c20",
+      "lines": 17
+    },
+    {
+      "path": "babel.config.js",
+      "bytes": 156,
+      "sha256": "1a52db5d5565299c52f4afaa20b4729141ff580e348ac45b95a6d883c3fa066a",
+      "lines": 7
+    },
+    {
+      "path": "components/ErrorBoundary.tsx",
+      "bytes": 1728,
+      "sha256": "72344d809ac12ff7cfc2b76e2e2e54f23b029bac699e5a40fd00ca00fcba57c5",
+      "lines": 55
+    },
+    {
+      "path": "components/ErrorFallback.tsx",
+      "bytes": 7389,
+      "sha256": "16679f73fcfbf964f3f2a43145726bf9edbe200e2607584d630f6b3975ad8400",
+      "lines": 287
+    },
+    {
+      "path": "components/KeyboardAwareScrollViewCompat.tsx",
+      "bytes": 766,
+      "sha256": "27cbeb3d03f01ef5de74392d0a2aa4fdc9b9f6752d05b218515d7ea646a44ad1",
+      "lines": 31
+    },
+    {
+      "path": "components/ShareWorkoutCard.tsx",
+      "bytes": 13703,
+      "sha256": "ad86d5a3d30c6afcabebc2c14ebfd92c02521c7543c11284376b5d6b355ff0f2",
+      "lines": 488
+    },
+    {
+      "path": "components/SortableExerciseList.tsx",
+      "bytes": 9285,
+      "sha256": "b7020d30bdd6dd6e91ea6ed7bc2c9ad464b113ea6548cc0d4aaeacb7ea24295c",
+      "lines": 293
+    },
+    {
+      "path": "constants/colors.ts",
+      "bytes": 808,
+      "sha256": "31d2b187ed69a309b643a8b4d94acd8550fae98761e4de8c6c57eab29cea3be6",
+      "lines": 37
+    },
+    {
+      "path": "contexts/AuthContext.tsx",
+      "bytes": 4808,
+      "sha256": "ae786dc05a83b371fe44b17466a48a9866f5ff0e486d5159b4d391679c0ab956",
+      "lines": 144
+    },
+    {
+      "path": "docs/index.html",
+      "bytes": 16153,
+      "sha256": "c1f7868ffd39f7681e76e1c12ee1d87e3c86347e51e132a342f623f3b2e25720",
+      "lines": 528
+    },
+    {
+      "path": "drizzle.config.ts",
+      "bytes": 356,
+      "sha256": "7a94639b712726b9623e35c9ba383f5ff017a28b8c47e35200e43b16e08ca655",
+      "lines": 15
+    },
+    {
+      "path": "eslint.config.js",
+      "bytes": 199,
+      "sha256": "b3eff3033c55a71ba6b5128083ff409d41b987dbbe6d44cc1b03493d33f77fed",
+      "lines": 10
+    },
+    {
+      "path": "lib/auth-storage.ts",
+      "bytes": 677,
+      "sha256": "50054d08721f9af34d728e0c91540b3a09f78c7f9f8fd9d8d68d42923a35467f",
+      "lines": 27
+    },
+    {
+      "path": "lib/exercises.ts",
+      "bytes": 54210,
+      "sha256": "cef41458e5ac5bc98da68b4fe7f1675f983165cd4127d6ab130fdd42446ca454",
+      "lines": 1053
+    },
+    {
+      "path": "lib/profile-storage.ts",
+      "bytes": 957,
+      "sha256": "72304357e9d3a07540ded3dbac36f10ced3ccbb9d56e1a9cbf1fc737ac6679ad",
+      "lines": 33
+    },
+    {
+      "path": "lib/query-client.ts",
+      "bytes": 4318,
+      "sha256": "47dcf7df55ead6e9846f7bf75d2c231bea43f043d28161500cdbbd7418b59cb9",
+      "lines": 147
+    },
+    {
+      "path": "lib/run-store.ts",
+      "bytes": 283,
+      "sha256": "e1ce3f719a21a5ab22bc073e0edf27fe75bdd1c352caa5263c47aae942f59e06",
+      "lines": 14
+    },
+    {
+      "path": "lib/supabase.ts",
+      "bytes": 2537,
+      "sha256": "a1a86841b2d7bbf0a5dfc4166b56f1a1c13f0bf53de74a32145c238b64cf98c0",
+      "lines": 77
+    },
+    {
+      "path": "lib/useCustomExercises.ts",
+      "bytes": 2317,
+      "sha256": "bedcf184bfe0ae17579e5ef03f77cb8ce2ab9148f3394e268e3d1ff4e1cebdf0",
+      "lines": 71
+    },
+    {
+      "path": "lib/useHiddenExercises.ts",
+      "bytes": 1759,
+      "sha256": "d7d7e2184c8f6af122c9c52f439fbfebd2e1ebe24fbdc0d13fcc913618fc5043",
+      "lines": 48
+    },
+    {
+      "path": "lib/workout-storage.ts",
+      "bytes": 5453,
+      "sha256": "e85b93e2e8b79741460694b9dcbe4e91e88b5cb9e57be7d754aea3324c0cf893",
+      "lines": 173
+    },
+    {
+      "path": "metro.config.js",
+      "bytes": 676,
+      "sha256": "761d70a130c5662b15200f96fed029ce4bbc0c79a813d5dc3f913d86b3cf4bc4",
+      "lines": 22
+    },
+    {
+      "path": "mocks/react-native-maps.web.js",
+      "bytes": 512,
+      "sha256": "4b130218d4f1c5562739bf196ee9f28ccb5014bcda8e7206d6a063d5b273c320",
+      "lines": 25
+    },
+    {
+      "path": "package-lock.json",
+      "bytes": 628685,
+      "sha256": "3ee737cba3efd54dfbab9803b26d988e694079cc2b85372443f93866980cad89",
+      "lines": 16759
+    },
+    {
+      "path": "package.json",
+      "bytes": 3283,
+      "sha256": "5acff206ba758e559b45486d864941c44578251e6b6759f3ac744d9cffdf4088",
+      "lines": 91
+    },
+    {
+      "path": "patches/expo-asset+12.0.12.patch",
+      "bytes": 1011,
+      "sha256": "460d8386773491a716df1559d93486b674bc7023c07483988861f705563f1d06",
+      "lines": null
+    },
+    {
+      "path": "replit.md",
+      "bytes": 6199,
+      "sha256": "50b97fbc1b16635e0bc5d4788d5ef6790059ac7f2a20a3c0630f030312f838ac",
+      "lines": 108
+    },
+    {
+      "path": "scripts/build.js",
+      "bytes": 15574,
+      "sha256": "805086c90571cb5faddf61900516cb0ba11d599ff9a96659ddb009b3b8ff72b5",
+      "lines": 564
+    },
+    {
+      "path": "scripts/migrate.ts",
+      "bytes": 2626,
+      "sha256": "73becaa27cb738d76285078c21511830c9469f3432fb51f2542d897a38a66ed1",
+      "lines": 94
+    },
+    {
+      "path": "scripts/post-merge.sh",
+      "bytes": 359,
+      "sha256": "d0477c6386d8c6847b704030bdab37c0ee88db14f7cde58efef7a8979820c59b",
+      "lines": 16
+    },
+    {
+      "path": "server/auth.ts",
+      "bytes": 1023,
+      "sha256": "5ebdcb42d7985515f3744951b5b4485c7ecfeecaf9fa4baa6aa09578f47a7b1a",
+      "lines": 35
+    },
+    {
+      "path": "server/db.ts",
+      "bytes": 1385,
+      "sha256": "a90d56ea51b8c7baaaa6f7e0efc31261298fc79875d9ae186166a270455a692a",
+      "lines": 47
+    },
+    {
+      "path": "server/index.ts",
+      "bytes": 6518,
+      "sha256": "5c7b72a3cc13f160e2505421a935ba3fbf4385ed6dacecf1a68f9aad3c386d37",
+      "lines": 251
+    },
+    {
+      "path": "server/routes.ts",
+      "bytes": 21946,
+      "sha256": "b9f9b1405a9a3c05a179947636e7f5ee17e556005c68adc38e2e057000c554d5",
+      "lines": 497
+    },
+    {
+      "path": "server/storage.ts",
+      "bytes": 4560,
+      "sha256": "ca90e5902698b1f655f207561f088ea4f229dec7af97a1f4591bea242ecd92ad",
+      "lines": 134
+    },
+    {
+      "path": "server/templates/landing-page.html",
+      "bytes": 12655,
+      "sha256": "7faf8da1e291cad24936217e7a7370bf762adbe0e1b465f4210ad12a38b92532",
+      "lines": 460
+    },
+    {
+      "path": "shared/schema.ts",
+      "bytes": 1507,
+      "sha256": "fab2355c1c540307e0caf14129d910424528661f77a6aa2ef4c9255d29675ddf",
+      "lines": 42
+    },
+    {
+      "path": "tsconfig.json",
+      "bytes": 334,
+      "sha256": "94a033f4e3cf34a3a7bd9fd1068ec3eb34917683d641375ba0acd125b3ba561b",
+      "lines": 22
+    }
+  ]
+}

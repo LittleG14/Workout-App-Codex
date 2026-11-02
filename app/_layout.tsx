@@ -1,7 +1,9 @@
+import '@/lib/run-tracking';
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
+import { StartupFailure } from '@/components/StartupFailure';
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
@@ -16,7 +18,7 @@ import {
 } from "@expo-google-fonts/rubik";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 
-SplashScreen.preventAutoHideAsync();
+void SplashScreen.preventAutoHideAsync().catch(() => {});
 
 function RootLayoutNav() {
   return (
@@ -43,33 +45,35 @@ function RootLayoutNav() {
   );
 }
 
-function RootLayoutContent({ fontsLoaded }: { fontsLoaded: boolean }) {
-  const { isLoading } = useAuth();
+function RootLayoutContent({ fontsLoaded, fontError, retry }: { fontsLoaded: boolean; fontError: Error | null; retry: () => void }) {
+  const { isLoading, user, startupError } = useAuth();
+  const [fontTimedOut, setFontTimedOut] = useState(false);
+  useEffect(() => {
+    if (fontsLoaded || fontError) return;
+    const timer = setTimeout(() => setFontTimedOut(true), 15000);
+    return () => clearTimeout(timer);
+  }, [fontsLoaded, fontError]);
+  const failure = startupError ?? (fontError || (fontTimedOut && !fontsLoaded) ? 'The app’s fonts could not load. Please try again.' : null);
 
   useEffect(() => {
-    if (fontsLoaded && !isLoading) {
-      SplashScreen.hideAsync();
+    if (failure || (fontsLoaded && !isLoading)) {
+      void SplashScreen.hideAsync().catch(() => {});
     }
-  }, [fontsLoaded, isLoading]);
+  }, [fontsLoaded, isLoading, failure]);
 
+  if (failure) return <StartupFailure message={failure} retry={retry} />;
   if (!fontsLoaded || isLoading) return null;
 
-  return <RootLayoutNav />;
+  return <RootLayoutNav key={user?.id ?? 'signed-out'} />;
 }
 
-export default function RootLayout() {
+function StartupAttempt({ retry }: { retry: () => void }) {
   const [fontsLoaded, fontError] = useFonts({
     Rubik_400Regular,
     Rubik_500Medium,
     Rubik_600SemiBold,
     Rubik_700Bold,
   });
-
-  useEffect(() => {
-    if (fontError) {
-      SplashScreen.hideAsync();
-    }
-  }, [fontError]);
 
   return (
     <ErrorBoundary>
@@ -78,11 +82,16 @@ export default function RootLayout() {
           <KeyboardProvider>
             <AuthProvider>
               <StatusBar style="light" />
-              <RootLayoutContent fontsLoaded={!!(fontsLoaded || fontError)} />
+              <RootLayoutContent fontsLoaded={fontsLoaded} fontError={fontError} retry={retry} />
             </AuthProvider>
           </KeyboardProvider>
         </GestureHandlerRootView>
       </QueryClientProvider>
     </ErrorBoundary>
   );
+}
+
+export default function RootLayout() {
+  const [attempt, setAttempt] = useState(0);
+  return <StartupAttempt key={attempt} retry={() => setAttempt(value => value + 1)} />;
 }

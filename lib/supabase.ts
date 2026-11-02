@@ -1,76 +1,44 @@
+import './native-crypto';
 import { createClient } from "@supabase/supabase-js";
 import * as SecureStore from "expo-secure-store";
 import { Platform } from "react-native";
+import { createSecureSessionStorage } from "./secure-session-storage";
+import { assertClientConfigured, clientConfigErrors, clientEnvironment } from './client-config';
+import { withRequestTimeout } from './request-timeout';
 
-const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL!;
-const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY!;
+// Invalid build configuration must reach the recoverable startup screen, not throw
+// while modules are loading (before React's error boundary exists).
+const configured = clientConfigErrors(clientEnvironment).length === 0;
+const SUPABASE_URL = configured ? clientEnvironment.supabaseUrl! : 'https://unconfigured.invalid';
+const SUPABASE_ANON_KEY = configured ? clientEnvironment.supabaseKey! : 'unconfigured';
 
-// Expo SecureStore has a 2048-byte limit per key on iOS.
-// Supabase sessions can exceed this, so we chunk large values.
-const CHUNK_SIZE = 1800;
-
-async function secureGet(key: string): Promise<string | null> {
-  if (Platform.OS === "web") {
-    try { return localStorage.getItem(key); } catch { return null; }
-  }
-  const countStr = await SecureStore.getItemAsync(`${key}_count`);
-  if (!countStr) return SecureStore.getItemAsync(key);
-  const count = parseInt(countStr, 10);
-  const chunks: string[] = [];
-  for (let i = 0; i < count; i++) {
-    const chunk = await SecureStore.getItemAsync(`${key}_${i}`);
-    if (chunk === null) return null;
-    chunks.push(chunk);
-  }
-  return chunks.join("");
-}
-
-async function secureSet(key: string, value: string): Promise<void> {
-  if (Platform.OS === "web") {
-    try { localStorage.setItem(key, value); } catch {}
-    return;
-  }
-  if (value.length <= CHUNK_SIZE) {
-    await SecureStore.deleteItemAsync(`${key}_count`);
-    await SecureStore.setItemAsync(key, value);
-    return;
-  }
-  const chunks: string[] = [];
-  for (let i = 0; i < value.length; i += CHUNK_SIZE) {
-    chunks.push(value.slice(i, i + CHUNK_SIZE));
-  }
-  await SecureStore.setItemAsync(`${key}_count`, String(chunks.length));
-  await Promise.all(chunks.map((c, i) => SecureStore.setItemAsync(`${key}_${i}`, c)));
-}
-
-async function secureDelete(key: string): Promise<void> {
-  if (Platform.OS === "web") {
-    try { localStorage.removeItem(key); } catch {}
-    return;
-  }
-  const countStr = await SecureStore.getItemAsync(`${key}_count`);
-  if (countStr) {
-    const count = parseInt(countStr, 10);
-    await Promise.all([
-      SecureStore.deleteItemAsync(`${key}_count`),
-      ...Array.from({ length: count }, (_, i) => SecureStore.deleteItemAsync(`${key}_${i}`)),
-    ]);
-  } else {
-    await SecureStore.deleteItemAsync(key);
-  }
-}
-
-const ExpoSecureStoreAdapter = {
-  getItem: secureGet,
-  setItem: secureSet,
-  removeItem: secureDelete,
+// Background location may need the persisted owner while the phone is locked.
+// Device-only Keychain access after first unlock supports that without moving
+// session credentials into AsyncStorage or making them migrate to another device.
+const keychainOptions: SecureStore.SecureStoreOptions = {
+  keychainAccessible: SecureStore.AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY,
 };
+const nativeStorage = createSecureSessionStorage({
+  getItemAsync: key => SecureStore.getItemAsync(key, keychainOptions),
+  setItemAsync: (key, value) => SecureStore.setItemAsync(key, value, keychainOptions),
+  deleteItemAsync: key => SecureStore.deleteItemAsync(key, keychainOptions),
+});
+const ExpoSecureStoreAdapter = Platform.OS === "web" ? {
+  getItem: async (key: string) => localStorage.getItem(key),
+  setItem: async (key: string, value: string) => { localStorage.setItem(key, value); },
+  removeItem: async (key: string) => { localStorage.removeItem(key); },
+} : nativeStorage;
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  global: { fetch: (input, init) => {
+    assertClientConfigured();
+    return withRequestTimeout(signal => fetch(input, { ...init, signal }), init?.signal ?? undefined);
+  } },
   auth: {
     storage: ExpoSecureStoreAdapter,
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: false,
+    flowType: 'pkce',
   },
 });

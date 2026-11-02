@@ -1,0 +1,376 @@
+TAP version 13
+# Subtest: scopes reject old work after account switch and logout/relogin
+ok 1 - scopes reject old work after account switch and logout/relogin
+  ---
+  duration_ms: 80.2549
+  type: 'test'
+  ...
+# Subtest: auth callbacks accept only the exact native or explicitly allowed web endpoint
+ok 2 - auth callbacks accept only the exact native or explicitly allowed web endpoint
+  ---
+  duration_ms: 16.9346
+  type: 'test'
+  ...
+# Subtest: callback errors and duplicate codes cannot create an authenticated intent
+ok 3 - callback errors and duplicate codes cannot create an authenticated intent
+  ---
+  duration_ms: 0.9202
+  type: 'test'
+  ...
+# Subtest: redirects do not use transient Replit/Expo Go hosts
+ok 4 - redirects do not use transient Replit/Expo Go hosts
+  ---
+  duration_ms: 1.3658
+  type: 'test'
+  ...
+# Subtest: updated Express parser/router preserve JSON routes and reject oversized or corrupt compressed bodies
+ok 5 - updated Express parser/router preserve JSON routes and reject oversized or corrupt compressed bodies
+  ---
+  duration_ms: 2221.4318
+  type: 'test'
+  ...
+# Subtest: reviewed PostCSS minor override preserves CSS parse/transform behavior used by tooling
+ok 6 - reviewed PostCSS minor override preserves CSS parse/transform behavior used by tooling
+  ---
+  duration_ms: 9.4132
+  type: 'test'
+  ...
+# Subtest: hiding running prerequisites still produces defined exercises at each duration
+ok 7 - hiding running prerequisites still produces defined exercises at each duration
+  ---
+  duration_ms: 13.7606
+  type: 'test'
+  ...
+# Subtest: exhausted pools fail clearly before persisting an invalid workout
+ok 8 - exhausted pools fail clearly before persisting an invalid workout
+  ---
+  duration_ms: 3.8605
+  type: 'test'
+  ...
+# Subtest: small circuit pools yield nonempty blocks and finite rounds
+ok 9 - small circuit pools yield nonempty blocks and finite rounds
+  ---
+  duration_ms: 1.9881
+  type: 'test'
+  ...
+# Subtest: rebalance does not duplicate exercises in a block or add hidden exercises
+ok 10 - rebalance does not duplicate exercises in a block or add hidden exercises
+  ---
+  duration_ms: 3.7547
+  type: 'test'
+  ...
+# Subtest: baseline generator combinations preserve valid workouts
+ok 11 - baseline generator combinations preserve valid workouts
+  ---
+  duration_ms: 50.8194
+  type: 'test'
+  ...
+# Subtest: only verified recovery redirect type permits a password reset
+ok 12 - only verified recovery redirect type permits a password reset
+  ---
+  duration_ms: 138.4957
+  type: 'test'
+  ...
+# Subtest: duplicate callback mounts exchange a one-time code only once
+ok 13 - duplicate callback mounts exchange a one-time code only once
+  ---
+  duration_ms: 2.8006
+  type: 'test'
+  ...
+# Subtest: account changes, expiry and clearing prevent recovery updates
+ok 14 - account changes, expiry and clearing prevent recovery updates
+  ---
+  duration_ms: 2.9139
+  type: 'test'
+  ...
+# Subtest: successful reset consumes authority and replaying the link cannot grant it again
+ok 15 - successful reset consumes authority and replaying the link cannot grant it again
+  ---
+  duration_ms: 3.0173
+  type: 'test'
+  ...
+# Subtest: backend password failure preserves a verified grant for a safe retry
+ok 16 - backend password failure preserves a verified grant for a safe retry
+  ---
+  duration_ms: 1.5154
+  type: 'test'
+  ...
+# Subtest: failed/expired code exchange never creates recovery authority
+ok 17 - failed/expired code exchange never creates recovery authority
+  ---
+  duration_ms: 0.9419
+  type: 'test'
+  ...
+# Subtest: weight records compare canonical units but retain the winning original units
+ok 18 - weight records compare canonical units but retain the winning original units
+  ---
+  duration_ms: 9.1434
+  type: 'test'
+  ...
+# Subtest: PR reset excludes older weights without deleting history
+ok 19 - PR reset excludes older weights without deleting history
+  ---
+  duration_ms: 0.6157
+  type: 'test'
+  ...
+# Subtest: run records compare miles and kilometers in canonical units
+ok 20 - run records compare miles and kilometers in canonical units
+  ---
+  duration_ms: 5.3738
+  type: 'test'
+  ...
+# Subtest: requests time out without relying on AbortSignal static methods
+ok 21 - requests time out without relying on AbortSignal static methods
+  ---
+  duration_ms: 65.4257
+  type: 'test'
+  ...
+# Subtest: query cancellation propagates and already cancelled queries never proceed
+ok 22 - query cancellation propagates and already cancelled queries never proceed
+  ---
+  duration_ms: 2.3802
+  type: 'test'
+  ...
+# Subtest: successful requests return without leaving timeout work
+ok 23 - successful requests return without leaving timeout work
+  ---
+  duration_ms: 1.8462
+  type: 'test'
+  ...
+# Subtest: locked/suspended JS elapsed time derives from timestamps, not timer ticks
+ok 24 - locked/suspended JS elapsed time derives from timestamps, not timer ticks
+  ---
+  duration_ms: 8.156
+  type: 'test'
+  ...
+# Subtest: headless location batches preserve route and reject duplicate, stale and inaccurate fixes
+ok 25 - headless location batches preserve route and reject duplicate, stale and inaccurate fixes
+  ---
+  duration_ms: 10.4543
+  type: 'test'
+  ...
+# Subtest: pause excludes time and paused travel, including delayed fixes from an earlier segment
+ok 26 - pause excludes time and paused travel, including delayed fixes from an earlier segment
+  ---
+  duration_ms: 4.938
+  type: 'test'
+  ...
+# Subtest: approximate GPS produces visible guidance and recovers when accurate fixes arrive
+ok 27 - approximate GPS produces visible guidance and recovers when accurate fixes arrive
+  ---
+  duration_ms: 1.7634
+  type: 'test'
+  ...
+# Subtest: new account cannot read, finish, discard or upload the previous owner draft
+ok 28 - new account cannot read, finish, discard or upload the previous owner draft
+  ---
+  duration_ms: 4.0619
+  type: 'test'
+  ...
+# Subtest: expired or absent secure session stops headless updates without assigning a new owner
+ok 29 - expired or absent secure session stops headless updates without assigning a new owner
+  ---
+  duration_ms: 0.9741
+  type: 'test'
+  ...
+# Subtest: OS interruption recovers conservatively through last recorded location
+ok 30 - OS interruption recovers conservatively through last recorded location
+  ---
+  duration_ms: 1.0863
+  type: 'test'
+  ...
+# Subtest: finish is idempotent and stopped draft survives restart for a fixed-ID save retry
+ok 31 - finish is idempotent and stopped draft survives restart for a fixed-ID save retry
+  ---
+  duration_ms: 1.4659
+  type: 'test'
+  ...
+# Subtest: permission failure preserves a paused recoverable draft and stops GPS
+ok 32 - permission failure preserves a paused recoverable draft and stops GPS
+  ---
+  duration_ms: 0.907
+  type: 'test'
+  ...
+# Subtest: pause storage failure still stops native tracking and preserves prior draft
+ok 33 - pause storage failure still stops native tracking and preserves prior draft
+  ---
+  duration_ms: 0.9947
+  type: 'test'
+  ...
+# Subtest: unbound native task is stopped, and corrupted drafts are not overwritten
+ok 34 - unbound native task is stopped, and corrupted drafts are not overwritten
+  ---
+  duration_ms: 69.8422
+  type: 'test'
+  ...
+# Subtest: run handoff and delayed stop confirmations cannot cross account boundaries
+ok 35 - run handoff and delayed stop confirmations cannot cross account boundaries
+  ---
+  duration_ms: 44.366
+  type: 'test'
+  ...
+# Subtest: PKCE verifier survives adapter recreation and is removed after use
+ok 36 - PKCE verifier survives adapter recreation and is removed after use
+  ---
+  duration_ms: 10.4664
+  type: 'test'
+  ...
+# Subtest: session size changes and logout remove all live and legacy representations
+ok 37 - session size changes and logout remove all live and legacy representations
+  ---
+  duration_ms: 7.1928
+  type: 'test'
+  ...
+# Subtest: failed chunk write preserves the committed session
+ok 38 - failed chunk write preserves the committed session
+  ---
+  duration_ms: 4.0501
+  type: 'test'
+  ...
+# Subtest: interrupted logout is unreadable and cleanup is retryable
+ok 39 - interrupted logout is unreadable and cleanup is retryable
+  ---
+  duration_ms: 1.5735
+  type: 'test'
+  ...
+# Subtest: Unicode chunks obey byte limits without splitting characters
+ok 40 - Unicode chunks obey byte limits without splitting characters
+  ---
+  duration_ms: 5.0168
+  type: 'test'
+  ...
+# Subtest: malformed and missing chunks fail explicitly; legacy sessions remain readable
+ok 41 - malformed and missing chunks fail explicitly; legacy sessions remain readable
+  ---
+  duration_ms: 0.6586
+  type: 'test'
+  ...
+# Subtest: concurrent operations on one session are serialized
+ok 42 - concurrent operations on one session are serialized
+  ---
+  duration_ms: 1.2231
+  type: 'test'
+  ...
+# Subtest: startup timeout/error is recoverable by a fresh attempt; late completion does not change rejection
+ok 43 - startup timeout/error is recoverable by a fresh attempt; late completion does not change rejection
+  ---
+  duration_ms: 32.1073
+  type: 'test'
+  ...
+# Subtest: missing/malformed configuration is reported without returning credential values
+ok 44 - missing/malformed configuration is reported without returning credential values
+  ---
+  duration_ms: 3.942
+  type: 'test'
+  ...
+# Subtest: release preflight accepts public fields and rejects missing project or privileged JWT
+ok 45 - release preflight accepts public fields and rejects missing project or privileged JWT
+  ---
+  duration_ms: 75.3871
+  type: 'test'
+  ...
+# Subtest: testing and production profiles select explicit environments and valid square opaque icon
+ok 46 - testing and production profiles select explicit environments and valid square opaque icon
+  ---
+  duration_ms: 11.5892
+  type: 'test'
+  ...
+# Subtest: conversion preserves every existing superset and the selected display position
+ok 47 - conversion preserves every existing superset and the selected display position
+  ---
+  duration_ms: 47.9914
+  type: 'test'
+  ...
+# Subtest: inconsistent saved order recovers all persisted items
+ok 48 - inconsistent saved order recovers all persisted items
+  ---
+  duration_ms: 0.8279
+  type: 'test'
+  ...
+# Subtest: repeated conversions preserve order metadata and logged values
+ok 49 - repeated conversions preserve order metadata and logged values
+  ---
+  duration_ms: 4.1363
+  type: 'test'
+  ...
+# Subtest: legacy data is not uploaded or assigned to the next account
+ok 50 - legacy data is not uploaded or assigned to the next account
+  ---
+  duration_ms: 140.5851
+  type: 'test'
+  ...
+# Subtest: new workouts are explicitly owner-tagged and foreign ownership cannot be reassigned
+ok 51 - new workouts are explicitly owner-tagged and foreign ownership cannot be reassigned
+  ---
+  duration_ms: 3.2183
+  type: 'test'
+  ...
+# Subtest: retry after a stopped run was persisted keeps one workout with the original identity
+ok 52 - retry after a stopped run was persisted keeps one workout with the original identity
+  ---
+  duration_ms: 1.8706
+  type: 'test'
+  ...
+# Subtest: a foreign-owner record returned by an API cannot enter the account cache
+ok 53 - a foreign-owner record returned by an API cannot enter the account cache
+  ---
+  duration_ms: 2.5846
+  type: 'test'
+  ...
+# Subtest: concurrent saves persist both records and independent account queues
+ok 54 - concurrent saves persist both records and independent account queues
+  ---
+  duration_ms: 1.6886
+  type: 'test'
+  ...
+# Subtest: offline updates and deletions survive process-style repository recreation
+ok 55 - offline updates and deletions survive process-style repository recreation
+  ---
+  duration_ms: 5.9218
+  type: 'test'
+  ...
+# Subtest: failed server mutations retain pending data rather than accepting stale GETs
+ok 56 - failed server mutations retain pending data rather than accepting stale GETs
+  ---
+  duration_ms: 1.2052
+  type: 'test'
+  ...
+# Subtest: late account-A reads cannot replace account-B local data
+ok 57 - late account-A reads cannot replace account-B local data
+  ---
+  duration_ms: 50.5895
+  type: 'test'
+  ...
+# Subtest: corrupt persisted data is preserved and reported
+ok 58 - corrupt persisted data is preserved and reported
+  ---
+  duration_ms: 6.5284
+  type: 'test'
+  ...
+# Subtest: a GET started before a concurrent edit cannot overwrite the acknowledged edit
+ok 59 - a GET started before a concurrent edit cannot overwrite the acknowledged edit
+  ---
+  duration_ms: 1.2428
+  type: 'test'
+  ...
+# Subtest: an in-flight write cannot acknowledge a newer pending edit
+ok 60 - an in-flight write cannot acknowledge a newer pending edit
+  ---
+  duration_ms: 1.2686
+  type: 'test'
+  ...
+# Subtest: previous server workout format remains readable without changing its identity
+ok 61 - previous server workout format remains readable without changing its identity
+  ---
+  duration_ms: 1.1705
+  type: 'test'
+  ...
+1..61
+# tests 61
+# suites 0
+# pass 61
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 34708.0215

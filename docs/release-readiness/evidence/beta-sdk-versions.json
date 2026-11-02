@@ -1,0 +1,236 @@
+{
+  "expo": "54.0.38",
+  "react": "19.1.0",
+  "reactNative": "0.81.5",
+  "hostNode": "v24.21.0",
+  "versions": [
+    {
+      "name": "@expo/vector-icons",
+      "version": "15.0.3",
+      "sdkRange": "^15.0.3",
+      "satisfies": true
+    },
+    {
+      "name": "@react-native-async-storage/async-storage",
+      "version": "2.2.0",
+      "sdkRange": "2.2.0",
+      "satisfies": true
+    },
+    {
+      "name": "expo-asset",
+      "version": "12.0.14",
+      "sdkRange": "~12.0.14",
+      "satisfies": true
+    },
+    {
+      "name": "expo-auth-session",
+      "version": "7.0.11",
+      "sdkRange": "~7.0.11",
+      "satisfies": true
+    },
+    {
+      "name": "expo-blur",
+      "version": "15.0.8",
+      "sdkRange": "~15.0.8",
+      "satisfies": true
+    },
+    {
+      "name": "expo-clipboard",
+      "version": "8.0.8",
+      "sdkRange": "~8.0.8",
+      "satisfies": true
+    },
+    {
+      "name": "expo-constants",
+      "version": "18.0.14",
+      "sdkRange": "~18.0.14",
+      "satisfies": true
+    },
+    {
+      "name": "expo-crypto",
+      "version": "15.0.9",
+      "sdkRange": "~15.0.9",
+      "satisfies": true
+    },
+    {
+      "name": "expo-font",
+      "version": "14.0.12",
+      "sdkRange": "~14.0.12",
+      "satisfies": true
+    },
+    {
+      "name": "expo-glass-effect",
+      "version": "0.1.10",
+      "sdkRange": "~0.1.10",
+      "satisfies": true
+    },
+    {
+      "name": "expo-haptics",
+      "version": "15.0.8",
+      "sdkRange": "~15.0.8",
+      "satisfies": true
+    },
+    {
+      "name": "expo-image",
+      "version": "3.0.11",
+      "sdkRange": "~3.0.11",
+      "satisfies": true
+    },
+    {
+      "name": "expo-image-picker",
+      "version": "17.0.11",
+      "sdkRange": "~17.0.11",
+      "satisfies": true
+    },
+    {
+      "name": "expo-linear-gradient",
+      "version": "15.0.8",
+      "sdkRange": "~15.0.8",
+      "satisfies": true
+    },
+    {
+      "name": "expo-linking",
+      "version": "8.0.12",
+      "sdkRange": "~8.0.12",
+      "satisfies": true
+    },
+    {
+      "name": "expo-location",
+      "version": "19.0.8",
+      "sdkRange": "~19.0.8",
+      "satisfies": true
+    },
+    {
+      "name": "expo-router",
+      "version": "6.0.24",
+      "sdkRange": "~6.0.24",
+      "satisfies": true
+    },
+    {
+      "name": "expo-secure-store",
+      "version": "15.0.8",
+      "sdkRange": "~15.0.8",
+      "satisfies": true
+    },
+    {
+      "name": "expo-sharing",
+      "version": "14.0.8",
+      "sdkRange": "~14.0.8",
+      "satisfies": true
+    },
+    {
+      "name": "expo-splash-screen",
+      "version": "31.0.13",
+      "sdkRange": "~31.0.13",
+      "satisfies": true
+    },
+    {
+      "name": "expo-status-bar",
+      "version": "3.0.9",
+      "sdkRange": "~3.0.9",
+      "satisfies": true
+    },
+    {
+      "name": "expo-symbols",
+      "version": "1.0.8",
+      "sdkRange": "~1.0.8",
+      "satisfies": true
+    },
+    {
+      "name": "expo-system-ui",
+      "version": "6.0.9",
+      "sdkRange": "~6.0.9",
+      "satisfies": true
+    },
+    {
+      "name": "expo-task-manager",
+      "version": "14.0.9",
+      "sdkRange": "~14.0.9",
+      "satisfies": true
+    },
+    {
+      "name": "expo-web-browser",
+      "version": "15.0.11",
+      "sdkRange": "~15.0.11",
+      "satisfies": true
+    },
+    {
+      "name": "react",
+      "version": "19.1.0",
+      "sdkRange": "19.1.0",
+      "satisfies": true
+    },
+    {
+      "name": "react-dom",
+      "version": "19.1.0",
+      "sdkRange": "19.1.0",
+      "satisfies": true
+    },
+    {
+      "name": "react-native",
+      "version": "0.81.5",
+      "sdkRange": "0.81.5",
+      "satisfies": true
+    },
+    {
+      "name": "react-native-gesture-handler",
+      "version": "2.28.0",
+      "sdkRange": "~2.28.0",
+      "satisfies": true
+    },
+    {
+      "name": "react-native-keyboard-controller",
+      "version": "1.18.5",
+      "sdkRange": "1.18.5",
+      "satisfies": true
+    },
+    {
+      "name": "react-native-maps",
+      "version": "1.20.1",
+      "sdkRange": "1.20.1",
+      "satisfies": true
+    },
+    {
+      "name": "react-native-reanimated",
+      "version": "4.1.6",
+      "sdkRange": "~4.1.1",
+      "satisfies": true
+    },
+    {
+      "name": "react-native-safe-area-context",
+      "version": "5.6.2",
+      "sdkRange": "~5.6.0",
+      "satisfies": true
+    },
+    {
+      "name": "react-native-screens",
+      "version": "4.16.0",
+      "sdkRange": "~4.16.0",
+      "satisfies": true
+    },
+    {
+      "name": "react-native-svg",
+      "version": "15.12.1",
+      "sdkRange": "15.12.1",
+      "satisfies": true
+    },
+    {
+      "name": "react-native-view-shot",
+      "version": "4.0.3",
+      "sdkRange": "4.0.3",
+      "satisfies": true
+    },
+    {
+      "name": "react-native-web",
+      "version": "0.21.2",
+      "sdkRange": "~0.21.0",
+      "satisfies": true
+    },
+    {
+      "name": "react-native-worklets",
+      "version": "0.5.1",
+      "sdkRange": "0.5.1",
+      "satisfies": true
+    }
+  ]
+}

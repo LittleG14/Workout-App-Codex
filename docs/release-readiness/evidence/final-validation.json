@@ -1,0 +1,13 @@
+{
+  "sourceFilesHashChecked": 69,
+  "sourceFilesChanged": [],
+  "findingCount": 27,
+  "critical": 1,
+  "high": 12,
+  "medium": 13,
+  "low": 1,
+  "defectsReproduced": 10,
+  "harnessErrors": 0,
+  "generatorCases": 380,
+  "missingReportLinks": []
+}

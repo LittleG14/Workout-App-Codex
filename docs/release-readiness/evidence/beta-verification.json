@@ -1,0 +1,107 @@
+{
+  "verifiedAt": "2026-11-02T20:05:55.328Z",
+  "branch": "codex/ios-release-readiness",
+  "originalFilesUnchanged": 69,
+  "tests": {
+    "command": "node node_modules/tsx/dist/cli.mjs --test --test-reporter=tap tests/*.test.ts",
+    "exitCode": 0,
+    "passed": 61,
+    "failed": 0,
+    "evidence": "beta-tests.tap"
+  },
+  "typescript": {
+    "command": "node node_modules/typescript/bin/tsc --noEmit --pretty false",
+    "exitCode": 0
+  },
+  "eslint": {
+    "command": "node node_modules/eslint/bin/eslint.js . --format json --output-file .verification/beta-eslint-final.json",
+    "exitCode": 0,
+    "errors": 0,
+    "warnings": 23,
+    "generatedArtifactDirectoryExcluded": ".verification/**"
+  },
+  "expoDoctor": {
+    "command": "npx --yes expo-doctor@1.21.5 --verbose",
+    "exitCode": 0,
+    "passed": 18,
+    "total": 18,
+    "evidence": "beta-expo-doctor.log"
+  },
+  "sdkCheck": {
+    "command": "node node_modules/expo/bin/cli install --check",
+    "exitCode": 0,
+    "matchingManagedPackages": 38,
+    "evidence": "beta-sdk-versions.json"
+  },
+  "nativeConfig": {
+    "command": "node node_modules/expo/bin/cli config --type introspect --json",
+    "exitCode": 0,
+    "evidence": "beta-native-config-summary.json"
+  },
+  "icon": {
+    "path": "assets/images/icon-ios.png",
+    "width": 1254,
+    "height": 1254,
+    "pngColorType": 2,
+    "sha256": "890e71f8264bde37d820744724514f0ffbf56ae7fdbbd4f1411c508727648482",
+    "nativeArchiveRenditionInspected": false
+  },
+  "jsExports": {
+    "command": "node node_modules/expo/bin/cli export --platform ios --platform web --output-dir .verification/beta-final-export",
+    "exitCode": 0,
+    "bundles": [
+      {
+        "platform": "ios",
+        "file": "entry-ed6e1346c94988cbe62febfe25b1b919.hbc",
+        "bytes": 5592265
+      },
+      {
+        "platform": "web",
+        "file": "entry-0eda90b28a69293d2a2f3a7b8e89d451.js",
+        "bytes": 3545776
+      }
+    ],
+    "environment": "Placeholder public validation values only; not release binaries",
+    "evidence": "beta-js-exports.log"
+  },
+  "serverCompilation": {
+    "command": "node node_modules/esbuild/bin/esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=server_dist",
+    "exitCode": 0,
+    "serverStarted": false
+  },
+  "patch": {
+    "command": "node node_modules/patch-package/index.js --error-on-fail",
+    "exitCode": 0,
+    "package": "expo-asset@12.0.14"
+  },
+  "npmAudit": {
+    "command": "npm audit --json --registry=https://registry.npmjs.org",
+    "exitCode": 1,
+    "vulnerabilities": {
+      "info": 0,
+      "low": 2,
+      "moderate": 52,
+      "high": 7,
+      "critical": 0,
+      "total": 61
+    },
+    "evidence": "beta-npm-audit.json"
+  },
+  "releasePreflight": {
+    "command": "node scripts/validate-release-config.cjs",
+    "exitCode": 1,
+    "expected": true,
+    "reason": "Intended API/Supabase public configuration and actual EAS project UUID are not supplied"
+  },
+  "notExecuted": [
+    "native or EAS builds",
+    "Apple signing/credential changes",
+    "TestFlight upload",
+    "production deployment or database changes",
+    "Supabase dashboard changes",
+    "real email/password reset",
+    "device/simulator or lock-screen tests",
+    "remote CI",
+    "App Store submission"
+  ]
+}

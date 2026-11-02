@@ -1,0 +1,52 @@
+[
+  {
+    "name": "Cross-account local upload",
+    "defectReproduced": true
+  },
+  {
+    "name": "Offline delete resurrects",
+    "defectReproduced": true
+  },
+  {
+    "name": "Offline edit overwritten",
+    "defectReproduced": true
+  },
+  {
+    "name": "Concurrent local saves lose one workout",
+    "defectReproduced": true
+  },
+  {
+    "name": "SecureStore chunk lifecycle retains previous values",
+    "defectReproduced": true,
+    "remainingKeys": [
+      "session_0",
+      "session_1"
+    ]
+  },
+  {
+    "name": "Converting with existing supersets omits display entries",
+    "defectReproduced": true
+  },
+  {
+    "name": "Weight PR compares mixed units as raw numbers",
+    "defectReproduced": true
+  },
+  {
+    "name": "Run PR compares mixed distance and pace units",
+    "defectReproduced": true
+  },
+  {
+    "name": "Hidden running warmup produces invalid exercise",
+    "defectReproduced": true
+  },
+  {
+    "name": "Empty EMOM pool produces infinite rounds",
+    "defectReproduced": true
+  },
+  {
+    "name": "Baseline generator matrix",
+    "passed": true,
+    "cases": 380,
+    "limit": "Pure generator only; nondeterministic random sampling, not UI/device validation."
+  }
+]
