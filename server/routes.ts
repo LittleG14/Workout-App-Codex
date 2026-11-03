@@ -5,7 +5,7 @@ import { storage } from "./storage";
 import { authMiddleware, type AuthRequest } from "./auth";
 import { Resend } from "resend";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 
 if (!process.env.RESEND_API_KEY) {
   console.warn("WARNING: RESEND_API_KEY is not set — confirmation emails will not be sent.");
@@ -28,13 +28,20 @@ function escapeHtml(text: string): string {
     .replace(/'/g, "&#39;");
 }
 
+function getRouteId(req: AuthRequest): string {
+  if (typeof req.params.id !== 'string' || !req.params.id) {
+    throw Object.assign(new Error('Invalid resource ID'), { status: 400 });
+  }
+  return req.params.id;
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/workouts", authMiddleware, async (req: AuthRequest, res) => {
     try {
       const rows = await storage.getWorkouts(req.userId!);
       const workouts = rows
         .map((row) => {
-          try { return JSON.parse(row.data); } catch { return null; }
+          try { return { ...JSON.parse(row.data), userId: req.userId! }; } catch { return null; }
         })
         .filter(Boolean)
         .reverse();
@@ -47,7 +54,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/workouts", authMiddleware, async (req: AuthRequest, res) => {
     try {
-      const workout = req.body;
+      const workout = req.body && { ...req.body, userId: req.userId! };
       if (!workout || !workout.id) {
         res.status(400).json({ message: "Invalid workout data" });
         return;
@@ -63,6 +70,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(201).json({ ok: true });
     } catch (err: any) {
       if (err?.code === "23505") {
+        const existing = await storage.getWorkout(req.body.id, req.userId!);
+        if (!existing) { res.status(409).json({ message: 'Workout ID is unavailable' }); return; }
+        await storage.updateWorkout(req.body.id, req.userId!, JSON.stringify({ ...req.body, userId: req.userId! }));
         res.json({ ok: true });
         return;
       }
@@ -73,8 +83,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put("/api/workouts/:id", authMiddleware, async (req: AuthRequest, res) => {
     try {
-      const { id } = req.params;
-      const workout = req.body;
+      const id = getRouteId(req);
+      const workout = req.body && { ...req.body, id, userId: req.userId! };
       if (!workout) {
         res.status(400).json({ message: "Invalid workout data" });
         return;
@@ -93,7 +103,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/workouts/:id", authMiddleware, async (req: AuthRequest, res) => {
     try {
-      const { id } = req.params;
+      const id = getRouteId(req);
       await storage.deleteWorkout(id, req.userId!);
       res.json({ ok: true });
     } catch (err) {
@@ -143,7 +153,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.saveFeedback(req.userId!, req.userEmail ?? "", id, date, selection, category, submission);
 
       // Admin notification email — fires and forgets, never blocks the response
-      resend.emails.send({
+      resend?.emails.send({
         from: "Swole House <noreply@swolehousefitness.com>",
         to: process.env.ADMIN_EMAIL ?? "swolehousefitness@gmail.com",
         subject: `[Feedback] ${escapeHtml(selection)} — ${escapeHtml(category)}`,
@@ -186,7 +196,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       if (req.userEmail) {
-        resend.emails.send({
+        resend?.emails.send({
           from: "Swole House <noreply@swolehousefitness.com>",
           to: req.userEmail,
           subject: "We received your feedback!",
@@ -236,13 +246,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.get("/api/admin/is-admin", authMiddleware, async (req: AuthRequest, res) => {
-    const adminEmails = (process.env.ADMIN_EMAILS ?? "").split(",").map((e) => e.trim()).filter(Boolean);
+    const adminEmails = (process.env.ADMIN_EMAILS ?? "").split(",").map((e: string) => e.trim()).filter(Boolean);
     const isAdmin = adminEmails.length > 0 && !!req.userEmail && adminEmails.includes(req.userEmail);
     res.json({ isAdmin });
   });
 
   app.get("/api/admin/feedback", authMiddleware, async (req: AuthRequest, res) => {
-    const adminEmails = (process.env.ADMIN_EMAILS ?? "").split(",").map((e) => e.trim()).filter(Boolean);
+    const adminEmails = (process.env.ADMIN_EMAILS ?? "").split(",").map((e: string) => e.trim()).filter(Boolean);
     if (adminEmails.length === 0 || !req.userEmail || !adminEmails.includes(req.userEmail)) {
       res.status(403).json({ error: "Forbidden" });
       return;
@@ -257,12 +267,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.get("/api/admin/email-domain-status", authMiddleware, async (req: AuthRequest, res) => {
-    const adminEmails = (process.env.ADMIN_EMAILS ?? "").split(",").map((e) => e.trim()).filter(Boolean);
+    const adminEmails = (process.env.ADMIN_EMAILS ?? "").split(",").map((e: string) => e.trim()).filter(Boolean);
     if (adminEmails.length === 0 || !req.userEmail || !adminEmails.includes(req.userEmail)) {
       res.status(403).json({ error: "Forbidden" });
       return;
     }
-    if (!process.env.RESEND_API_KEY) {
+    if (!resend) {
       res.status(503).json({ error: "RESEND_API_KEY not configured" });
       return;
     }
@@ -313,12 +323,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.post("/api/admin/verify-domain", authMiddleware, async (req: AuthRequest, res) => {
-    const adminEmails = (process.env.ADMIN_EMAILS ?? "").split(",").map((e) => e.trim()).filter(Boolean);
+    const adminEmails = (process.env.ADMIN_EMAILS ?? "").split(",").map((e: string) => e.trim()).filter(Boolean);
     if (adminEmails.length === 0 || !req.userEmail || !adminEmails.includes(req.userEmail)) {
       res.status(403).json({ error: "Forbidden" });
       return;
     }
-    if (!process.env.RESEND_API_KEY) {
+    if (!resend) {
       res.status(503).json({ error: "RESEND_API_KEY not configured" });
       return;
     }
@@ -344,12 +354,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.post("/api/admin/send-test-email", authMiddleware, async (req: AuthRequest, res) => {
-    const adminEmails = (process.env.ADMIN_EMAILS ?? "").split(",").map((e) => e.trim()).filter(Boolean);
+    const adminEmails = (process.env.ADMIN_EMAILS ?? "").split(",").map((e: string) => e.trim()).filter(Boolean);
     if (adminEmails.length === 0 || !req.userEmail || !adminEmails.includes(req.userEmail)) {
       res.status(403).json({ error: "Forbidden" });
       return;
     }
-    if (!process.env.RESEND_API_KEY) {
+    if (!resend) {
       res.status(503).json({ error: "RESEND_API_KEY not configured" });
       return;
     }
@@ -463,7 +473,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/exercises/:id", authMiddleware, async (req: AuthRequest, res) => {
     try {
-      const { id } = req.params;
+      const id = getRouteId(req);
       await storage.deleteCustomExercise(id, req.userId!);
       res.json({ ok: true });
     } catch (err) {

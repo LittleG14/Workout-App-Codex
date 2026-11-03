@@ -36,6 +36,8 @@ export interface RunCoordinate {
 
 export interface RunData {
   coordinates: RunCoordinate[];
+  /** Indices of continuous GPS segments; paused travel is excluded. */
+  segmentStarts?: number[];
   distanceMiles: number;
   distanceKm: number;
   durationSeconds: number;
@@ -81,6 +83,8 @@ export type CircuitBalance = 'default' | 'more_movements' | 'more_rounds';
 
 export interface GeneratedWorkout {
   id: string;
+  /** Assigned on persistence; absent only on older records or unsaved generator output. */
+  userId?: string;
   name: string;
   topCategory: TopCategory;
   subType: string;
@@ -616,6 +620,7 @@ function generateCircuit(circuitStyle: CircuitStyle, duration: number, customExe
       const exCountPerBlock = duration >= 90 ? 5 : 4;
       const selected1 = allExercises.slice(0, exCountPerBlock);
       const selected2 = allExercises.slice(exCountPerBlock, exCountPerBlock * 2);
+      if (selected2.length === 0) selected2.push(...selected1);
       const makeAmrapBlock = (sel: Exercise[], blockNum: number, timeCap: number) => {
         const exs = sel.map(e => ({
           exercise: e,
@@ -654,6 +659,7 @@ function generateCircuit(circuitStyle: CircuitStyle, duration: number, customExe
       const exCountPerBlock = duration >= 90 ? 4 : 3;
       const selected1 = allExercises.slice(0, exCountPerBlock);
       const selected2 = allExercises.slice(exCountPerBlock, exCountPerBlock * 2);
+      if (selected2.length === 0) selected2.push(...selected1);
       const makeEmomBlock = (sel: Exercise[], blockNum: number, timeCap: number) => {
         const exs = sel.map((e, i) => ({
           exercise: e,
@@ -801,15 +807,15 @@ function generateCardio(cardioStyle: CardioStyle, duration: number, customExerci
 
     if (duration <= 30) {
       const main = pool.filter(e => ['Tempo Run', 'Fartlek Run', '400m Intervals', 'Sprint Intervals'].includes(e.name));
-      const warmup = pool.find(e => e.name === 'Easy Pace Run')!;
+      const warmup = pool.find(e => e.name === 'Easy Pace Run') ?? pool[0];
       exercises = [
         { exercise: warmup, sets: 1, reps: '5 min', restSeconds: 0, notes: 'Warm-up' },
         { exercise: main[0] || pool[0], sets: 1, reps: '20 min', restSeconds: 0, notes: 'Main block' },
         { exercise: warmup, sets: 1, reps: '5 min', restSeconds: 0, notes: 'Cool-down' },
       ];
     } else if (duration <= 45) {
-      const warmup = pool.find(e => e.name === 'Easy Pace Run')!;
-      const intervals = pool.find(e => e.name === '800m Intervals' || e.name === '400m Intervals')!;
+      const warmup = pool.find(e => e.name === 'Easy Pace Run') ?? pool[0];
+      const intervals = pool.find(e => e.name === '800m Intervals' || e.name === '400m Intervals') ?? pool[0];
       const strides = pool.find(e => e.name === 'Strides')!;
       exercises = [
         { exercise: warmup, sets: 1, reps: '10 min', restSeconds: 0, notes: 'Warm-up' },
@@ -818,14 +824,14 @@ function generateCardio(cardioStyle: CardioStyle, duration: number, customExerci
         { exercise: warmup, sets: 1, reps: '5 min', restSeconds: 0, notes: 'Cool-down' },
       ];
     } else {
-      const warmup = pool.find(e => e.name === 'Easy Pace Run')!;
+      const warmup = pool.find(e => e.name === 'Easy Pace Run') ?? pool[0];
       const tempo = pool.find(e => e.name === 'Tempo Run')!;
       const hills = pool.find(e => e.name === 'Hill Sprints')!;
       const fartlek = pool.find(e => e.name === 'Fartlek Run')!;
       exercises = [
         { exercise: warmup, sets: 1, reps: '10 min', restSeconds: 0, notes: 'Easy warm-up' },
-        { exercise: tempo || fartlek, sets: 1, reps: `${Math.floor(duration * 0.4)} min`, restSeconds: 0, notes: 'Comfortably hard pace' },
-        { exercise: hills || pool[2], sets: 5, reps: '30s', restSeconds: 90, notes: 'Hard uphill effort' },
+        { exercise: tempo || fartlek || pool[0], sets: 1, reps: `${Math.floor(duration * 0.4)} min`, restSeconds: 0, notes: 'Comfortably hard pace' },
+        { exercise: hills || pool[2] || pool[0], sets: 5, reps: '30s', restSeconds: 90, notes: 'Hard uphill effort' },
         { exercise: warmup, sets: 1, reps: '10 min', restSeconds: 0, notes: 'Cool-down jog' },
       ];
     }
@@ -909,18 +915,30 @@ export function generateWorkout(
   customExercises?: CustomExerciseData[],
   hiddenIds?: string[]
 ): GeneratedWorkout {
+  if (!Number.isFinite(durationMinutes) || durationMinutes <= 0) throw new Error('Choose a valid workout duration.');
+  if (getExercisePool(topCategory, subType, customExercises, hiddenIds).length === 0) {
+    throw new Error('No exercises are available for this workout. Restore an exercise or add a custom exercise.');
+  }
+  let workout: GeneratedWorkout;
   switch (topCategory) {
     case 'weight_lifting':
-      return generateWeightLifting(subType as WeightLiftingType, style as TrainingStyle, durationMinutes, includeSupersets, includeCore, customExercises, hiddenIds);
+      workout = generateWeightLifting(subType as WeightLiftingType, style as TrainingStyle, durationMinutes, includeSupersets, includeCore, customExercises, hiddenIds); break;
     case 'circuit':
-      return generateCircuit(subType as CircuitStyle, durationMinutes, customExercises, hiddenIds);
+      workout = generateCircuit(subType as CircuitStyle, durationMinutes, customExercises, hiddenIds); break;
     case 'yoga':
-      return generateYoga(subType as YogaStyle, durationMinutes, customExercises, hiddenIds);
+      workout = generateYoga(subType as YogaStyle, durationMinutes, customExercises, hiddenIds); break;
     case 'cardio':
-      return generateCardio(subType as CardioStyle, durationMinutes, customExercises, hiddenIds);
+      workout = generateCardio(subType as CardioStyle, durationMinutes, customExercises, hiddenIds); break;
     case 'mobility':
-      return generateMobility(subType as MobilityStyle, durationMinutes, customExercises, hiddenIds);
+      workout = generateMobility(subType as MobilityStyle, durationMinutes, customExercises, hiddenIds); break;
+    default: throw new Error('Choose a supported workout category.');
   }
+  if (!workout.exercises.length || workout.exercises.some(ex => !ex.exercise)
+    || workout.circuitBlocks?.some(block => !block.exercises.length
+      || (block.rounds !== undefined && (!Number.isFinite(block.rounds) || block.rounds < 1)))) {
+    throw new Error('No exercises are available for this workout. Restore an exercise or add a custom exercise.');
+  }
+  return workout;
 }
 
 export function getSubTypeLabel(topCategory: TopCategory, subType: string): string {
@@ -969,7 +987,7 @@ function getRftConfig(duration: number, balance: CircuitBalance): { exCount: num
     : { exCount: 6, rounds: 5 };
 }
 
-function rebalanceSingleBlock(block: CircuitBlock, blockDuration: number, balance: CircuitBalance, allUsedIds: Set<string>, blockNum?: number, extraCircuitExercises?: Exercise[]): CircuitBlock {
+function rebalanceSingleBlock(block: CircuitBlock, blockDuration: number, balance: CircuitBalance, allUsedIds: Set<string>, blockNum?: number, extraCircuitExercises?: Exercise[], hiddenIds?: string[]): CircuitBlock {
   const format = block.format;
   const config = format === 'EMOM'
     ? getEmomConfig(blockDuration, balance)
@@ -982,7 +1000,7 @@ function rebalanceSingleBlock(block: CircuitBlock, blockDuration: number, balanc
     newExercises = currentExercises.slice(0, config.exCount);
   } else {
     const pool = shuffle([...CIRCUIT_EXERCISES, ...(extraCircuitExercises ?? [])]);
-    const extras = pool.filter(e => !allUsedIds.has(e.id));
+    const extras = pool.filter(e => !allUsedIds.has(e.id) && !hiddenIds?.includes(e.id));
     newExercises = [...currentExercises];
     for (let i = 0; newExercises.length < config.exCount && i < extras.length; i++) {
       const e = extras[i];
@@ -1012,7 +1030,7 @@ function rebalanceSingleBlock(block: CircuitBlock, blockDuration: number, balanc
   const blockLabel = blockNum ? ` ${blockNum} —` : '';
   return {
     ...block,
-    rounds: config.rounds,
+    rounds: format === 'EMOM' ? Math.floor(blockDuration / Math.max(1, newExercises.length)) : config.rounds,
     exercises: newExercises,
     timeCapMinutes: blockDuration,
     name: format === 'EMOM'
@@ -1021,24 +1039,24 @@ function rebalanceSingleBlock(block: CircuitBlock, blockDuration: number, balanc
   };
 }
 
-export function rebalanceCircuit(workout: GeneratedWorkout, balance: CircuitBalance, customExercises?: CustomExerciseData[]): GeneratedWorkout {
+export function rebalanceCircuit(workout: GeneratedWorkout, balance: CircuitBalance, customExercises?: CustomExerciseData[], hiddenIds?: string[]): GeneratedWorkout {
   if (!workout.circuitBlocks || workout.circuitBlocks.length === 0) return workout;
 
   const format = workout.circuitBlocks[0].format;
   if (format !== 'EMOM' && format !== 'Rounds for Time') return workout;
 
   const extraCircuit = getCustomForCategory('circuit', '', customExercises);
-  const allUsedIds = new Set<string>();
+  const allUsedIds = new Set(workout.circuitBlocks.flatMap(block => block.exercises.map(ex => ex.exercise.id)));
   const newBlocks: CircuitBlock[] = [];
 
   if (workout.circuitBlocks.length > 1) {
     for (let i = 0; i < workout.circuitBlocks.length; i++) {
       const block = workout.circuitBlocks[i];
       const blockDuration = block.timeCapMinutes || Math.floor(workout.durationMinutes / workout.circuitBlocks.length);
-      newBlocks.push(rebalanceSingleBlock(block, blockDuration, balance, allUsedIds, i + 1, extraCircuit));
+      newBlocks.push(rebalanceSingleBlock(block, blockDuration, balance, allUsedIds, i + 1, extraCircuit, hiddenIds));
     }
   } else {
-    newBlocks.push(rebalanceSingleBlock(workout.circuitBlocks[0], workout.durationMinutes, balance, allUsedIds, undefined, extraCircuit));
+    newBlocks.push(rebalanceSingleBlock(workout.circuitBlocks[0], workout.durationMinutes, balance, allUsedIds, undefined, extraCircuit, hiddenIds));
   }
 
   const allExercises = newBlocks.flatMap(b => b.exercises);

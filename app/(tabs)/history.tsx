@@ -6,6 +6,7 @@ import {
   FlatList,
   Pressable,
   Platform,
+  Alert,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -29,7 +30,8 @@ import {
   getSubTypeLabel,
   TopCategory,
 } from "@/lib/exercises";
-import { getWorkouts, deleteWorkout } from "@/lib/workout-storage";
+import { getWorkouts, deleteWorkout, getLocalWorkoutsOnly, getPendingWorkoutCount } from '@/lib/workout-storage';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const DELETE_THRESHOLD = -80;
 const SNAP_OPEN = -90;
@@ -248,6 +250,10 @@ const ALL_CATEGORIES: { key: TopCategory; label: string; color: string; icon: st
 export default function HistoryScreen() {
   const insets = useSafeAreaInsets();
   const [workouts, setWorkouts] = useState<GeneratedWorkout[]>([]);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [pendingCount, setPendingCount] = useState(0);
+  const [legacyPreserved, setLegacyPreserved] = useState(false);
+  const [refresh, setRefresh] = useState(0);
   const [filterOpen, setFilterOpen] = useState(false);
   const [pendingFilters, setPendingFilters] = useState<Set<TopCategory>>(new Set());
   const [activeFilters, setActiveFilters] = useState<Set<TopCategory>>(new Set());
@@ -255,18 +261,33 @@ export default function HistoryScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      loadWorkouts();
-    }, []),
+      let active = true;
+      const load = async () => {
+        try {
+          const local = await getLocalWorkoutsOnly();
+          if (active) { setWorkouts(local); setLoadError(null); }
+          const legacy = await AsyncStorage.multiGet(['ironforge_workouts', 'ironforge_profile', 'hidden_exercise_ids', 'pr_reset_timestamps']);
+          if (active) setLegacyPreserved(legacy.some(([, value]) => value !== null));
+          const data = await getWorkouts();
+          const count = await getPendingWorkoutCount();
+          if (active) { setWorkouts(data); setPendingCount(count); }
+        } catch (error) {
+          if (active) setLoadError(error instanceof Error ? error.message : 'Could not load history. Please try again.');
+        }
+      };
+      void load();
+      return () => { active = false; };
+    // Retry changes callback identity so useFocusEffect reloads while focused.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [refresh]),
   );
 
-  const loadWorkouts = async () => {
-    const data = await getWorkouts();
-    setWorkouts(data);
-  };
-
   const handleDelete = async (id: string) => {
-    await deleteWorkout(id);
-    setWorkouts((prev) => prev.filter((w) => w.id !== id));
+    try {
+      await deleteWorkout(id);
+      setWorkouts((prev) => prev.filter((w) => w.id !== id));
+      setPendingCount(await getPendingWorkoutCount());
+    } catch (error) { Alert.alert('Could not delete workout', error instanceof Error ? error.message : 'Please try again.'); }
   };
 
   const togglePending = (key: TopCategory) => {
@@ -379,6 +400,18 @@ export default function HistoryScreen() {
         )}
       </View>
 
+      {legacyPreserved && <Text style={{ color: Colors.textSecondary, paddingHorizontal: 20, paddingBottom: 12 }}>
+        Earlier on-device data is preserved separately and is not automatically assigned to this account. Your synced history is shown here.
+      </Text>}
+      {pendingCount > 0 && <Text accessibilityLiveRegion="polite" style={{ color: Colors.textSecondary, paddingHorizontal: 20, paddingBottom: 12 }}>
+        {pendingCount} change{pendingCount === 1 ? '' : 's'} saved on this device, waiting to sync.
+      </Text>}
+      {loadError && <View style={{ paddingHorizontal: 20, paddingBottom: 12 }}>
+        <Text accessibilityLiveRegion="polite" style={{ color: Colors.textSecondary }}>{loadError}</Text>
+        <Pressable accessibilityRole="button" onPress={() => setRefresh(value => value + 1)} style={{ paddingVertical: 12 }}>
+          <Text style={{ color: Colors.primary }}>Retry</Text>
+        </Pressable>
+      </View>}
       <FlatList
         data={displayedWorkouts}
         keyExtractor={(item) => item.id}

@@ -1,4 +1,4 @@
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, and } from "drizzle-orm";
 import { db } from "./db";
 import { workouts, feedback, customExercises, type WorkoutRow, type FeedbackRow, type CustomExerciseRow } from "@shared/schema";
 
@@ -42,7 +42,7 @@ export class DbStorage implements IStorage {
     const rows = await db
       .select()
       .from(workouts)
-      .where(eq(workouts.id, id))
+      .where(and(eq(workouts.id, id), eq(workouts.userId, userId)))
       .limit(1);
     const row = rows[0];
     if (!row || row.userId !== userId) return undefined;
@@ -59,14 +59,14 @@ export class DbStorage implements IStorage {
     await db
       .update(workouts)
       .set({ data: workoutData })
-      .where(eq(workouts.id, id));
+      .where(and(eq(workouts.id, id), eq(workouts.userId, userId)));
     return { ...existing, data: workoutData };
   }
 
   async deleteWorkout(id: string, userId: string): Promise<void> {
     const existing = await this.getWorkout(id, userId);
     if (!existing) return;
-    await db.delete(workouts).where(eq(workouts.id, id));
+    await db.delete(workouts).where(and(eq(workouts.id, id), eq(workouts.userId, userId)));
   }
 
   async saveFeedback(
@@ -123,10 +123,10 @@ export class DbStorage implements IStorage {
   }
 
   async deleteCustomExercise(id: string, userId: string): Promise<void> {
-    const rows = await db.select().from(customExercises).where(eq(customExercises.id, id)).limit(1);
+    const rows = await db.select().from(customExercises).where(and(eq(customExercises.id, id), eq(customExercises.userId, userId))).limit(1);
     const row = rows[0];
     if (!row || row.userId !== userId) return;
-    await db.delete(customExercises).where(eq(customExercises.id, id));
+    await db.delete(customExercises).where(and(eq(customExercises.id, id), eq(customExercises.userId, userId)));
   }
 }
 

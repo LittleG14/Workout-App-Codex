@@ -6,38 +6,21 @@ import {
   Pressable,
   Alert,
   Platform,
+  AppState,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useLocalSearchParams, router } from "expo-router";
+import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import * as Location from "expo-location";
 import * as Haptics from "expo-haptics";
 import Animated, {
   FadeIn,
   FadeOut,
-  useSharedValue,
-  useAnimatedStyle,
-  withTiming,
 } from "react-native-reanimated";
 import Colors from "@/constants/colors";
-import { RunCoordinate, RunData } from "@/lib/exercises";
-import { setPendingRun } from "@/lib/run-store";
+import { ownRun, runs } from '@/lib/run-tracking';
+import { elapsedRunSeconds, type RunDraft } from '@/lib/run-repository';
+import { getAccountScope, assertAccountScope } from '@/lib/account-scope';
 import MapView, { Polyline, PROVIDER_DEFAULT } from "react-native-maps";
-
-function haversineMeters(a: RunCoordinate, b: RunCoordinate): number {
-  const R = 6371000;
-  const dLat = ((b.latitude - a.latitude) * Math.PI) / 180;
-  const dLon = ((b.longitude - a.longitude) * Math.PI) / 180;
-  const sinLat = Math.sin(dLat / 2);
-  const sinLon = Math.sin(dLon / 2);
-  const h =
-    sinLat * sinLat +
-    Math.cos((a.latitude * Math.PI) / 180) *
-      Math.cos((b.latitude * Math.PI) / 180) *
-      sinLon *
-      sinLon;
-  return R * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
-}
 
 function formatTime(secs: number): string {
   const h = Math.floor(secs / 3600);
@@ -57,180 +40,82 @@ function formatPace(secsPerUnit: number): string {
 }
 
 export default function ActiveRunScreen() {
+  const runScope = useRef(getAccountScope());
   const insets = useSafeAreaInsets();
-  const params = useLocalSearchParams<{ unit: string; notifInterval: string }>();
-  const unit = (params.unit === "km" ? "km" : "miles") as "miles" | "km";
-  const notifInterval = parseFloat(params.notifInterval ?? "0");
-
-  const [coordinates, setCoordinates] = useState<RunCoordinate[]>([]);
-  const [elapsed, setElapsed] = useState(0);
-  const [paused, setPaused] = useState(false);
-  const [distanceMeters, setDistanceMeters] = useState(0);
+  const [draft, setDraft] = useState<RunDraft | null>(null);
+  const [now, setNow] = useState(Date.now());
+  const [busy, setBusy] = useState(false);
+  const busyRef = useRef(false);
   const [milestoneMsg, setMilestoneMsg] = useState<string | null>(null);
-
-  const coordinatesRef = useRef<RunCoordinate[]>([]);
-  const distanceRef = useRef(0);
-  const elapsedRef = useRef(0);
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const locationSubRef = useRef<Location.LocationSubscription | null>(null);
-  const pausedRef = useRef(false);
   const lastMilestoneRef = useRef(0);
-  const milestoneMsgTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const mapRef = useRef<MapView>(null);
-
-  const startTimer = useCallback(() => {
-    timerRef.current = setInterval(() => {
-      elapsedRef.current += 1;
-      setElapsed(elapsedRef.current);
-    }, 1000);
+  const refresh = useCallback(async () => {
+    assertAccountScope(runScope.current);
+    const run = await ownRun(); assertAccountScope(runScope.current);
+    if (!run) { router.replace('/run/setup'); return; }
+    if (run.status === 'stopped') { router.replace('/run/summary'); return; }
+    setDraft(run); setNow(Date.now());
   }, []);
-
-  const stopTimer = useCallback(() => {
-    if (timerRef.current) {
-      clearInterval(timerRef.current);
-      timerRef.current = null;
-    }
-  }, []);
-
-  const startLocationWatch = useCallback(async () => {
-    const sub = await Location.watchPositionAsync(
-      {
-        accuracy: Location.Accuracy.BestForNavigation,
-        timeInterval: 2000,
-        distanceInterval: 5,
-      },
-      (loc) => {
-        if (pausedRef.current) return;
-        const newCoord: RunCoordinate = {
-          latitude: loc.coords.latitude,
-          longitude: loc.coords.longitude,
-          timestamp: loc.timestamp,
-        };
-
-        if (coordinatesRef.current.length > 0) {
-          const prev = coordinatesRef.current[coordinatesRef.current.length - 1];
-          const d = haversineMeters(prev, newCoord);
-          if (d > 0.5 || coordinatesRef.current.length < 2) {
-            distanceRef.current += d;
-            setDistanceMeters(distanceRef.current);
-          }
-        }
-
-        coordinatesRef.current = [...coordinatesRef.current, newCoord];
-        setCoordinates([...coordinatesRef.current]);
-
-        mapRef.current?.animateToRegion(
-          {
-            latitude: newCoord.latitude,
-            longitude: newCoord.longitude,
-            latitudeDelta: 0.005,
-            longitudeDelta: 0.005,
-          },
-          500
-        );
-
-        if (notifInterval > 0) {
-          const distInUnit = unit === "miles"
-            ? distanceRef.current / 1609.34
-            : distanceRef.current / 1000;
-          const milestone = Math.floor(distInUnit / notifInterval) * notifInterval;
-          if (milestone > 0 && milestone > lastMilestoneRef.current) {
-            lastMilestoneRef.current = milestone;
-            const label = unit === "miles" ? "mi" : "km";
-            const msg = `${milestone} ${label} reached!`;
-            setMilestoneMsg(msg);
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-            if (milestoneMsgTimeout.current) clearTimeout(milestoneMsgTimeout.current);
-            milestoneMsgTimeout.current = setTimeout(() => setMilestoneMsg(null), 3500);
-          }
-        }
-      }
-    );
-    locationSubRef.current = sub;
-  }, [unit, notifInterval]);
-
   useEffect(() => {
-    // Center the map on the user's actual position as soon as the screen opens,
-    // before watchPositionAsync fires its first event.
-    Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced })
-      .then((loc) => {
-        mapRef.current?.animateToRegion(
-          {
-            latitude: loc.coords.latitude,
-            longitude: loc.coords.longitude,
-            latitudeDelta: 0.005,
-            longitudeDelta: 0.005,
-          },
-          300
-        );
-      })
-      .catch(() => {});
-
-    startTimer();
-    startLocationWatch();
-    return () => {
-      stopTimer();
-      locationSubRef.current?.remove();
-      if (milestoneMsgTimeout.current) clearTimeout(milestoneMsgTimeout.current);
+    let mounted = true;
+    let reading = false;
+    const load = async () => {
+      if (reading || !mounted) return;
+      reading = true;
+      try {
+        const run = await ownRun(); assertAccountScope(runScope.current);
+        if (!mounted) return;
+        if (!run) { router.replace('/run/setup'); return; }
+        if (run.status === 'stopped') { router.replace('/run/summary'); return; }
+        setDraft(run); setNow(Date.now());
+      } catch (error) {
+        if (mounted) setMilestoneMsg(error instanceof Error ? error.message : 'Could not read your run.');
+      } finally { reading = false; }
     };
+    void load();
+    const timer = setInterval(() => { if (AppState.currentState === 'active') void load(); }, 1000);
+    const listener = AppState.addEventListener('change', state => { if (state === 'active') void load(); });
+    return () => { mounted = false; clearInterval(timer); listener.remove(); };
   }, []);
-
-  const handlePause = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    if (paused) {
-      pausedRef.current = false;
-      setPaused(false);
-      startTimer();
-    } else {
-      pausedRef.current = true;
-      setPaused(true);
-      stopTimer();
+  const unit = draft?.unit ?? 'miles';
+  const notifInterval = draft?.notifInterval ?? 0;
+  const coordinates = draft?.coordinates ?? [];
+  const paused = draft?.status !== 'running';
+  const elapsed = draft ? elapsedRunSeconds(draft, now) : 0;
+  const distanceMeters = draft?.distanceMeters ?? 0;
+  useEffect(() => {
+    const latest = draft?.coordinates.at(-1);
+    if (latest) mapRef.current?.animateToRegion({ ...latest, latitudeDelta: 0.005, longitudeDelta: 0.005 }, 500);
+    const dist = unit === 'miles' ? distanceMeters / 1609.34 : distanceMeters / 1000;
+    const milestone = notifInterval > 0 ? Math.floor(dist / notifInterval) * notifInterval : 0;
+    if (milestone > lastMilestoneRef.current) {
+      lastMilestoneRef.current = milestone;
+      setMilestoneMsg(milestone + ' ' + (unit === 'miles' ? 'mi' : 'km') + ' reached!');
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     }
+  }, [draft?.coordinates, distanceMeters, unit, notifInterval]);
+  useEffect(() => {
+    if (!milestoneMsg) return;
+    const timer = setTimeout(() => setMilestoneMsg(null), 3500);
+    return () => clearTimeout(timer);
+  }, [milestoneMsg]);
+  const control = async (action: 'pause' | 'resume' | 'finish') => {
+    if (!draft || busyRef.current) return;
+    busyRef.current = true; setBusy(true);
+    try {
+      assertAccountScope(runScope.current);
+      await runs[action](runScope.current.userId, draft.id);
+      assertAccountScope(runScope.current);
+      if (action === 'finish') router.replace('/run/summary');
+      else await refresh();
+    } catch (error) { Alert.alert('Run needs attention', error instanceof Error ? error.message : 'Please try again.'); }
+    finally { busyRef.current = false; setBusy(false); }
   };
-
-  const finishRun = () => {
-    stopTimer();
-    locationSubRef.current?.remove();
-
-    const coords = coordinatesRef.current;
-    const distM = distanceRef.current;
-    const durationSecs = elapsedRef.current;
-    const distMiles = distM / 1609.34;
-    const distKm = distM / 1000;
-    const paceSecsPerMile = distMiles > 0 ? durationSecs / distMiles : 0;
-    const paceSecsPerKm = distKm > 0 ? durationSecs / distKm : 0;
-
-    const runData: RunData = {
-      coordinates: coords,
-      distanceMiles: distMiles,
-      distanceKm: distKm,
-      durationSeconds: durationSecs,
-      paceSecsPerMile,
-      paceSecsPerKm,
-      unit,
-      notifInterval,
-    };
-
-    setPendingRun(runData);
-    router.replace("/run/summary");
-  };
-
-  const handleStop = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-    if (paused) stopTimer();
-    Alert.alert(
-      "End Workout?",
-      "Are you sure you want to stop this run? Your progress will be saved.",
-      [
-        { text: "Keep Running", style: "cancel", onPress: () => { if (!paused) {} } },
-        {
-          text: "Stop Run",
-          style: "destructive",
-          onPress: finishRun,
-        },
-      ]
-    );
-  };
+  const handlePause = () => { void control(paused ? 'resume' : 'pause'); };
+  const handleStop = () => Alert.alert('End Workout?', 'Your run will be kept as a draft. Save it to your history on the next screen.', [
+    { text: 'Keep Running', style: 'cancel' },
+    { text: 'Stop Run', onPress: () => { void control('finish'); } },
+  ]);
 
   const distInUnit = unit === "miles" ? distanceMeters / 1609.34 : distanceMeters / 1000;
   const paceSecsPerUnit = unit === "miles"
@@ -269,15 +154,16 @@ export default function ActiveRunScreen() {
         pitchEnabled={false}
         rotateEnabled={false}
       >
-        {coordinates.length > 1 && (
+        {(draft?.segmentStarts ?? [0]).map((start, index, starts) => (
           <Polyline
-            coordinates={coordinates.map(c => ({ latitude: c.latitude, longitude: c.longitude }))}
+            key={start}
+            coordinates={coordinates.slice(start, starts[index + 1] ?? coordinates.length)}
             strokeColor="#FF8C00"
             strokeWidth={5}
             lineCap="round"
             lineJoin="round"
           />
-        )}
+        ))}
       </MapView>
 
       {milestoneMsg && (
@@ -293,6 +179,8 @@ export default function ActiveRunScreen() {
 
       <View style={[styles.statsOverlay, { paddingTop: insets.top + webTopPad }]}>
         <View style={styles.statusRow}>
+          {draft?.mode === 'foreground' && <Text style={styles.pausedBadgeText}>App-open tracking only</Text>}
+          {draft?.error && <Text accessibilityRole="alert" style={styles.pausedBadgeText}>{draft.error}</Text>}
           {paused ? (
             <View style={styles.pausedBadge}>
               <Ionicons name="pause" size={12} color="#FFD700" />
@@ -331,10 +219,10 @@ export default function ActiveRunScreen() {
       </View>
 
       <View style={[styles.controls, { paddingBottom: insets.bottom + 32 }]}>
-        <Pressable style={styles.pauseBtn} onPress={handlePause}>
+        <Pressable disabled={busy || !draft} accessibilityRole="button" accessibilityLabel={paused ? "Resume run" : "Pause run"} style={styles.pauseBtn} onPress={handlePause}>
           <Ionicons name={paused ? "play" : "pause"} size={28} color="#FFF" />
         </Pressable>
-        <Pressable style={styles.stopBtn} onPress={handleStop}>
+        <Pressable disabled={busy || !draft} accessibilityRole="button" accessibilityLabel="End run" style={styles.stopBtn} onPress={handleStop}>
           <Ionicons name="stop" size={28} color="#FFF" />
         </Pressable>
       </View>

@@ -1,3 +1,4 @@
+import { computePRs, computeJustRunPRs, type ExercisePR, type JustRunPRs, type PRCategory } from '@/lib/personal-records';
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -35,9 +36,6 @@ import { apiRequest } from "@/lib/query-client";
 import { UserProfile, getProfile, saveProfile } from "@/lib/profile-storage";
 import {
   Exercise,
-  WorkoutExercise,
-  GeneratedWorkout,
-  RunData,
   WEIGHT_EXERCISES,
   CIRCUIT_EXERCISES,
   YOGA_CORE_POSES,
@@ -64,20 +62,7 @@ const GOAL_OPTIONS: { key: Goal; label: string; icon: string }[] = [
   { key: "maintain_weight", label: "Maintain", icon: "shield-checkmark-outline" },
 ];
 
-interface ExercisePR {
-  exercise: Exercise;
-  prWeight?: number;
-  prWeightUnit?: string;
-  prReps?: string;
-  prDate?: string;
-  lastWeight?: number;
-  lastWeightUnit?: string;
-  lastReps?: string;
-  lastDate?: string;
-  lastNotes?: string;
-}
 
-type PRCategory = "weight_lifting" | "circuit" | "yoga" | "cardio" | "mobility";
 
 const PR_CATEGORY_TABS: { key: PRCategory; label: string; icon: string; color: string }[] = [
   { key: "weight_lifting", label: "Weights", icon: "barbell", color: Colors.primary },
@@ -95,79 +80,6 @@ function getExerciseListForCategory(cat: PRCategory): Exercise[] {
     case "cardio": return [...CARDIO_RUNNING, ...CARDIO_MIXED];
     case "mobility": return MOBILITY_EXERCISES;
   }
-}
-
-function computePRs(
-  workouts: GeneratedWorkout[],
-  exerciseList: Exercise[],
-  category: PRCategory,
-  hiddenIds?: string[],
-  resetTimestamps?: Record<string, string>
-): ExercisePR[] {
-  const prMap = new Map<string, ExercisePR>();
-
-  exerciseList.forEach((ex) => {
-    if (!hiddenIds?.includes(ex.id)) {
-      prMap.set(ex.id, { exercise: ex });
-    }
-  });
-
-  const sorted = [...workouts]
-    .filter((w) => w.topCategory === category)
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-
-  sorted.forEach((w) => {
-    const allExercises: { ex: WorkoutExercise; date: string }[] = [];
-
-    w.exercises.forEach((ex) => allExercises.push({ ex, date: w.createdAt }));
-
-    if (w.supersets) {
-      w.supersets.forEach((ss) => {
-        allExercises.push({ ex: ss.exerciseA, date: w.createdAt });
-        allExercises.push({ ex: ss.exerciseB, date: w.createdAt });
-      });
-    }
-
-    if (w.circuitBlocks) {
-      w.circuitBlocks.forEach((block) => {
-        block.exercises.forEach((ex) =>
-          allExercises.push({ ex, date: w.createdAt })
-        );
-      });
-    }
-
-    allExercises.forEach(({ ex, date }) => {
-      const exId = ex.exercise.id;
-      if (hiddenIds?.includes(exId)) return;
-      if (!prMap.has(exId)) {
-        prMap.set(exId, { exercise: ex.exercise });
-      }
-      const entry = prMap.get(exId);
-      if (!entry) return;
-
-      const resetDate = resetTimestamps?.[exId];
-      if (resetDate && new Date(date) <= new Date(resetDate)) return;
-
-      if (ex.weight && ex.weight > 0) {
-        if (!entry.prWeight || ex.weight > entry.prWeight) {
-          entry.prWeight = ex.weight;
-          entry.prWeightUnit = ex.weightUnit || "lbs";
-          entry.prReps = ex.reps;
-          entry.prDate = date;
-        }
-      }
-
-      if (!entry.lastDate) {
-        entry.lastWeight = ex.weight;
-        entry.lastWeightUnit = ex.weightUnit || "lbs";
-        entry.lastReps = ex.reps;
-        entry.lastDate = date;
-        entry.lastNotes = ex.userNotes;
-      }
-    });
-  });
-
-  return Array.from(prMap.values());
 }
 
 function formatDate(iso: string): string {
@@ -192,40 +104,6 @@ function formatRunPace(secsPerUnit: number): string {
   const m = Math.floor(secsPerUnit / 60);
   const s = Math.floor(secsPerUnit % 60);
   return `${m}:${String(s).padStart(2, "0")}`;
-}
-
-interface JustRunPRs {
-  fastestPaceRun: { pace: number; distance: number; time: number; unit: 'miles' | 'km'; date: string } | null;
-  farthestDistanceRun: { distance: number; pace: number; time: number; unit: 'miles' | 'km'; date: string } | null;
-}
-
-function computeJustRunPRs(workouts: GeneratedWorkout[]): JustRunPRs {
-  const runs = workouts.filter(w => w.subType === "just_run" && w.runData);
-
-  let fastestPaceRun: JustRunPRs["fastestPaceRun"] = null;
-  let farthestDistanceRun: JustRunPRs["farthestDistanceRun"] = null;
-
-  runs.forEach(w => {
-    const rd = w.runData!;
-    const unit = rd.unit;
-    const dist = unit === "miles" ? rd.distanceMiles : rd.distanceKm;
-    const pace = unit === "miles" ? rd.paceSecsPerMile : rd.paceSecsPerKm;
-    const time = rd.durationSeconds;
-
-    if (pace > 0 && isFinite(pace)) {
-      if (!fastestPaceRun || pace < fastestPaceRun.pace) {
-        fastestPaceRun = { pace, distance: dist, time, unit, date: w.createdAt };
-      }
-    }
-
-    if (dist > 0) {
-      if (!farthestDistanceRun || dist > farthestDistanceRun.distance) {
-        farthestDistanceRun = { distance: dist, pace, time, unit, date: w.createdAt };
-      }
-    }
-  });
-
-  return { fastestPaceRun, farthestDistanceRun };
 }
 
 function computeBMR(profile: UserProfile): number | null {
@@ -412,7 +290,7 @@ function AccountSettingsSheet({
           {section === "change_email" && (
             <>
               <Text style={accountStyles.sectionDesc}>
-                Enter a new email address. We'll send a confirmation link to verify the change.
+                Enter a new email address. We&apos;ll send a confirmation link to verify the change.
               </Text>
               <Text style={accountStyles.fieldLabel}>Current Email</Text>
               <View style={accountStyles.staticField}>
@@ -763,15 +641,16 @@ export default function ProfileScreen() {
   );
 
   const loadProfile = async () => {
-    const p = await getProfile();
-    setProfile(p);
+    try { setProfile(await getProfile()); }
+    catch (error) { Alert.alert('Could not load profile', error instanceof Error ? error.message : 'Please try again.'); }
   };
 
   const updateField = async <K extends keyof UserProfile>(key: K, value: UserProfile[K]) => {
     if (!profile) return;
     const updated = { ...profile, [key]: value };
     setProfile(updated);
-    await saveProfile(updated);
+    try { await saveProfile(updated); }
+    catch (error) { Alert.alert('Profile was not saved', error instanceof Error ? error.message : 'Please try again.'); }
   };
 
   const openPRModal = async () => {
@@ -800,7 +679,7 @@ export default function ProfileScreen() {
   const handleDeletePRExercise = useCallback((id: string) => {
     Alert.alert(
       "Remove Exercise",
-      "Remove this exercise from tracking and future workouts? Your history won't be affected.",
+      "Remove this exercise from tracking and future workouts? Your history won&apos;t be affected.",
       [
         { text: "Cancel", style: "cancel" },
         {
@@ -1106,7 +985,7 @@ export default function ProfileScreen() {
                 </Pressable>
                 <Pressable
                   style={styles.logoutConfirmBtn}
-                  onPress={() => { setConfirmLogout(false); logout(); }}
+                  onPress={() => { setConfirmLogout(false); void logout().catch(() => Alert.alert('Could not sign out', 'Please check your connection and try again.')); }}
                   testID="logout-confirm-btn"
                 >
                   <Text style={styles.logoutConfirmBtnText}>Sign Out</Text>

@@ -71,7 +71,7 @@ export default function AdminScreen() {
     refetch: refetchDomainStatus,
     dataUpdatedAt,
   } = useQuery<DomainStatusResponse>({
-    queryKey: DOMAIN_STATUS_KEY,
+    queryKey: [...DOMAIN_STATUS_KEY, user?.id ?? ''],
     enabled: !isLoading && !!user,
     staleTime: 5 * 60 * 1000,
     gcTime: 0,
@@ -84,7 +84,7 @@ export default function AdminScreen() {
     isFetching: feedbackLoading,
     refetch: refetchFeedback,
   } = useQuery<{ feedback: FeedbackRow[] }>({
-    queryKey: ["/api/admin/feedback"],
+    queryKey: ["/api/admin/feedback", user?.id ?? ''],
     enabled: !isLoading && !!user,
     staleTime: 60_000,
   });

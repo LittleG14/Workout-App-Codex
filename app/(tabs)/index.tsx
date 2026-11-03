@@ -7,6 +7,7 @@ import {
   Pressable,
   Platform,
   Image,
+  Alert,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
@@ -40,6 +41,7 @@ import {
   getSubTypeLabel,
 } from "@/lib/exercises";
 import { saveWorkout } from "@/lib/workout-storage";
+import { getAccountScope, assertAccountScope } from '@/lib/account-scope';
 import { useCustomExercises } from "@/lib/useCustomExercises";
 import { useHiddenExercises } from "@/lib/useHiddenExercises";
 
@@ -285,13 +287,22 @@ export default function GenerateScreen() {
     }
 
     setGenerating(true);
+    const scope = getAccountScope();
     await new Promise(r => setTimeout(r, 400));
 
-    const style = selectedCategory === "weight_lifting" ? trainingStyle : currentSubType;
-    const workout = generateWorkout(selectedCategory, currentSubType, style, selectedDuration, includeSupersets, includeCore, customExercises, hiddenIds);
-    await saveWorkout(workout);
-    setGenerating(false);
-    router.push({ pathname: "/workout/[id]", params: { id: workout.id, fresh: "true" } });
+    try {
+      assertAccountScope(scope);
+      const style = selectedCategory === "weight_lifting" ? trainingStyle : currentSubType;
+      const workout = generateWorkout(selectedCategory, currentSubType, style, selectedDuration, includeSupersets, includeCore, customExercises, hiddenIds);
+      workout.userId = scope.userId;
+      await saveWorkout(workout);
+      assertAccountScope(scope);
+      router.push({ pathname: "/workout/[id]", params: { id: workout.id, fresh: "true" } });
+    } catch (error) {
+      Alert.alert("Could not create workout", error instanceof Error ? error.message : "Please try again.");
+    } finally {
+      setGenerating(false);
+    }
   }, [selectedCategory, currentSubType, trainingStyle, selectedDuration, includeSupersets, includeCore, customExercises, hiddenIds, isJustRun]);
 
   const webTopPad = Platform.OS === "web" ? 67 : 0;

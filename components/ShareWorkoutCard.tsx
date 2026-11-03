@@ -59,10 +59,11 @@ function formatPace(secsPerUnit: number): string {
 }
 
 async function captureAndShare(
-  ref: React.RefObject<View>,
+  ref: React.RefObject<View | null>,
   transparent: boolean
 ) {
   try {
+    if (!ref.current) throw new Error("The share card is not ready.");
     const uri = await captureRef(ref, {
       format: "png",
       quality: 1,
@@ -110,7 +111,7 @@ async function captureAndShare(
   }
 }
 
-async function handleWebShare(ref: React.RefObject<View>, transparent: boolean) {
+async function handleWebShare(ref: React.RefObject<View | null>, transparent: boolean) {
   try {
     const b64 = await captureRef(ref, {
       format: "png",
@@ -125,11 +126,11 @@ async function handleWebShare(ref: React.RefObject<View>, transparent: boolean) 
   } catch (_) {}
 }
 
-export async function shareWorkoutCard(ref: React.RefObject<View>) {
+export async function shareWorkoutCard(ref: React.RefObject<View | null>) {
   await captureAndShare(ref, false);
 }
 
-export async function shareRunCard(ref: React.RefObject<View>) {
+export async function shareRunCard(ref: React.RefObject<View | null>) {
   await captureAndShare(ref, true);
 }
 
@@ -485,3 +486,6 @@ const rc = StyleSheet.create({
     textAlign: "center",
   },
 });
+
+ShareableRegularCard.displayName = 'ShareableRegularCard';
+ShareableRunCard.displayName = 'ShareableRunCard';

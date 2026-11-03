@@ -1,3 +1,4 @@
+import { convertExerciseToSuperset, getWorkoutOrder } from '@/lib/workout-order';
 import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import {
   StyleSheet,
@@ -518,13 +519,14 @@ function JustRunDetail({ workout }: { workout: GeneratedWorkout }) {
               rotateEnabled={false}
               showsUserLocation={false}
             >
-              <Polyline
-                coordinates={runData.coordinates.map(c => ({ latitude: c.latitude, longitude: c.longitude }))}
+              {(runData.segmentStarts ?? [0]).map((start, index, starts) => <Polyline
+                key={start}
+                coordinates={runData.coordinates.slice(start, starts[index + 1] ?? runData.coordinates.length)}
                 strokeColor="#FF8C00"
                 strokeWidth={5}
                 lineCap="round"
                 lineJoin="round"
-              />
+              />)}
             </MapView>
           </Animated.View>
         )}
@@ -959,39 +961,14 @@ export default function WorkoutDetailScreen() {
         key: `block-${i}-${block.name}`,
       }));
     }
-    if (workout.itemOrder) {
-      let ei = 0, si = 0;
-      return workout.itemOrder.map(({ kind }) => {
-        if (kind === "exercise") {
-          const ex = workout.exercises[ei++];
-          return { kind: "exercise" as const, data: ex, origIdx: ei - 1, key: `ex-${ex.exercise.id}` };
-        } else {
-          const ss = workout.supersets![si++];
-          return { kind: "superset" as const, data: ss, origIdx: si - 1, key: `ss-${ss.exerciseA.exercise.id}` };
-        }
-      });
-    }
-    if (workout.supersets && workout.supersets.length > 0) {
-      const items: DragListItem[] = [];
-      workout.exercises.forEach((ex, i) => {
-        if (ex.exercise.category === "compound")
-          items.push({ kind: "exercise", data: ex, origIdx: i, key: `ex-${ex.exercise.id}` });
-      });
-      workout.supersets.forEach((pair, i) => {
-        items.push({ kind: "superset", data: pair, origIdx: i, key: `ss-${pair.exerciseA.exercise.id}` });
-      });
-      workout.exercises.forEach((ex, i) => {
-        if (ex.exercise.category !== "compound")
-          items.push({ kind: "exercise", data: ex, origIdx: i, key: `ex-${ex.exercise.id}` });
-      });
-      return items;
-    }
-    return workout.exercises.map((ex, i) => ({
-      kind: "exercise" as const,
-      data: ex,
-      origIdx: i,
-      key: `ex-${ex.exercise.id}`,
-    }));
+    return getWorkoutOrder(workout).map(({ kind, index }) => {
+      if (kind === 'exercise') {
+        const ex = workout.exercises[index];
+        return { kind, data: ex, origIdx: index, key: `ex-${ex.exercise.id}` };
+      }
+      const ss = workout.supersets![index];
+      return { kind, data: ss, origIdx: index, key: `ss-${ss.exerciseA.exercise.id}` };
+    });
   }, [workout]);
 
   const handleReorder = useCallback(async (from: number, to: number) => {
@@ -1134,7 +1111,7 @@ export default function WorkoutDetailScreen() {
   const handleBalance = async (balance: CircuitBalance) => {
     if (!workout || balance === currentBalance) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    const rebalanced = rebalanceCircuit(workout, balance, customExercises);
+    const rebalanced = rebalanceCircuit(workout, balance, customExercises, hiddenIds);
     setWorkout(rebalanced);
     await updateWorkout(rebalanced);
   };
@@ -1256,30 +1233,7 @@ export default function WorkoutDetailScreen() {
       },
     };
 
-    const newExercises = workout.exercises.filter((_, i) => i !== exerciseIndex);
-    const newSupersets = [...(workout.supersets ?? []), pair];
-
-    // Derive current itemOrder if one doesn't exist yet
-    const baseOrder: Array<{ kind: 'exercise' | 'superset' }> = workout.itemOrder
-      ? workout.itemOrder
-      : workout.exercises.map(() => ({ kind: 'exercise' as const }));
-
-    // Replace the exerciseIndex-th 'exercise' entry with 'superset'
-    let exCount = 0;
-    const newItemOrder = baseOrder.map(entry => {
-      if (entry.kind === 'exercise') {
-        if (exCount === exerciseIndex) { exCount++; return { kind: 'superset' as const }; }
-        exCount++;
-      }
-      return entry;
-    });
-
-    const updated: GeneratedWorkout = {
-      ...workout,
-      exercises: newExercises,
-      supersets: newSupersets,
-      itemOrder: newItemOrder,
-    };
+    const updated = convertExerciseToSuperset(workout, exerciseIndex, pair);
     setWorkout(updated);
     await updateWorkout(updated);
   };

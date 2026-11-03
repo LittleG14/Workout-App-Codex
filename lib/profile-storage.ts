@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { accountStorageKey, assertAccountScope, getAccountScope } from './account-scope';
 
 const PROFILE_KEY = 'ironforge_profile';
 
@@ -22,11 +23,19 @@ const DEFAULT_PROFILE: UserProfile = {
 };
 
 export async function getProfile(): Promise<UserProfile> {
-  const data = await AsyncStorage.getItem(PROFILE_KEY);
+  const scope = getAccountScope();
+  const data = await AsyncStorage.getItem(accountStorageKey(scope, PROFILE_KEY));
+  assertAccountScope(scope);
   if (!data) return { ...DEFAULT_PROFILE };
-  return { ...DEFAULT_PROFILE, ...JSON.parse(data) };
+  try {
+    const parsed = JSON.parse(data);
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error();
+    return { ...DEFAULT_PROFILE, ...parsed };
+  } catch { throw new Error('Your saved profile could not be read. It has been preserved.'); }
 }
 
 export async function saveProfile(profile: UserProfile): Promise<void> {
-  await AsyncStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
+  const scope = getAccountScope();
+  await AsyncStorage.setItem(accountStorageKey(scope, PROFILE_KEY), JSON.stringify(profile));
+  assertAccountScope(scope);
 }

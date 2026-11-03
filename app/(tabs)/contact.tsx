@@ -18,6 +18,7 @@ import Animated, { FadeInDown, FadeIn, FadeOut } from "react-native-reanimated";
 import Colors from "@/constants/colors";
 import { apiRequest, queryClient } from "@/lib/query-client";
 import { useQuery } from "@tanstack/react-query";
+import { useAuth } from '@/contexts/AuthContext';
 
 interface FeedbackRow {
   id: string;
@@ -286,8 +287,10 @@ function SubmissionCard({ item }: { item: FeedbackRow }) {
 }
 
 function MySubmissions() {
+  const { user } = useAuth();
   const { data, isLoading, isError } = useQuery<{ feedback: FeedbackRow[] }>({
-    queryKey: ["/api/feedback"],
+    queryKey: ["/api/feedback", user?.id ?? ''],
+    enabled: !!user,
     staleTime: 5 * 60 * 1000, // 5 minutes — also invalidated immediately after submission
   });
 
@@ -330,7 +333,7 @@ function SuccessBanner() {
     >
       <Ionicons name="checkmark-circle" size={20} color={Colors.success} />
       <Text style={styles.successBannerText}>
-        Thank you! We've received your feedback.
+        Thank you! We&apos;ve received your feedback.
       </Text>
     </Animated.View>
   );

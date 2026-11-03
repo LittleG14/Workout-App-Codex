@@ -1,0 +1,11 @@
+{
+  "cli": { "version": ">= 16.0.0", "appVersionSource": "remote", "requireCommit": true },
+  "build": {
+    "base": { "node": "22.23.3", "ios": { "image": "sdk-54" } },
+    "preview": { "extends": "base", "distribution": "internal", "environment": "preview" },
+    "simulator": { "extends": "preview", "ios": { "simulator": true } },
+    "testflight": { "extends": "base", "distribution": "store", "environment": "preview", "autoIncrement": true },
+    "production": { "extends": "base", "distribution": "store", "environment": "production", "autoIncrement": true }
+  },
+  "submit": { "testflight": {}, "production": {} }
+}

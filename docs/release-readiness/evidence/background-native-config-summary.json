@@ -1,0 +1,21 @@
+{
+  "iosBackgroundModes": [
+    "location"
+  ],
+  "whenInUse": "Swole House uses your location during a run or walk to record your route, distance, and pace.",
+  "always": "Allow Swole House to continue recording your route, distance, and pace during a run or walk when the screen is locked or you use another app. Tracking stops when you pause or end the workout.",
+  "legacyAlwaysPresent": false,
+  "androidPermissions": [
+    "android.permission.INTERNET",
+    "android.permission.SYSTEM_ALERT_WINDOW",
+    "android.permission.VIBRATE",
+    "android.permission.READ_EXTERNAL_STORAGE",
+    "android.permission.WRITE_EXTERNAL_STORAGE",
+    "android.permission.ACCESS_COARSE_LOCATION",
+    "android.permission.ACCESS_FINE_LOCATION",
+    "android.permission.ACCESS_BACKGROUND_LOCATION",
+    "android.permission.FOREGROUND_SERVICE",
+    "android.permission.FOREGROUND_SERVICE_LOCATION",
+    "android.permission.RECORD_AUDIO"
+  ]
+}

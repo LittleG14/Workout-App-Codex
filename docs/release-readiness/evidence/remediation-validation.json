@@ -1,0 +1,38 @@
+{
+  "date": "2026-11-01",
+  "branch": "codex/ios-release-readiness",
+  "baseline": "93bd1f356cee4708fafb44850b4c8a4312a390bd",
+  "tests": {
+    "failed": 0,
+    "passed": 31
+  },
+  "typecheck": "pass",
+  "lint": {
+    "warnings": 28.0,
+    "errors": 0.0
+  },
+  "expo": "54.0.38",
+  "react": "19.1.0",
+  "reactNative": "0.81.5",
+  "expoDependencyCheck": "pass-online",
+  "expoDoctor": {
+    "total": 18,
+    "passed": 17,
+    "unverified": "Expo API TLS/schema check; unchanged invalid icons previously confirmed"
+  },
+  "iosJsExport": "pass-placeholder-public-values-no-native-build",
+  "serverCompile": "pass-not-started",
+  "vulnerabilities": {
+    "info": 0,
+    "low": 2,
+    "moderate": 26,
+    "high": 19,
+    "critical": 0,
+    "total": 47
+  },
+  "originalBaselineHashesUnchanged": 69,
+  "nativeBuild": "not-run",
+  "deviceTests": "not-run",
+  "testFlight": "not-uploaded",
+  "submission": "not-submitted"
+}

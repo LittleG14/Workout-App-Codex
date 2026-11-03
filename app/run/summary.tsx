@@ -15,7 +15,9 @@ import * as Haptics from "expo-haptics";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import Colors from "@/constants/colors";
 import { RunData, GeneratedWorkout } from "@/lib/exercises";
-import { consumePendingRun } from "@/lib/run-store";
+import { ownRun, runs } from "@/lib/run-tracking";
+import { runData as toRunData, type RunDraft } from "@/lib/run-repository";
+import { getAccountScope, assertAccountScope } from "@/lib/account-scope";
 import { saveWorkout } from "@/lib/workout-storage";
 import MapView, { Polyline, PROVIDER_DEFAULT } from "react-native-maps";
 import { ShareableRunCard, shareRunCard } from "@/components/ShareWorkoutCard";
@@ -60,19 +62,25 @@ export default function RunSummaryScreen() {
   const insets = useSafeAreaInsets();
   const [runData, setRunData] = useState<RunData | null>(null);
   const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
+  const scope = useRef(getAccountScope());
+  const [draft, setDraft] = useState<RunDraft | null>(null);
   const runShareRef = useRef<View>(null);
-  const [completedAt] = useState(new Date().toISOString());
+  const completedAt = new Date(draft?.stoppedAt ?? draft?.startedAt ?? 0).toISOString();
 
   useEffect(() => {
-    const data = consumePendingRun();
-    if (data) {
-      setRunData(data);
-    }
+    let mounted = true;
+    void ownRun().then(run => {
+      assertAccountScope(scope.current); if (!mounted || !run) return;
+      if (run.status !== 'stopped') { router.replace('/run/active'); return; }
+      setDraft(run); setRunData(toRunData(run, run.stoppedAt ?? run.startedAt));
+    }).catch(error => { if (mounted) Alert.alert('Could not recover run', error instanceof Error ? error.message : 'Please try again.'); });
+    return () => { mounted = false; };
   }, []);
 
   const handleSave = async () => {
-    if (!runData || saving) return;
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    if (!runData || !draft || savingRef.current) return;
+    savingRef.current = true;
     setSaving(true);
 
     const distInUnit = runData.unit === "miles" ? runData.distanceMiles : runData.distanceKm;
@@ -82,20 +90,29 @@ export default function RunSummaryScreen() {
     const durationMins = Math.max(1, Math.round(runData.durationSeconds / 60));
 
     const workout: GeneratedWorkout = {
-      id: Date.now().toString() + Math.random().toString(36).slice(2, 9),
+      id: draft.id,
+      userId: scope.current.userId,
       name: `Just Run — ${distInUnit.toFixed(2)} ${unitLabel}`,
       topCategory: "cardio",
       subType: "just_run",
       style: "just_run",
       durationMinutes: durationMins,
       exercises: [],
-      createdAt: new Date().toISOString(),
+      createdAt: new Date(draft.startedAt).toISOString(),
       runData,
     };
 
-    await saveWorkout(workout);
-    setSaving(false);
-    router.replace("/(tabs)");
+    try {
+      assertAccountScope(scope.current);
+      await saveWorkout(workout);
+      assertAccountScope(scope.current);
+      await runs.discard(scope.current.userId, draft.id);
+      assertAccountScope(scope.current);
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      router.replace("/(tabs)");
+    } catch (error) {
+      Alert.alert('Could not finish saving', error instanceof Error ? error.message : 'Your draft is preserved. Please try again.');
+    } finally { savingRef.current = false; setSaving(false); }
   };
 
   const handleDiscard = () => {
@@ -107,7 +124,13 @@ export default function RunSummaryScreen() {
         {
           text: "Discard",
           style: "destructive",
-          onPress: () => router.replace("/(tabs)"),
+          onPress: () => { void (async () => {
+            try {
+              assertAccountScope(scope.current); if (!draft) return;
+              await runs.discard(scope.current.userId, draft.id); assertAccountScope(scope.current);
+              router.replace('/(tabs)');
+            } catch (error) { Alert.alert('Could not discard run', error instanceof Error ? error.message : 'Please try again.'); }
+          })(); },
         },
       ]
     );
@@ -161,13 +184,14 @@ export default function RunSummaryScreen() {
               showsUserLocation={false}
               pointerEvents="auto"
             >
-              <Polyline
-                coordinates={runData.coordinates.map(c => ({ latitude: c.latitude, longitude: c.longitude }))}
+              {(runData.segmentStarts ?? [0]).map((start, index, starts) => <Polyline
+                key={start}
+                coordinates={runData.coordinates.slice(start, starts[index + 1] ?? runData.coordinates.length)}
                 strokeColor="#FF8C00"
                 strokeWidth={5}
                 lineCap="round"
                 lineJoin="round"
-              />
+              />)}
             </MapView>
           </Animated.View>
         )}

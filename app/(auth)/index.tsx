@@ -160,10 +160,13 @@ export default function LoginScreen() {
               <Text style={styles.primaryBtnText}>Sign In</Text>
             )}
           </Pressable>
+          <Pressable accessibilityRole="button" onPress={() => router.push('/auth/forgot-password')}>
+            <Text style={styles.footerLink}>Forgot password?</Text>
+          </Pressable>
         </View>
 
         <View style={styles.footer}>
-          <Text style={styles.footerText}>Don't have an account? </Text>
+          <Text style={styles.footerText}>Don&apos;t have an account? </Text>
           <Pressable onPress={() => router.push("/(auth)/signup")}>
             <Text style={styles.footerLink}>Sign Up</Text>
           </Pressable>

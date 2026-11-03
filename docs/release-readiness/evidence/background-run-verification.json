@@ -1,0 +1,69 @@
+{
+  "updatedAt": "2026-11-01T16:46:21.449Z",
+  "branch": "codex/ios-release-readiness",
+  "tests": {
+    "command": "node node_modules/tsx/dist/cli.mjs --test --test-reporter=tap tests/*.test.ts",
+    "passed": 45,
+    "failed": 0,
+    "evidence": "background-run-tests.tap"
+  },
+  "typecheck": {
+    "command": "node node_modules/typescript/bin/tsc --noEmit --pretty false",
+    "exitCode": 0
+  },
+  "lint": {
+    "command": "node node_modules/eslint/bin/eslint.js . --format json --output-file .verification/eslint-background.json",
+    "errors": 0,
+    "warnings": 27
+  },
+  "expoDependencyCheck": {
+    "command": "node node_modules/expo/bin/cli install --check",
+    "exitCode": 0,
+    "taskManagerVersion": "14.0.9"
+  },
+  "nativeConfiguration": {
+    "command": "node node_modules/expo/bin/cli config --type introspect --json",
+    "exitCode": 0,
+    "evidence": "background-native-config-summary.json"
+  },
+  "iosJavaScriptExport": {
+    "command": "node node_modules/expo/bin/cli export --platform ios --output-dir .verification/ios-background-export",
+    "exitCode": 0,
+    "hermesBundleMB": 5.56,
+    "environment": "placeholder public validation values; not a release binary",
+    "evidence": "background-ios-export.log"
+  },
+  "serverCompilation": {
+    "command": "esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=server_dist",
+    "exitCode": 0,
+    "bundleKB": 31.5,
+    "serverStarted": false
+  },
+  "npmAudit": {
+    "command": "npm audit --json --registry=https://registry.npmjs.org",
+    "vulnerabilities": {
+      "info": 0,
+      "low": 2,
+      "moderate": 26,
+      "high": 19,
+      "critical": 0,
+      "total": 47
+    },
+    "evidence": "background-npm-audit.json"
+  },
+  "originalRepository": {
+    "checkedFileHashes": 69,
+    "changed": 0
+  },
+  "notExecuted": [
+    "native iOS build",
+    "signing",
+    "device or simulator tests",
+    "lock-screen GPS validation",
+    "battery/performance measurement",
+    "hosted API/DB/RLS tests",
+    "production migrations",
+    "TestFlight",
+    "App Store submission"
+  ]
+}
