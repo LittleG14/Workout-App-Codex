@@ -16,7 +16,10 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.forge.app",
-      "icon": "./assets/images/icon-ios.png"
+      "icon": "./assets/images/icon-ios.png",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "package": "com.forge.app",
@@ -32,21 +35,43 @@
       "expo-router",
       "expo-font",
       "expo-web-browser",
-      ["expo-image-picker", { "photosPermission": false, "cameraPermission": false, "microphonePermission": false }],
-      ["expo-secure-store", { "faceIDPermission": false, "configureAndroidBackup": true }],
-      ["expo-location", {
-        "locationWhenInUsePermission": "Swole House uses your location during a run or walk to record your route, distance, and pace.",
-        "locationAlwaysAndWhenInUsePermission": "Allow Swole House to continue recording your route, distance, and pace during a run or walk when the screen is locked or you use another app. Tracking stops when you pause or end the workout.",
-        "locationAlwaysPermission": false,
-        "isIosBackgroundLocationEnabled": true,
-        "isAndroidBackgroundLocationEnabled": true,
-        "isAndroidForegroundServiceEnabled": true
-      }],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": false,
+          "cameraPermission": false,
+          "microphonePermission": false
+        }
+      ],
+      [
+        "expo-secure-store",
+        {
+          "faceIDPermission": false,
+          "configureAndroidBackup": true
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Swole House uses your location during a run or walk to record your route, distance, and pace.",
+          "locationAlwaysAndWhenInUsePermission": "Allow Swole House to continue recording your route, distance, and pace during a run or walk when the screen is locked or you use another app. Tracking stops when you pause or end the workout.",
+          "locationAlwaysPermission": false,
+          "isIosBackgroundLocationEnabled": true,
+          "isAndroidBackgroundLocationEnabled": true,
+          "isAndroidForegroundServiceEnabled": true
+        }
+      ],
       "./plugins/with-run-background"
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "362c28f0-e9c4-42f0-b6ef-e58e0d262274"
+      }
     }
   }
 }
