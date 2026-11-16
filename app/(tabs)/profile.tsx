@@ -31,6 +31,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Colors from "@/constants/colors";
+import { AvailableEquipment } from '@/components/AvailableEquipment';
 import { useAuth } from "@/contexts/AuthContext";
 import { apiRequest } from "@/lib/query-client";
 import { UserProfile, getProfile, saveProfile } from "@/lib/profile-storage";
@@ -753,6 +754,8 @@ export default function ProfileScreen() {
             <Ionicons name="chevron-forward" size={18} color={Colors.textMuted} />
           </Pressable>
         </Animated.View>
+
+        <AvailableEquipment buttonStyle={styles.prButton} textStyle={styles.prButtonText} />
 
         <Animated.View entering={FadeInDown.delay(100).duration(400)}>
           <View style={styles.section}>

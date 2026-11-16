@@ -20,7 +20,7 @@ function validate(env, config) {
   }
   if (!publicKey) errors.push('Set a public Supabase publishable/anon key; never a privileged key.');
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(env.EAS_PROJECT_ID ?? '')) errors.push('Set EAS_PROJECT_ID to the linked Expo project UUID.');
-  if (config.ios?.bundleIdentifier !== 'com.forge.app') errors.push('The approved iOS bundle identifier must remain com.forge.app.');
+  if (config.ios?.bundleIdentifier !== 'app.replit.swolehouse') errors.push('The iOS bundle identifier must match the existing App Store Connect app: app.replit.swolehouse.');
   return errors;
 }
 module.exports = { validate };

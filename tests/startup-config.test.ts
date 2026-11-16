@@ -20,8 +20,9 @@ test('missing/malformed configuration is reported without returning credential v
 test('release preflight accepts public fields and rejects missing project or privileged JWT', () => {
   const env = { EXPO_PUBLIC_DOMAIN: 'api.swole.test', EXPO_PUBLIC_SUPABASE_URL: 'https://project.supabase.co',
     EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_test_public', EAS_PROJECT_ID: '12345678-1234-1234-1234-123456789abc' };
-  const config = { ios: { bundleIdentifier: 'com.forge.app' } };
+  const config = { ios: { bundleIdentifier: 'app.replit.swolehouse' } };
   assert.deepEqual(validate(env, config), []);
+  assert.ok(validate(env, { ios: { bundleIdentifier: 'com.forge.app' } }).some((s: string) => s.includes('bundle identifier')));
   assert.ok(validate({ ...env, EAS_PROJECT_ID: '' }, config).length > 0);
   const secretJwt = 'eyJ.' + Buffer.from(JSON.stringify({ role: 'service_role' })).toString('base64url') + '.signature';
   assert.ok(validate({ ...env, EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: secretJwt }, config).some((s: string) => s.includes('privileged')));
@@ -32,7 +33,7 @@ test('testing and production profiles select explicit environments and valid squ
   assert.equal(eas.build.production.environment, 'production'); assert.equal(eas.build.simulator.ios.simulator, true);
   assert.equal(eas.build.base.ios.image, 'sdk-54');
   const app = JSON.parse(fs.readFileSync('app.json', 'utf8')).expo;
-  assert.equal(app.ios.bundleIdentifier, 'com.forge.app');
+  assert.equal(app.ios.bundleIdentifier, 'app.replit.swolehouse');
   const png = fs.readFileSync(app.ios.icon);
   assert.equal(png.readUInt32BE(16), png.readUInt32BE(20)); assert.ok(png.readUInt32BE(16) >= 1024);
   assert.equal(png[25], 2); // RGB, no alpha channel.

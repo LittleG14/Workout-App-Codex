@@ -11,6 +11,7 @@ import {
   TextInput,
   KeyboardAvoidingView,
   FlatList,
+  Alert,
 } from "react-native";
 import MapView, { Polyline, PROVIDER_DEFAULT } from "react-native-maps";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -43,7 +44,6 @@ import {
   CARDIO_MIXED,
   MOBILITY_EXERCISES,
   WEIGHT_LIFTING_LABELS,
-  EQUIPMENT_OPTIONS,
   CustomExerciseData,
   TopCategory,
   MuscleGroup,
@@ -53,6 +53,10 @@ import {
 import { getLocalWorkoutsOnly, updateWorkout } from "@/lib/workout-storage";
 import { useCustomExercises } from "@/lib/useCustomExercises";
 import { useHiddenExercises } from "@/lib/useHiddenExercises";
+import { useEquipmentPreferences } from '@/lib/useEquipmentPreferences';
+import { EquipmentOptions } from '@/components/EquipmentOptions';
+import { normalizeEquipment } from '@/shared/equipment';
+import { assertAccountScope, getAccountScope } from '@/lib/account-scope';
 import {
   ShareableRegularCard,
   ShareableRunCard,
@@ -587,6 +591,27 @@ export default function WorkoutDetailScreen() {
   const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [workout, setWorkout] = useState<GeneratedWorkout | null>(null);
+  const currentWorkout = useRef(workout);
+  currentWorkout.current = workout;
+  const { loadLatest: loadEquipment } = useEquipmentPreferences();
+  const selectionPending = useRef(false);
+  const automaticPreferences = async () => {
+    if (selectionPending.current) return null;
+    selectionPending.current = true;
+    const snapshot = workout;
+    try {
+      const scope = getAccountScope();
+      if (snapshot?.userId && snapshot.userId !== scope.userId) throw new Error('Please reopen this workout from your account.');
+      const preferences = await loadEquipment();
+      assertAccountScope(scope);
+      if (currentWorkout.current !== snapshot) throw new Error('The workout changed. Please try again.');
+      return preferences;
+    } catch (error) {
+      Alert.alert('Could not select an exercise', error instanceof Error ? error.message : 'Please check your connection and try again.');
+      return null;
+    } finally { selectionPending.current = false; }
+  };
+  const noEligibleExercise = () => Alert.alert('No compatible exercise available', 'Review Available Equipment or add a compatible custom exercise. You can still choose an exercise manually.');
   const shareCardRef = useRef<View>(null);
   const webTopPad = Platform.OS === "web" ? 67 : 0;
 
@@ -613,14 +638,15 @@ export default function WorkoutDetailScreen() {
 
   const handleRefreshExercise = async (exerciseIndex: number) => {
     if (!workout) return;
+    const equipment = await automaticPreferences(); if (!equipment) return;
     const target = workout.exercises[exerciseIndex];
     const usedIds = getAllUsedIds(workout);
     const isLastExercise = exerciseIndex === workout.exercises.length - 1;
     const isCoreSlot = isLastExercise && workout.includeCore;
     const replacement = isCoreSlot
-      ? findCoreReplacementExercise(target.exercise, usedIds, customExercises, hiddenIds)
-      : findReplacementExercise(target.exercise, workout.topCategory, workout.subType, usedIds, customExercises, hiddenIds);
-    if (!replacement) return;
+      ? findCoreReplacementExercise(target.exercise, usedIds, customExercises, hiddenIds, equipment)
+      : findReplacementExercise(target.exercise, workout.topCategory, workout.subType, usedIds, customExercises, hiddenIds, equipment);
+    if (!replacement) { noEligibleExercise(); return; }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     const updated = { ...workout, exercises: [...workout.exercises] };
     updated.exercises[exerciseIndex] = { ...target, exercise: replacement };
@@ -630,11 +656,12 @@ export default function WorkoutDetailScreen() {
 
   const handleRefreshSuperset = async (supersetIndex: number, slot: 'A' | 'B') => {
     if (!workout || !workout.supersets) return;
+    const equipment = await automaticPreferences(); if (!equipment) return;
     const pair = workout.supersets[supersetIndex];
     const target = slot === 'A' ? pair.exerciseA : pair.exerciseB;
     const usedIds = getAllUsedIds(workout);
-    const replacement = findReplacementExercise(target.exercise, workout.topCategory, workout.subType, usedIds, customExercises, hiddenIds);
-    if (!replacement) return;
+    const replacement = findReplacementExercise(target.exercise, workout.topCategory, workout.subType, usedIds, customExercises, hiddenIds, equipment);
+    if (!replacement) { noEligibleExercise(); return; }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     const updatedSupersets = [...workout.supersets];
     updatedSupersets[supersetIndex] = {
@@ -648,11 +675,12 @@ export default function WorkoutDetailScreen() {
 
   const handleRefreshCircuitExercise = async (blockIndex: number, exIndex: number) => {
     if (!workout || !workout.circuitBlocks) return;
+    const equipment = await automaticPreferences(); if (!equipment) return;
     const block = workout.circuitBlocks[blockIndex];
     const target = block.exercises[exIndex];
     const usedIds = getAllUsedIds(workout);
-    const replacement = findReplacementExercise(target.exercise, workout.topCategory, workout.subType, usedIds, customExercises, hiddenIds);
-    if (!replacement) return;
+    const replacement = findReplacementExercise(target.exercise, workout.topCategory, workout.subType, usedIds, customExercises, hiddenIds, equipment);
+    if (!replacement) { noEligibleExercise(); return; }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     const updatedBlocks = [...workout.circuitBlocks];
     const updatedExercises = [...block.exercises];
@@ -890,7 +918,7 @@ export default function WorkoutDetailScreen() {
     if (trimmedName.length > 40) { setNewExError('Name must be 40 characters or less.'); return; }
     if (newExCategories.size === 0) { setNewExError('Select at least one category.'); return; }
     if (newExMuscles.size === 0) { setNewExError('Select at least one muscle group.'); return; }
-    if (!newExEquipment) { setNewExError('Select equipment.'); return; }
+    if (!normalizeEquipment(newExEquipment)) { setNewExError('Select valid equipment.'); return; }
     setNewExError('');
     setNewExSaving(true);
     try {
@@ -1110,18 +1138,20 @@ export default function WorkoutDetailScreen() {
 
   const handleBalance = async (balance: CircuitBalance) => {
     if (!workout || balance === currentBalance) return;
+    const equipment = await automaticPreferences(); if (!equipment) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    const rebalanced = rebalanceCircuit(workout, balance, customExercises, hiddenIds);
+    const rebalanced = rebalanceCircuit(workout, balance, customExercises, hiddenIds, equipment);
     setWorkout(rebalanced);
     await updateWorkout(rebalanced);
   };
 
   const handleAddExercise = async () => {
     if (!workout) return;
+    const equipment = await automaticPreferences(); if (!equipment) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     const usedIds = getAllUsedIds(workout);
-    const newExercise = pickRandomNewExercise(workout.topCategory, workout.subType, usedIds, customExercises, hiddenIds);
-    if (!newExercise) return;
+    const newExercise = pickRandomNewExercise(workout.topCategory, workout.subType, usedIds, customExercises, hiddenIds, equipment);
+    if (!newExercise) { noEligibleExercise(); return; }
 
     const { topCategory, subType, style } = workout;
     let newWorkoutExercise: WorkoutExercise;
@@ -1215,10 +1245,11 @@ export default function WorkoutDetailScreen() {
 
   const handleConvertToSuperset = async (exerciseIndex: number, targetExercise: WorkoutExercise) => {
     if (!workout) return;
+    const equipment = await automaticPreferences(); if (!equipment) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     const usedIds = getAllUsedIds(workout);
-    const partnerExercise = pickRandomNewExercise(workout.topCategory, workout.subType, usedIds, customExercises, hiddenIds);
-    if (!partnerExercise) return;
+    const partnerExercise = pickRandomNewExercise(workout.topCategory, workout.subType, usedIds, customExercises, hiddenIds, equipment);
+    if (!partnerExercise) { noEligibleExercise(); return; }
 
     const isStrength = workout.style === 'strength';
     const ssRest = isStrength ? 120 : 60;
@@ -1666,21 +1697,8 @@ export default function WorkoutDetailScreen() {
               </View>
 
               <Text style={styles.newExSectionLabel}>Equipment <Text style={styles.newExRequired}>*</Text></Text>
-              <View style={styles.newExChipRow}>
-                {EQUIPMENT_OPTIONS.map(eq => {
-                  const checked = newExEquipment === eq;
-                  return (
-                    <Pressable
-                      key={eq}
-                      style={[styles.newExChip, checked && styles.newExChipActive]}
-                      onPress={() => setNewExEquipment(checked ? '' : eq)}
-                    >
-                      {checked && <Ionicons name="checkmark" size={12} color={Colors.primary} style={{ marginRight: 4 }} />}
-                      <Text style={[styles.newExChipText, checked && styles.newExChipTextActive]}>{eq}</Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
+              <EquipmentOptions selected={newExEquipment ? [newExEquipment] : []}
+                onToggle={eq => setNewExEquipment(newExEquipment === eq ? '' : eq)} />
 
               <Text style={styles.newExSectionLabel}>Type <Text style={styles.newExRequired}>*</Text></Text>
               <View style={styles.newExTypeRow}>

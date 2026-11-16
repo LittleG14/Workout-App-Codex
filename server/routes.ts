@@ -4,6 +4,7 @@ import { createClient } from "@supabase/supabase-js";
 import { storage } from "./storage";
 import { authMiddleware, type AuthRequest } from "./auth";
 import { Resend } from "resend";
+import { normalizeEquipment } from '../shared/equipment';
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 
@@ -440,6 +441,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         res.status(400).json({ message: "type must be compound or isolation" });
         return;
       }
+      const normalizedEquipment = normalizeEquipment(equipment);
+      if (!normalizedEquipment) {
+        res.status(400).json({ message: 'Select a supported equipment category.' });
+        return;
+      }
       const id = "cx_" + Date.now().toString() + Math.random().toString(36).substr(2, 6);
       const createdAt = new Date().toISOString();
       await storage.saveCustomExercise(
@@ -447,7 +453,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         id,
         name.trim(),
         JSON.stringify(muscles),
-        equipment,
+        normalizedEquipment,
         type,
         JSON.stringify(topCategories),
         JSON.stringify(weightSubCategories ?? []),
@@ -458,7 +464,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           id,
           name: name.trim(),
           muscles,
-          equipment,
+          equipment: normalizedEquipment,
           type,
           topCategories,
           weightSubCategories: weightSubCategories ?? [],

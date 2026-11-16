@@ -44,6 +44,7 @@ import { saveWorkout } from "@/lib/workout-storage";
 import { getAccountScope, assertAccountScope } from '@/lib/account-scope';
 import { useCustomExercises } from "@/lib/useCustomExercises";
 import { useHiddenExercises } from "@/lib/useHiddenExercises";
+import { useEquipmentPreferences } from '@/lib/useEquipmentPreferences';
 
 const CATEGORIES: { key: TopCategory; label: string; icon: string; iconSet: "ionicons" | "mci"; color: string; desc: string }[] = [
   { key: "weight_lifting", label: "Weights", icon: "barbell", iconSet: "ionicons", color: Colors.primary, desc: "Traditional splits" },
@@ -255,6 +256,7 @@ const DEFAULT_SUB_TYPES: Record<TopCategory, string> = {
 };
 
 export default function GenerateScreen() {
+  const { loadLatest: loadEquipment } = useEquipmentPreferences();
   const insets = useSafeAreaInsets();
   const { customExercises } = useCustomExercises();
   const { hiddenIds } = useHiddenExercises();
@@ -292,8 +294,10 @@ export default function GenerateScreen() {
 
     try {
       assertAccountScope(scope);
+      const equipment = await loadEquipment();
+      assertAccountScope(scope);
       const style = selectedCategory === "weight_lifting" ? trainingStyle : currentSubType;
-      const workout = generateWorkout(selectedCategory, currentSubType, style, selectedDuration, includeSupersets, includeCore, customExercises, hiddenIds);
+      const workout = generateWorkout(selectedCategory, currentSubType, style, selectedDuration, includeSupersets, includeCore, customExercises, hiddenIds, equipment);
       workout.userId = scope.userId;
       await saveWorkout(workout);
       assertAccountScope(scope);
@@ -303,7 +307,7 @@ export default function GenerateScreen() {
     } finally {
       setGenerating(false);
     }
-  }, [selectedCategory, currentSubType, trainingStyle, selectedDuration, includeSupersets, includeCore, customExercises, hiddenIds, isJustRun]);
+  }, [selectedCategory, currentSubType, trainingStyle, selectedDuration, includeSupersets, includeCore, customExercises, hiddenIds, isJustRun, loadEquipment]);
 
   const webTopPad = Platform.OS === "web" ? 67 : 0;
 

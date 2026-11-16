@@ -1,3 +1,6 @@
+import { isExerciseEligible } from './equipment-eligibility';
+import type { EquipmentPreferences } from '../shared/equipment';
+export { EQUIPMENT_OPTIONS } from '../shared/equipment';
 export type TopCategory = 'weight_lifting' | 'circuit' | 'yoga' | 'cardio' | 'mobility';
 
 export interface CustomExerciseData {
@@ -9,13 +12,6 @@ export interface CustomExerciseData {
   topCategories: TopCategory[];
   weightSubCategories: WeightLiftingType[];
 }
-
-export const EQUIPMENT_OPTIONS: string[] = [
-  'Barbell', 'Dumbbells', 'Cable', 'Machine', 'Bodyweight', 'Kettlebell',
-  'Medicine Ball', 'Jump Rope', 'Mat', 'Plyo Box', 'Battle Ropes', 'Ski Erg',
-  'Sled', 'Rower', 'Assault Bike', 'Sandbag', 'Rings', 'Ab Wheel',
-  'Pull-Up Bar', 'Bench', 'Resistance Band', 'None',
-];
 
 export type MuscleGroup = 'chest' | 'triceps' | 'back' | 'biceps' | 'shoulders' | 'abs' | 'quads' | 'hamstrings' | 'glutes' | 'calves' | 'full_body';
 
@@ -202,8 +198,10 @@ export function pickRandomNewExercise(
   subType: string,
   usedIds: string[],
   customExercises?: CustomExerciseData[],
-  hiddenIds?: string[]
+  hiddenIds?: string[],
+  equipmentPreferences?: EquipmentPreferences,
 ): Exercise | null {
+  hiddenIds = withEquipmentRestrictions(hiddenIds, equipmentPreferences, customExercises);
   const pool = getExercisePool(topCategory, subType, customExercises, hiddenIds);
   const candidates = pool.filter(e => !usedIds.includes(e.id));
   if (candidates.length === 0) return null;
@@ -216,8 +214,10 @@ export function findReplacementExercise(
   subType: string,
   usedIds: string[],
   customExercises?: CustomExerciseData[],
-  hiddenIds?: string[]
+  hiddenIds?: string[],
+  equipmentPreferences?: EquipmentPreferences,
 ): Exercise | null {
+  hiddenIds = withEquipmentRestrictions(hiddenIds, equipmentPreferences, customExercises);
   const pool = getExercisePool(topCategory, subType, customExercises, hiddenIds);
 
   const candidates = pool.filter(e =>
@@ -246,8 +246,10 @@ export function findCoreReplacementExercise(
   current: Exercise,
   usedIds: string[],
   customExercises?: CustomExerciseData[],
-  hiddenIds?: string[]
+  hiddenIds?: string[],
+  equipmentPreferences?: EquipmentPreferences,
 ): Exercise | null {
+  hiddenIds = withEquipmentRestrictions(hiddenIds, equipmentPreferences, customExercises);
   const customWeight = getCustomForCategory('weight_lifting', 'shoulders_abs', customExercises);
   let pool = [...WEIGHT_EXERCISES, ...customWeight];
   if (hiddenIds?.length) pool = pool.filter(e => !hiddenIds.includes(e.id));
@@ -469,6 +471,17 @@ const MOBILITY_SUBTYPE_IDS: Record<MobilityStyle, string[]> = {
   upper_body:   ['mob6', 'mob7', 'mob9', 'mob18', 'mob21', 'mob12', 'mob8', 'mob10'],
   hips_and_spine: ['mob5', 'mob13', 'mob14', 'mob18', 'mob19', 'mob22', 'mob24', 'mob3', 'mob9', 'mob20'],
 };
+
+/** One eligibility boundary for every automatic selector, before randomization.
+ * Existing exclusion semantics keep category/muscle/duration assembly unchanged.
+ */
+function withEquipmentRestrictions(hiddenIds: string[] | undefined, preferences: EquipmentPreferences | undefined, custom: CustomExerciseData[] = []): string[] | undefined {
+  if (preferences === undefined) return hiddenIds;
+  const all = [...WEIGHT_EXERCISES, ...CIRCUIT_EXERCISES, ...YOGA_CORE_POSES, ...YOGA_FLEX_POSES,
+    ...CARDIO_RUNNING, ...CARDIO_MIXED, ...MOBILITY_EXERCISES, ...custom];
+  const excluded = all.filter(e => !isExerciseEligible(e, preferences)).map(e => e.id);
+  return [...new Set([...(hiddenIds ?? []), ...excluded])];
+}
 
 function getMobilityPool(subType: MobilityStyle): Exercise[] {
   const ids = MOBILITY_SUBTYPE_IDS[subType] || MOBILITY_SUBTYPE_IDS.full_body;
@@ -831,7 +844,7 @@ function generateCardio(cardioStyle: CardioStyle, duration: number, customExerci
       exercises = [
         { exercise: warmup, sets: 1, reps: '10 min', restSeconds: 0, notes: 'Easy warm-up' },
         { exercise: tempo || fartlek || pool[0], sets: 1, reps: `${Math.floor(duration * 0.4)} min`, restSeconds: 0, notes: 'Comfortably hard pace' },
-        { exercise: hills || pool[2] || pool[0], sets: 5, reps: '30s', restSeconds: 90, notes: 'Hard uphill effort' },
+        { exercise: hills || pool[2] || pool[0], sets: 5, reps: '30s', restSeconds: 90, notes: hills ? 'Hard uphill effort' : 'Hard interval effort' },
         { exercise: warmup, sets: 1, reps: '10 min', restSeconds: 0, notes: 'Cool-down jog' },
       ];
     }
@@ -913,11 +926,13 @@ export function generateWorkout(
   includeSupersets: boolean = false,
   includeCore: boolean = false,
   customExercises?: CustomExerciseData[],
-  hiddenIds?: string[]
+  hiddenIds?: string[],
+  equipmentPreferences?: EquipmentPreferences,
 ): GeneratedWorkout {
+  hiddenIds = withEquipmentRestrictions(hiddenIds, equipmentPreferences, customExercises);
   if (!Number.isFinite(durationMinutes) || durationMinutes <= 0) throw new Error('Choose a valid workout duration.');
   if (getExercisePool(topCategory, subType, customExercises, hiddenIds).length === 0) {
-    throw new Error('No exercises are available for this workout. Restore an exercise or add a custom exercise.');
+    throw new Error('No exercises are available for this workout. Review Available Equipment, restore an exercise, or add a compatible custom exercise.');
   }
   let workout: GeneratedWorkout;
   switch (topCategory) {
@@ -1039,7 +1054,8 @@ function rebalanceSingleBlock(block: CircuitBlock, blockDuration: number, balanc
   };
 }
 
-export function rebalanceCircuit(workout: GeneratedWorkout, balance: CircuitBalance, customExercises?: CustomExerciseData[], hiddenIds?: string[]): GeneratedWorkout {
+export function rebalanceCircuit(workout: GeneratedWorkout, balance: CircuitBalance, customExercises?: CustomExerciseData[], hiddenIds?: string[], equipmentPreferences?: EquipmentPreferences): GeneratedWorkout {
+  hiddenIds = withEquipmentRestrictions(hiddenIds, equipmentPreferences, customExercises);
   if (!workout.circuitBlocks || workout.circuitBlocks.length === 0) return workout;
 
   const format = workout.circuitBlocks[0].format;
