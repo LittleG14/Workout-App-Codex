@@ -46,3 +46,7 @@ Implementation and isolated automated validation are complete. Final deployment 
 - Live cross-device persistence, actual iPhone UI/accessibility, cancellation/draft behavior through the rendered modal, expired-session behavior and native runtime: **manual validation pending**, not claimed as passed.
 
 See [the original architecture plan](IMPLEMENTATION.md), [deployment order, metadata inventory and device checklist](DEPLOYMENT_AND_TESTING.md), and [validation results](VALIDATION.md).
+
+## Working-beta merge follow-up
+
+The developer subsequently committed the feature and merged `origin/backup/testflight-before-equipment-2026-11-16` into this local branch. The earlier source-reconciliation prerequisite is now addressed for that backed-up snapshot. Conflict resolution retains the working beta's Expo project UUID and `ITSAppUsesNonExemptEncryption: false`, the established iOS bundle ID, and the additional test rejecting the former identifier. The beta's development port configuration is preserved; restore the single backend mapping before an Autoscale backend publication. All 74 tests, TypeScript, merged iOS configuration checks and whitespace validation pass after resolution. The files are resolved but the developer still needs to stage them and complete the merge commit. Hosted/device checks and deployment approval gates remain.
