@@ -7,6 +7,7 @@ import {
   Platform,
   Alert,
   Linking,
+  ScrollView,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
@@ -14,6 +15,10 @@ import { Ionicons } from "@expo/vector-icons";
 import { ownRun, requestRunMode, runs } from "@/lib/run-tracking";
 import { getAccountScope, assertAccountScope } from "@/lib/account-scope";
 import type { RunDraft } from "@/lib/run-repository";
+import type { RunNotificationType } from '@/lib/run-milestones';
+import { runPlanning } from '@/lib/run-planning';
+import { prepareRunAudio, runAudioAvailable } from '@/lib/run-audio';
+import { METERS_PER_MILE } from '@/lib/run-geometry';
 import * as Haptics from "expo-haptics";
 import Animated, {
   FadeIn,
@@ -30,12 +35,24 @@ export default function RunSetupScreen() {
   const insets = useSafeAreaInsets();
   const [unit, setUnit] = useState<DistanceUnit>("miles");
   const [notifInterval, setNotifInterval] = useState<NotifInterval>(1);
+  const [notificationType, setNotificationType] = useState<RunNotificationType>('sound');
+  const [settingsLoaded, setSettingsLoaded] = useState(false);
+  const [planDistance, setPlanDistance] = useState<number | null>(null);
+  const [settingsError, setSettingsError] = useState('');
   const [requesting, setRequesting] = useState(false);
   const starting = useRef(false);
   const mounted = useRef(true);
   const [countdown, setCountdown] = useState<number | null>(null);
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; if (countdownRef.current) clearInterval(countdownRef.current); }; }, []);
+  useEffect(() => {
+    const scope = getAccountScope();
+    void runPlanning.get(scope).then(data => {
+      assertAccountScope(scope); if (!mounted.current) return;
+      setUnit(data.settings.unit); setNotifInterval(data.settings.notifInterval); setNotificationType(data.settings.notificationType);
+      setPlanDistance(data.route?.distanceMeters ?? null); setSettingsLoaded(true);
+    }).catch(error => { if (mounted.current) setSettingsError(error instanceof Error ? error.message : 'Could not load run settings.'); });
+  }, []);
   const btnScale = useSharedValue(1);
   const btnAnimStyle = useAnimatedStyle(() => ({ transform: [{ scale: btnScale.value }] }));
 
@@ -57,6 +74,16 @@ export default function RunSetupScreen() {
       const existing = await ownRun(); assertAccountScope(scope);
       if (!mounted.current) return;
       if (existing) { router.push(existing.status === 'stopped' ? '/run/summary' : '/run/active'); return; }
+      if (!settingsLoaded) throw new Error(settingsError || 'Run settings are still loading. Return to Just Run and try again.');
+      const plan = await runPlanning.get(scope); assertAccountScope(scope);
+      await runPlanning.saveSettings({ unit, notifInterval, notificationType }, scope); assertAccountScope(scope);
+      if (notifInterval > 0 && runAudioAvailable) {
+        try { await prepareRunAudio(); }
+        catch {
+          if (!mounted.current || !await confirm('Audio could not prepare', 'You can continue with visual milestones and GPS tracking. Audio may be unavailable for this run.', 'Continue with visual alerts')) return;
+          assertAccountScope(scope);
+        }
+      }
       if (Platform.OS !== 'web' && !await confirm('Track your run or walk',
         'Location records your route, distance, and pace. Allow background location to keep tracking while your screen is locked or you use another app. Tracking stops when you pause or end the run. Android may open Settings to grant background access.', 'Continue')) return;
       if (!mounted.current) return; assertAccountScope(scope);
@@ -76,7 +103,7 @@ export default function RunSetupScreen() {
         void (async () => {
           try {
             assertAccountScope(scope); if (!mounted.current) return;
-            await runs.begin(scope.userId, unit, notifInterval, mode);
+            await runs.begin(scope.userId, unit, notifInterval, mode, { notificationType, plannedRoute: plan.route });
             assertAccountScope(scope);
             if (mounted.current) router.push('/run/active');
           } catch (error) {
@@ -117,7 +144,7 @@ export default function RunSetupScreen() {
           </Pressable>
         </Animated.View>
       ) : (
-        <View style={styles.content}>
+        <ScrollView contentContainerStyle={[styles.content, { flexGrow: 1, flex: 0 }]}>
           <Animated.View entering={FadeIn.duration(400)} style={styles.header}>
             <Pressable
               onPress={() => router.back()}
@@ -168,12 +195,14 @@ export default function RunSetupScreen() {
           <Animated.View entering={FadeInDown.delay(200).duration(400)} style={styles.section}>
             <Text style={styles.sectionLabel}>Distance Alerts</Text>
             <Text style={styles.sectionSub}>
-              Get an in-app alert as you hit each milestone while viewing the run screen
+              Keep visual milestone ribbons and optionally hear each distance update.
             </Text>
             <View style={styles.notifOptions}>
               {NOTIF_OPTIONS.map((opt) => (
                 <Pressable
                   key={String(opt.value)}
+                  accessibilityRole="radio"
+                  accessibilityState={{ checked: notifInterval === opt.value }}
                   style={[
                     styles.notifOption,
                     notifInterval === opt.value && styles.notifOptionActive,
@@ -201,10 +230,24 @@ export default function RunSetupScreen() {
             </View>
           </Animated.View>
 
+          <View style={styles.section}>
+            <Text style={styles.sectionLabel}>Notification Type</Text>
+            <View style={styles.unitToggle}>
+              {(['sound', 'update'] as const).map(type => <Pressable key={type} accessibilityRole="radio"
+                accessibilityLabel={type === 'sound' ? 'Sound: short ding' : 'Update: spoken distance, time and average pace'}
+                accessibilityState={{ checked: notificationType === type, disabled: notifInterval === 0 }} disabled={notifInterval === 0}
+                style={[styles.unitBtn, notificationType === type && styles.unitBtnActive, notifInterval === 0 && { opacity: 0.5 }]}
+                onPress={() => setNotificationType(type)}><Text style={[styles.unitBtnText, notificationType === type && styles.unitBtnTextActive]}>{type === 'sound' ? 'Sound' : 'Update'}</Text></Pressable>)}
+            </View>
+            {!runAudioAvailable && <Text style={[styles.sectionSub, { marginTop: 10 }]}>Audio needs the new iOS native build. This version can still show visual milestones.</Text>}
+            {!!settingsError && <Text accessibilityRole="alert" style={[styles.sectionSub, { color: Colors.error }]}>{settingsError}</Text>}
+            {planDistance !== null && <Text style={[styles.sectionSub, { marginTop: 10 }]}>Planned route: {(planDistance / METERS_PER_MILE).toFixed(2)} mi / {(planDistance / 1000).toFixed(2)} km. Actual GPS determines workout distance and pace.</Text>}
+          </View>
+
           <Animated.View entering={FadeInDown.delay(300).duration(400)} style={styles.infoCard}>
             <Ionicons name="information-circle-outline" size={18} color={Colors.cardio} />
             <Text style={styles.infoText}>
-              Allow background location to track runs and walks with your screen locked. After an interruption or restart, tap Start Run to recover your private draft.
+              Allow background location to track with your screen locked. On iOS, audio uses your current output even in silent mode and briefly ducks other media where supported. After an interruption or restart, tap Start Run to recover your private draft.
             </Text>
           </Animated.View>
 
@@ -216,7 +259,7 @@ export default function RunSetupScreen() {
               </Pressable>
             </Animated.View>
           </Animated.View>
-        </View>
+        </ScrollView>
       )}
     </View>
   );

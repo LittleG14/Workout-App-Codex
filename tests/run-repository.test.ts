@@ -27,10 +27,10 @@ test('locked/suspended JS elapsed time derives from timestamps, not timer ticks'
 test('headless location batches preserve route and reject duplicate, stale and inaccurate fixes', async () => {
   const f = fixture(); await f.repo.begin('A', 'km', 1, 'background'); f.time(110000);
   const headless = f.restart();
-  await headless.locations([fix(104000, 40.001), fix(102000), fix(102000), fix(99999), { ...fix(106000), accuracy: 500 }]);
+  await headless.locations([fix(104000, 40.0001), fix(102000), fix(102000), fix(99999), { ...fix(106000), accuracy: 500 }]);
   const run = await headless.get('A');
-  assert.equal(run?.coordinates.length, 2); assert.ok(run!.distanceMeters > 110 && run!.distanceMeters < 112);
-  await headless.locations([fix(104000, 40.001)]); assert.equal((await headless.get('A'))?.coordinates.length, 2);
+  assert.equal(run?.coordinates.length, 2); assert.ok(run!.distanceMeters > 11 && run!.distanceMeters < 12);
+  await headless.locations([fix(104000, 40.0001)]); assert.equal((await headless.get('A'))?.coordinates.length, 2);
 });
 test('pause excludes time and paused travel, including delayed fixes from an earlier segment', async () => {
   const f = fixture(); const run = await f.repo.begin('A', 'miles', 0, 'background');
@@ -38,7 +38,7 @@ test('pause excludes time and paused travel, including delayed fixes from an ear
   f.time(110500); await f.repo.pause('A', run.id); assert.equal(f.tracking(), false);
   f.time(120000); await f.repo.locations([fix(115000, 41)]);
   f.time(200000); await f.repo.resume('A', run.id);
-  f.time(210000); await f.repo.locations([fix(150000, 42), fix(202000, 41), fix(204000, 41.001)]);
+  f.time(210000); await f.repo.locations([fix(150000, 42), fix(202000, 41), fix(204000, 41.0001)]);
   const final = await f.repo.finish('A', run.id);
   assert.equal(elapsedRunSeconds(final, 900000), 20);
   assert.deepEqual(final.segmentStarts, [0, 1]); assert.equal(final.coordinates.length, 3);

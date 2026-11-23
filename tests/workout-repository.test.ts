@@ -47,6 +47,24 @@ test('retry after a stopped run was persisted keeps one workout with the origina
   assert.equal((await restarted.getLocalWorkoutsOnly())[0].userId, 'A');
 });
 
+test('planned route and audio settings survive offline history recovery and the existing API round trip', async () => {
+  const f = fixture(); setAccountScope('A');
+  const record: GeneratedWorkout = { ...workout('planned-run'), runData: {
+    coordinates: [{ latitude: 40, longitude: -74, timestamp: 1000 }], segmentStarts: [0],
+    distanceMiles: 0, distanceKm: 0, durationSeconds: 10, paceSecsPerMile: 0, paceSecsPerKm: 0,
+    unit: 'km', notifInterval: 0.5, notificationType: 'update',
+    plannedRoute: { version: 1, id: 'plan', createdAt: 1000, distanceMeters: 33.36,
+      coordinates: [{ latitude: 40, longitude: -74 }, { latitude: 40.0003, longitude: -74 }] },
+  } };
+  await f.repo.saveWorkout(record);
+  const restarted = createWorkoutRepository(f.storage, f.request);
+  assert.deepEqual((await restarted.getLocalWorkoutsOnly())[0].runData, record.runData);
+  f.online(); await restarted.syncLocalWorkoutsToServer();
+  assert.deepEqual(f.server.get(record.id)?.runData, record.runData);
+  assert.deepEqual((await restarted.getWorkouts())[0].runData, record.runData);
+  assert.equal((await restarted.getWorkouts())[0].runData?.distanceKm, 0);
+});
+
 test('a foreign-owner record returned by an API cannot enter the account cache', async () => {
   const f = fixture(); setAccountScope('B');
   const repo = createWorkoutRepository(f.storage, async () => ({ status: 200, workouts: [{ ...workout('foreign'), userId: 'A' }] }));

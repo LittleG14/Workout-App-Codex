@@ -441,11 +441,12 @@ function formatRunPace(secsPerUnit: number): string {
 }
 
 function getRunMapRegion(runData: RunData) {
-  if (runData.coordinates.length === 0) {
+  const points = [...runData.coordinates, ...(runData.plannedRoute?.coordinates ?? [])];
+  if (points.length === 0) {
     return { latitude: 37.78825, longitude: -122.4324, latitudeDelta: 0.01, longitudeDelta: 0.01 };
   }
-  const lats = runData.coordinates.map(c => c.latitude);
-  const lons = runData.coordinates.map(c => c.longitude);
+  const lats = points.map(c => c.latitude);
+  const lons = points.map(c => c.longitude);
   const minLat = Math.min(...lats);
   const maxLat = Math.max(...lats);
   const minLon = Math.min(...lons);
@@ -511,7 +512,7 @@ function JustRunDetail({ workout }: { workout: GeneratedWorkout }) {
           <Text style={styles.runDetailDate}>{dateStr} at {timeStr}</Text>
         </Animated.View>
 
-        {runData.coordinates.length > 1 && (
+        {(runData.coordinates.length > 1 || runData.plannedRoute) && (
           <Animated.View entering={FadeInDown.delay(80).duration(400)} style={styles.runMapCard}>
             <MapView
               style={styles.runMap}
@@ -523,6 +524,7 @@ function JustRunDetail({ workout }: { workout: GeneratedWorkout }) {
               rotateEnabled={false}
               showsUserLocation={false}
             >
+              {runData.plannedRoute && <Polyline coordinates={runData.plannedRoute.coordinates} strokeColor={Colors.cardio} strokeWidth={4} lineDashPattern={[10, 6]} />}
               {(runData.segmentStarts ?? [0]).map((start, index, starts) => <Polyline
                 key={start}
                 coordinates={runData.coordinates.slice(start, starts[index + 1] ?? runData.coordinates.length)}

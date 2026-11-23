@@ -6,6 +6,8 @@ import { Platform } from 'react-native';
 import { assertAccountScope, getAccountScope } from './account-scope';
 import { createRunRepository, type RunDraft } from './run-repository';
 import { supabase } from './supabase';
+import { runAudio } from './run-audio';
+import { runPlanning } from './run-planning';
 
 export const RUN_LOCATION_TASK = 'swolehouse-run-location-v1';
 let watch: Location.LocationSubscription | null = null;
@@ -18,6 +20,7 @@ const options: Location.LocationTaskOptions = {
   foregroundService: { notificationTitle: 'Swole House run in progress', notificationBody: 'Recording your route and distance. Open Swole House to pause or stop.', killServiceOnDestroy: true },
 };
 async function stopNative() {
+  runAudio.cancel();
   watch?.remove(); watch = null;
   if (Platform.OS !== 'web' && await TaskManager.isAvailableAsync() && await Location.hasStartedLocationUpdatesAsync(RUN_LOCATION_TASK)) {
     await Location.stopLocationUpdatesAsync(RUN_LOCATION_TASK);
@@ -43,6 +46,15 @@ export const runs = createRunRepository({ storage: AsyncStorage,
     const owner = session?.user.id ?? null;
     return currentOwner === undefined || currentOwner === owner ? owner : null;
   }, now: Date.now, id: Crypto.randomUUID, start: startNative, stop: stopNative,
+  cancelAudio: () => runAudio.cancel(),
+  notify: event => { if (currentOwner === undefined || currentOwner === event.userId) runAudio.enqueue(event); },
+  consumePlan: async (userId, id) => {
+    const scope = getAccountScope(); if (scope.userId !== userId) throw new Error('Your account changed.');
+    await runPlanning.consumeRoute(id, scope);
+  },
+});
+runAudio.onError((event, error) => {
+  void runs.audioFailure(event.userId, event.runId, error instanceof Error ? error.message : 'Run audio was unavailable. Visual milestones remain active.').catch(() => {});
 });
 
 // Must be evaluated at module scope, including when iOS starts a headless task.
@@ -60,7 +72,7 @@ export function runAccountChanged(userId: string | null) {
   setRunOwner(userId);
   return runs.accountChanged(userId);
 }
-export function setRunOwner(userId: string | null) { currentOwner = userId; }
+export function setRunOwner(userId: string | null) { if (currentOwner !== userId) runAudio.cancel(); currentOwner = userId; }
 export function settleRunAccount() { return runs.accountChanged(currentOwner ?? null); }
 export async function ownRun() {
   const scope = getAccountScope(); const run = await runs.get(scope.userId); assertAccountScope(scope);

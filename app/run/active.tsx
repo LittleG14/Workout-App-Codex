@@ -47,8 +47,10 @@ export default function ActiveRunScreen() {
   const [busy, setBusy] = useState(false);
   const busyRef = useRef(false);
   const [milestoneMsg, setMilestoneMsg] = useState<string | null>(null);
-  const lastMilestoneRef = useRef(0);
+  const lastMilestoneRef = useRef<number | null>(null);
   const mapRef = useRef<MapView>(null);
+  const [mapReady, setMapReady] = useState(false), [follow, setFollow] = useState(true);
+  const fitted = useRef<string | null>(null), followRequested = useRef(false);
   const refresh = useCallback(async () => {
     assertAccountScope(runScope.current);
     const run = await ownRun(); assertAccountScope(runScope.current);
@@ -78,22 +80,37 @@ export default function ActiveRunScreen() {
     return () => { mounted = false; clearInterval(timer); listener.remove(); };
   }, []);
   const unit = draft?.unit ?? 'miles';
-  const notifInterval = draft?.notifInterval ?? 0;
   const coordinates = draft?.coordinates ?? [];
   const paused = draft?.status !== 'running';
   const elapsed = draft ? elapsedRunSeconds(draft, now) : 0;
   const distanceMeters = draft?.distanceMeters ?? 0;
+  const latestCoordinate = coordinates.at(-1);
+  const latestLat = latestCoordinate?.latitude, latestLon = latestCoordinate?.longitude, latestTime = latestCoordinate?.timestamp;
+  const hasPlan = !!draft?.plannedRoute;
   useEffect(() => {
-    const latest = draft?.coordinates.at(-1);
-    if (latest) mapRef.current?.animateToRegion({ ...latest, latitudeDelta: 0.005, longitudeDelta: 0.005 }, 500);
-    const dist = unit === 'miles' ? distanceMeters / 1609.34 : distanceMeters / 1000;
-    const milestone = notifInterval > 0 ? Math.floor(dist / notifInterval) * notifInterval : 0;
-    if (milestone > lastMilestoneRef.current) {
-      lastMilestoneRef.current = milestone;
-      setMilestoneMsg(milestone + ' ' + (unit === 'miles' ? 'mi' : 'km') + ' reached!');
+    if (!draft || !mapReady || fitted.current === draft.id) return;
+    fitted.current = draft.id;
+    if (draft.plannedRoute) {
+      setFollow(false);
+      const lastFix = draft.coordinates.at(-1);
+      const frame = [...draft.plannedRoute.coordinates, ...(lastFix ? [lastFix] : [])];
+      mapRef.current?.fitToCoordinates(frame, { edgePadding: { top: insets.top + 160, bottom: insets.bottom + 150, left: 30, right: 30 }, animated: false });
+    }
+  }, [draft, mapReady, insets.top, insets.bottom]);
+  useEffect(() => {
+    if (!follow || (hasPlan && !followRequested.current) || latestLat === undefined || latestLon === undefined) return;
+    mapRef.current?.animateToRegion({ latitude: latestLat, longitude: latestLon, latitudeDelta: 0.005, longitudeDelta: 0.005 }, 500);
+  }, [latestLat, latestLon, latestTime, hasPlan, follow]);
+  useEffect(() => {
+    if (!draft) return;
+    const event = draft.latestMilestone;
+    if (lastMilestoneRef.current === null) { lastMilestoneRef.current = draft.notificationIndex ?? 0; return; }
+    if (event && event.index > lastMilestoneRef.current) {
+      lastMilestoneRef.current = event.index;
+      setMilestoneMsg(event.distance + ' ' + (event.unit === 'miles' ? 'mi' : 'km') + ' reached!');
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     }
-  }, [draft?.coordinates, distanceMeters, unit, notifInterval]);
+  }, [draft]);
   useEffect(() => {
     if (!milestoneMsg) return;
     const timer = setTimeout(() => setMilestoneMsg(null), 3500);
@@ -147,6 +164,8 @@ export default function ActiveRunScreen() {
         style={styles.map}
         provider={PROVIDER_DEFAULT}
         initialRegion={initialRegion}
+        onMapReady={() => setMapReady(true)}
+        onPanDrag={() => { followRequested.current = false; setFollow(false); }}
         showsUserLocation
         showsMyLocationButton={false}
         scrollEnabled
@@ -154,6 +173,7 @@ export default function ActiveRunScreen() {
         pitchEnabled={false}
         rotateEnabled={false}
       >
+        {draft?.plannedRoute && <Polyline coordinates={draft.plannedRoute.coordinates} strokeColor={Colors.cardio} strokeWidth={5} lineDashPattern={[10, 6]} />}
         {(draft?.segmentStarts ?? [0]).map((start, index, starts) => (
           <Polyline
             key={start}
@@ -181,6 +201,7 @@ export default function ActiveRunScreen() {
         <View style={styles.statusRow}>
           {draft?.mode === 'foreground' && <Text style={styles.pausedBadgeText}>App-open tracking only</Text>}
           {draft?.error && <Text accessibilityRole="alert" style={styles.pausedBadgeText}>{draft.error}</Text>}
+          {draft?.audioError && <Text accessibilityRole="alert" style={styles.pausedBadgeText}>{draft.audioError}</Text>}
           {paused ? (
             <View style={styles.pausedBadge}>
               <Ionicons name="pause" size={12} color="#FFD700" />
@@ -193,6 +214,8 @@ export default function ActiveRunScreen() {
             </View>
           )}
         </View>
+
+        {draft?.plannedRoute && <Text style={{ color: Colors.text, fontSize: 12 }}>Cyan dashed: planned · Orange: recorded GPS</Text>}
 
         <View style={styles.statRow}>
           <View style={styles.statBox}>
@@ -219,6 +242,10 @@ export default function ActiveRunScreen() {
       </View>
 
       <View style={[styles.controls, { paddingBottom: insets.bottom + 32 }]}>
+        <Pressable accessibilityRole="button" accessibilityLabel="Follow my current GPS position" style={styles.pauseBtn}
+          onPress={() => { followRequested.current = true; setFollow(true); const latest = coordinates.at(-1); if (latest) mapRef.current?.animateToRegion({ ...latest, latitudeDelta: 0.005, longitudeDelta: 0.005 }, 400); }}>
+          <Ionicons name="locate" size={24} color="#FFF" />
+        </Pressable>
         <Pressable disabled={busy || !draft} accessibilityRole="button" accessibilityLabel={paused ? "Resume run" : "Pause run"} style={styles.pauseBtn} onPress={handlePause}>
           <Ionicons name={paused ? "play" : "pause"} size={28} color="#FFF" />
         </Pressable>
@@ -348,9 +375,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
-    gap: 32,
+    gap: 20,
     paddingTop: 24,
-    paddingHorizontal: 40,
+    paddingHorizontal: 16,
     backgroundColor: "rgba(0,0,0,0.75)",
   },
   pauseBtn: {

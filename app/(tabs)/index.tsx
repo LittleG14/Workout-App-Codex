@@ -477,6 +477,15 @@ export default function GenerateScreen() {
           </LinearGradient>
         </Animated.View>
 
+        {isJustRun && <Animated.View style={[buttonAnimStyle, { marginBottom: 12 }]}>
+          <Pressable style={styles.generateButton} accessibilityRole="button" accessibilityLabel="Trace Route" onPress={() => router.push('/run/trace')}>
+            <LinearGradient colors={[catColor, `${catColor}CC`]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.generateGradient}>
+              <Ionicons name="map-outline" size={22} color="#FFF" />
+              <Text style={styles.generateText}>Trace Route</Text>
+            </LinearGradient>
+          </Pressable>
+        </Animated.View>}
+
         <Animated.View style={buttonAnimStyle}>
           <Pressable
             style={[styles.generateButton, generating && styles.generateButtonDisabled]}

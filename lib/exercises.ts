@@ -1,5 +1,7 @@
 import { isExerciseEligible } from './equipment-eligibility';
 import type { EquipmentPreferences } from '../shared/equipment';
+import type { PlannedRoute } from './run-geometry';
+import type { RunNotificationType } from './run-milestones';
 export { EQUIPMENT_OPTIONS } from '../shared/equipment';
 export type TopCategory = 'weight_lifting' | 'circuit' | 'yoga' | 'cardio' | 'mobility';
 
@@ -41,6 +43,8 @@ export interface RunData {
   paceSecsPerKm: number;
   unit: 'miles' | 'km';
   notifInterval: number;
+  notificationType?: RunNotificationType;
+  plannedRoute?: PlannedRoute;
 }
 
 export interface Exercise {
