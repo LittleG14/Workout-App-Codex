@@ -23,6 +23,7 @@ import { authRedirect } from '@/lib/auth-links';
 import { createPasswordRecovery } from '@/lib/password-recovery';
 import { assertPkceAvailable } from '@/lib/native-crypto';
 import { withRequestTimeout } from '@/lib/request-timeout';
+import { circuitController } from '@/lib/circuit-runtime';
 
 const recovery = createPasswordRecovery({
   exchangeCodeForSession: code => supabase.auth.exchangeCodeForSession(code),
@@ -183,7 +184,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const logout = useCallback(async () => {
-    try { await pauseRunBeforeLogout(); await clearAllAuth(); }
+    try { await circuitController.beforeLogout(); await pauseRunBeforeLogout(); await clearAllAuth(); }
     finally { setRunOwner(getAccountScopeOrNull()); }
   }, []);
 
@@ -210,7 +211,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const deleteAccount = useCallback(async () => {
     const scope = getAccountScope();
     try {
-      await pauseRunBeforeLogout();
+      await circuitController.beforeLogout(); await pauseRunBeforeLogout();
       const { data: { session } } = await supabase.auth.getSession();
       assertAccountScope(scope);
       if (!session?.access_token) throw new Error("No active session.");

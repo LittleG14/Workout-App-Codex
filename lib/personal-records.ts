@@ -1,4 +1,5 @@
 import type { Exercise, WorkoutExercise, GeneratedWorkout } from './exercises';
+import { collectHyroxTimes, type TimedPerformance } from './circuit-performance';
 
 const weightKg = (weight: number, unit?: string) => unit === 'kg' ? weight : weight * 0.45359237;
 const distanceKm = (distance: number, unit: 'miles' | 'km') => unit === 'km' ? distance : distance * 1.609344;
@@ -15,6 +16,7 @@ export interface ExercisePR {
   lastReps?: string;
   lastDate?: string;
   lastNotes?: string;
+  timedPerformances?: TimedPerformance[];
 }
 
 export type PRCategory = "weight_lifting" | "circuit" | "yoga" | "cardio" | "mobility";
@@ -89,6 +91,10 @@ export function computePRs(
     });
   });
 
+  if (category === 'circuit') for (const [id, data] of collectHyroxTimes(workouts, hiddenIds, resetTimestamps)) {
+    const entry = prMap.get(id) ?? { exercise: data.exercise };
+    entry.timedPerformances = data.times; prMap.set(id, entry);
+  }
   return Array.from(prMap.values());
 }
 

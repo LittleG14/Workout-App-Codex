@@ -88,7 +88,13 @@ export function createWorkoutRepository(storage: Storage, request: WorkoutReques
     if (workout?.userId && workout.userId !== scope.userId) throw new Error('This workout belongs to another account.');
     if (workout) workout = { ...workout, userId: scope.userId };
     await serial(scope, async () => {
-      const state = await read(scope); state.revision += 1;
+      const state = await read(scope);
+      const previous = state.workouts.find(w => w.id === id);
+      if (previous?.circuitSession) {
+        if (!workout && !['completed', 'canceled'].includes(previous.circuitSession.status)) throw new Error('Finish or cancel this circuit before deleting it.');
+        if (workout && JSON.stringify(workout.circuitSession) !== JSON.stringify(previous.circuitSession)) throw new Error('Circuit timing changed. Reopen the workout rather than overwriting its measurements.');
+      }
+      state.revision += 1;
       state.workouts = state.workouts.filter(w => w.id !== id);
       if (workout) state.workouts.unshift(workout);
       state.pending[id] = { revision: state.revision, kind: workout ? 'put' : 'delete', ...(workout ? { workout } : {}) };
@@ -99,6 +105,21 @@ export function createWorkoutRepository(storage: Storage, request: WorkoutReques
   return {
     saveWorkout: (workout: GeneratedWorkout) => mutate(workout, workout.id),
     updateWorkout: (workout: GeneratedWorkout) => mutate(workout, workout.id),
+    /** Atomic edit against the latest owned record, on the existing sync queue. */
+    async editWorkout(id: string, edit: (current: GeneratedWorkout) => GeneratedWorkout): Promise<GeneratedWorkout> {
+      const scope = getAccountScope();
+      const result = await serial(scope, async () => {
+        const state = await read(scope), current = state.workouts.find(w => w.id === id);
+        if (!current) throw new Error('This workout is no longer available.');
+        const updated = edit(current);
+        if (updated.id !== id || updated.userId !== scope.userId) throw new Error('Workout ownership cannot change.');
+        state.revision += 1;
+        state.workouts = state.workouts.map(w => w.id === id ? updated : w);
+        state.pending[id] = { revision: state.revision, kind: 'put', workout: updated };
+        await write(scope, state); return updated;
+      });
+      void sync(scope).catch(() => {}); return result;
+    },
     deleteWorkout: (id: string) => mutate(null, id),
     async getLocalWorkoutsOnly(): Promise<GeneratedWorkout[]> {
       const scope = getAccountScope(); return serial(scope, async () => (await read(scope)).workouts);

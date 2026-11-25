@@ -2,6 +2,7 @@ import { isExerciseEligible } from './equipment-eligibility';
 import type { EquipmentPreferences } from '../shared/equipment';
 import type { PlannedRoute } from './run-geometry';
 import type { RunNotificationType } from './run-milestones';
+import type { CircuitSession } from './circuit-session';
 export { EQUIPMENT_OPTIONS } from '../shared/equipment';
 export type TopCategory = 'weight_lifting' | 'circuit' | 'yoga' | 'cardio' | 'mobility';
 
@@ -98,6 +99,9 @@ export interface GeneratedWorkout {
   createdAt: string;
   runData?: RunData;
   elapsedSeconds?: number;
+  /** Optional account-owned timing/round metadata; missing on historical workouts. */
+  circuitSession?: CircuitSession;
+  circuitTrackingVersion?: 1;
   itemOrder?: Array<{ kind: "exercise" | "superset" }>;
 }
 

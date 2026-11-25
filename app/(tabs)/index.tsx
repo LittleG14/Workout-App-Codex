@@ -41,6 +41,7 @@ import {
   getSubTypeLabel,
 } from "@/lib/exercises";
 import { saveWorkout } from "@/lib/workout-storage";
+import { prepareCircuitTracking } from '@/lib/circuit-session';
 import { getAccountScope, assertAccountScope } from '@/lib/account-scope';
 import { useCustomExercises } from "@/lib/useCustomExercises";
 import { useHiddenExercises } from "@/lib/useHiddenExercises";
@@ -299,7 +300,7 @@ export default function GenerateScreen() {
       const style = selectedCategory === "weight_lifting" ? trainingStyle : currentSubType;
       const workout = generateWorkout(selectedCategory, currentSubType, style, selectedDuration, includeSupersets, includeCore, customExercises, hiddenIds, equipment);
       workout.userId = scope.userId;
-      await saveWorkout(workout);
+      await saveWorkout(prepareCircuitTracking(workout));
       assertAccountScope(scope);
       router.push({ pathname: "/workout/[id]", params: { id: workout.id, fresh: "true" } });
     } catch (error) {

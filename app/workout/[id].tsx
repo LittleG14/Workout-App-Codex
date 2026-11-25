@@ -57,6 +57,9 @@ import { useEquipmentPreferences } from '@/lib/useEquipmentPreferences';
 import { EquipmentOptions } from '@/components/EquipmentOptions';
 import { normalizeEquipment } from '@/shared/equipment';
 import { assertAccountScope, getAccountScope } from '@/lib/account-scope';
+import { CircuitControls, TrackedCircuitBlock } from '@/components/CircuitTracking';
+import { circuitFormat as trackedCircuitFormat, circuitPrescriptionLocked } from '@/lib/circuit-session';
+import { circuitController } from '@/lib/circuit-runtime';
 import {
   ShareableRegularCard,
   ShareableRunCard,
@@ -264,7 +267,8 @@ function ExerciseCard({ item, index, accentColor, onRefresh, onPickExercise, onL
   );
 }
 
-function CircuitBlockCard({ block, index, accentColor, showWeightLog, onLogWeight, onRefreshExercise, onPickExercise }: { block: CircuitBlock; index: number; accentColor: string; showWeightLog?: boolean; onLogWeight?: (exIndex: number) => void; onRefreshExercise?: (exIndex: number) => void; onPickExercise?: (exIndex: number) => void }) {
+function CircuitBlockCard({ block, index, accentColor, showWeightLog, onLogWeight, onRefreshExercise, onPickExercise, trackingWorkout }: { block: CircuitBlock; index: number; accentColor: string; showWeightLog?: boolean; onLogWeight?: (exIndex: number) => void; onRefreshExercise?: (exIndex: number) => void; onPickExercise?: (exIndex: number) => void; trackingWorkout?: GeneratedWorkout }) {
+  if (trackingWorkout) return <TrackedCircuitBlock workout={trackingWorkout} blockIndex={index} onLogWeight={onLogWeight} onRefresh={onRefreshExercise} onPick={onPickExercise} />;
   return (
     <Animated.View entering={FadeInDown.delay(100 + index * 80).duration(400)}>
       <View style={[styles.circuitBlockCard, { borderLeftColor: accentColor }]}>
@@ -593,6 +597,10 @@ export default function WorkoutDetailScreen() {
   const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [workout, setWorkout] = useState<GeneratedWorkout | null>(null);
+  useEffect(() => circuitController.subscribe(() => {
+    const latest = circuitController.getSnapshot().workout;
+    if (latest?.id === id) setWorkout(latest);
+  }), [id]);
   const currentWorkout = useRef(workout);
   currentWorkout.current = workout;
   const { loadLatest: loadEquipment } = useEquipmentPreferences();
@@ -602,6 +610,7 @@ export default function WorkoutDetailScreen() {
     selectionPending.current = true;
     const snapshot = workout;
     try {
+      if (snapshot && circuitPrescriptionLocked(snapshot)) throw new Error('The prescribed workout is locked once timing starts or is historical. Generate another workout to change its exercises.');
       const scope = getAccountScope();
       if (snapshot?.userId && snapshot.userId !== scope.userId) throw new Error('Please reopen this workout from your account.');
       const preferences = await loadEquipment();
@@ -617,12 +626,24 @@ export default function WorkoutDetailScreen() {
   const shareCardRef = useRef<View>(null);
   const webTopPad = Platform.OS === "web" ? 67 : 0;
 
-  useEffect(() => { loadWorkout(); }, [id]);
+  useEffect(() => {
+    let mounted = true;
+    void loadWorkout().catch(error => { if (mounted) Alert.alert('Could not load workout', error instanceof Error ? error.message : 'Please retry. Your data has been preserved.'); });
+    return () => { mounted = false; };
+  }, [id]);
 
   const loadWorkout = async () => {
+    const scope = getAccountScope();
     const all = await getLocalWorkoutsOnly();
+    assertAccountScope(scope);
     const found = all.find((w) => w.id === id);
-    if (found) setWorkout(found);
+    if (found) {
+      setWorkout(found);
+      if (trackedCircuitFormat(found) && found.circuitSession && !['completed', 'canceled'].includes(found.circuitSession.status)) {
+        try { await circuitController.recoverForView(found.id); assertAccountScope(scope); }
+        catch (error) { Alert.alert('Circuit recovery needs attention', error instanceof Error ? error.message : 'Please retry.'); }
+      }
+    }
   };
 
   const getAllUsedIds = (w: GeneratedWorkout): string[] => {
@@ -719,6 +740,7 @@ export default function WorkoutDetailScreen() {
 
   const saveWeight = async () => {
     if (!workout) return;
+    if (circuitPrescriptionLocked(workout)) { Alert.alert('Recorded workout', 'Station loads are locked once timing starts or is historical.'); return; }
     const numWeight = parseFloat(weightInput);
     const updated = { ...workout };
 
@@ -907,6 +929,7 @@ export default function WorkoutDetailScreen() {
   };
 
   const openPicker = (location: PickerLocation) => {
+    if (workout && circuitPrescriptionLocked(workout)) return;
     setPickerSearch('');
     setPickerIsNew(false);
     resetNewExForm();
@@ -1003,6 +1026,7 @@ export default function WorkoutDetailScreen() {
 
   const handleReorder = useCallback(async (from: number, to: number) => {
     if (!workout) return;
+    if (circuitPrescriptionLocked(workout)) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     const reordered = reorderArray(orderedItems, from, to);
     if (reordered[0]?.kind === "circuitBlock") {
@@ -1094,6 +1118,7 @@ export default function WorkoutDetailScreen() {
         key: item.key,
         element: (
           <CircuitBlockCard
+            trackingWorkout={trackedCircuitFormat(workout) ? workout : undefined}
             block={block}
             index={origIdx}
             accentColor={ac}
@@ -1359,7 +1384,7 @@ export default function WorkoutDetailScreen() {
               )}
             </View>
 
-            {supportsBalance && (
+            {supportsBalance && !circuitPrescriptionLocked(workout) && (
               <View style={styles.balanceRow}>
                 <Pressable
                   style={[styles.balanceBtn, currentBalance === 'more_movements' && styles.balanceBtnActive]}
@@ -1391,11 +1416,11 @@ export default function WorkoutDetailScreen() {
           {hasCircuitBlocks ? "Workout Structure" : workout.topCategory === "yoga" ? "Poses" : "Exercises"}
         </Text>
 
-        <SortableExerciseList
+        {circuitPrescriptionLocked(workout) ? sortableItems.map(item => <View key={item.key}>{item.element}</View>) : <SortableExerciseList
           items={sortableItems}
           onReorder={handleReorder}
           onDragActive={(active) => setScrollEnabled(!active)}
-        />
+        />}
 
         {!hasCircuitBlocks && workout.subType !== 'just_run' && (
           <Pressable
@@ -1409,7 +1434,8 @@ export default function WorkoutDetailScreen() {
         )}
       </ScrollView>
 
-      {hasCircuitBlocks && (
+      {trackedCircuitFormat(workout) && <CircuitControls workout={workout} bottom={insets.bottom} />}
+      {hasCircuitBlocks && !trackedCircuitFormat(workout) && (
         <View style={[styles.swFooter, { paddingBottom: insets.bottom + (Platform.OS === 'web' ? 34 : 8) }]}>
           <Pressable
             onPress={handleSwPress}

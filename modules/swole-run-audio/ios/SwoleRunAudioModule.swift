@@ -1,17 +1,32 @@
 import ExpoModulesCore
 import AVFoundation
 import UIKit
+import Darwin
 
 public final class SwoleRunAudioModule: Module {
   // All AVFoundation access is on the main queue, including headless task calls.
   private lazy var audio = RunAudioController()
+  private lazy var circuitNotifications = CircuitNotifications()
+  private let circuitClockOrigin = mach_continuous_time()
   public func definition() -> ModuleDefinition {
     Name("SwoleRunAudio")
+    // Relative to this module's initialization event. Raw device uptime is never
+    // exposed to JavaScript or included in synchronized workout metadata.
+    Function("circuitClockMs") { () -> Double in
+      var timebase = mach_timebase_info_data_t()
+      mach_timebase_info(&timebase)
+      return Double(mach_continuous_time() - self.circuitClockOrigin) * Double(timebase.numer) / Double(timebase.denom) / 1000000
+    }
     AsyncFunction("prepareAsync") { () throws in try self.audio.prepare() }.runOnQueue(.main)
     AsyncFunction("playAsync") { (kind: String, text: String, promise: Promise) in
       self.audio.play(kind: kind, text: text, promise: promise)
     }.runOnQueue(.main)
     AsyncFunction("stopAsync") { self.audio.cancel() }.runOnQueue(.main)
+    AsyncFunction("requestCircuitNotificationsAsync") { (promise: Promise) in self.circuitNotifications.request(promise) }.runOnQueue(.main)
+    AsyncFunction("scheduleCircuitNotificationsAsync") { (session: String, delays: [Double], promise: Promise) in
+      self.circuitNotifications.schedule(session, delays: delays, promise: promise)
+    }.runOnQueue(.main)
+    AsyncFunction("cancelCircuitNotificationsAsync") { (promise: Promise) in self.circuitNotifications.cancel(promise) }.runOnQueue(.main)
     OnDestroy { DispatchQueue.main.async { self.audio.close() } }
   }
 }

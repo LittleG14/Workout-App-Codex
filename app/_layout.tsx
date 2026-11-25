@@ -17,6 +17,7 @@ import {
   Rubik_700Bold,
 } from "@expo-google-fonts/rubik";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { CircuitRuntime } from '@/components/CircuitRuntime';
 
 void SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -81,6 +82,7 @@ function StartupAttempt({ retry }: { retry: () => void }) {
         <GestureHandlerRootView style={{ flex: 1 }}>
           <KeyboardProvider>
             <AuthProvider>
+              <CircuitRuntime />
               <StatusBar style="light" />
               <RootLayoutContent fontsLoaded={fontsLoaded} fontError={fontError} retry={retry} />
             </AuthProvider>

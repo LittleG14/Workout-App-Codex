@@ -24,6 +24,6 @@ const repository = createWorkoutRepository(AsyncStorage, async (scope, method, p
   return { status: response.status };
 });
 
-export const { saveWorkout, updateWorkout, deleteWorkout, getLocalWorkoutsOnly,
+export const { saveWorkout, updateWorkout, editWorkout, deleteWorkout, getLocalWorkoutsOnly,
   getWorkouts, syncLocalWorkoutsToServer, clearAccount: clearAccountWorkouts,
   pendingCount: getPendingWorkoutCount } = repository;

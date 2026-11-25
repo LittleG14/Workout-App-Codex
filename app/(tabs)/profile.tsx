@@ -32,6 +32,7 @@ import Animated, {
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Colors from "@/constants/colors";
 import { AvailableEquipment } from '@/components/AvailableEquipment';
+import { TimedPerformanceRecords } from '@/components/TimedPerformanceRecords';
 import { useAuth } from "@/contexts/AuthContext";
 import { apiRequest } from "@/lib/query-client";
 import { UserProfile, getProfile, saveProfile } from "@/lib/profile-storage";
@@ -501,7 +502,7 @@ function SwipeablePRItem({
               <Text style={prSwipeStyles.exerciseName}>{item.exercise.name}</Text>
               <Text style={prSwipeStyles.exerciseEquipment}>{item.exercise.equipment}</Text>
             </View>
-            {isWeightCategory ? (
+            {item.timedPerformances?.length ? <View style={[prSwipeStyles.badge, { backgroundColor: `${catColor}18` }]}><Ionicons name="stopwatch-outline" size={12} color={catColor} /><Text style={[prSwipeStyles.badgeText, { color: catColor }]}>Timed</Text></View> : isWeightCategory ? (
               item.prWeight ? (
                 <View style={[prSwipeStyles.badge, { backgroundColor: `${catColor}18` }]}>
                   <Ionicons name="trophy" size={12} color="#FFD700" />
@@ -1058,7 +1059,7 @@ export default function ProfileScreen() {
           </View>
 
           {selectedExercise ? (
-            <View style={styles.prDetailContainer}>
+            <ScrollView style={{ flex: 1 }} contentContainerStyle={[styles.prDetailContainer, { flex: 0, flexGrow: 1, paddingBottom: 24 }]}>
               <Pressable style={styles.prBackBtn} onPress={() => setSelectedExercise(null)}>
                 <Ionicons name="chevron-back" size={20} color={Colors.textSecondary} />
                 <Text style={styles.prBackText}>Back to list</Text>
@@ -1079,12 +1080,13 @@ export default function ProfileScreen() {
                   ))}
                 </View>
 
-                {isWeightCategory && (
+                <TimedPerformanceRecords records={selectedExercise.timedPerformances ?? []} />
+                {isWeightCategory && (!selectedExercise.timedPerformances?.length || !!selectedExercise.prWeight) && (
                   <View style={styles.prStatRow}>
                     <View style={styles.prStatCard}>
                       <View style={styles.prStatHeader}>
                         <Ionicons name="trophy" size={18} color="#FFD700" />
-                        <Text style={styles.prStatTitle}>Personal Record</Text>
+                        <Text style={styles.prStatTitle}>{selectedExercise.timedPerformances?.length ? 'Weight Personal Record' : 'Personal Record'}</Text>
                       </View>
                       {selectedExercise.prWeight ? (
                         <>
@@ -1101,11 +1103,11 @@ export default function ProfileScreen() {
                   </View>
                 )}
 
-                <View style={styles.prStatRow}>
+                {(!selectedExercise.timedPerformances?.length || !!selectedExercise.lastWeight) && <View style={styles.prStatRow}>
                   <View style={styles.prStatCard}>
                     <View style={styles.prStatHeader}>
                       <Ionicons name="time" size={18} color={Colors.accent} />
-                      <Text style={styles.prStatTitle}>Last Performed</Text>
+                      <Text style={styles.prStatTitle}>{selectedExercise.timedPerformances?.length ? 'Last Logged Load' : 'Last Performed'}</Text>
                     </View>
                     {selectedExercise.lastDate ? (
                       <>
@@ -1121,7 +1123,7 @@ export default function ProfileScreen() {
                       <Text style={styles.prStatEmpty}>Not performed yet</Text>
                     )}
                   </View>
-                </View>
+                </View>}
 
                 {!isWeightCategory && (
                   <View style={styles.prStatRow}>
@@ -1147,7 +1149,7 @@ export default function ProfileScreen() {
                   <Text style={styles.prResetBtnText}>Reset Stats & Notes</Text>
                 </Pressable>
               </View>
-            </View>
+            </ScrollView>
           ) : (
             <FlatList
               data={prData.filter(item =>

@@ -89,13 +89,16 @@ function SwipeableWorkoutItem({ item, index, onDelete }: {
   }, [item.id, onDelete]);
 
   const handleDeletePress = useCallback(() => {
+    if (item.circuitSession && !['completed', 'canceled'].includes(item.circuitSession.status)) {
+      Alert.alert('Circuit still in progress', 'Open this workout and finish or cancel the attempt before deleting it.'); return;
+    }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     translateX.value = withTiming(-400, { duration: 250 });
     rowHeight.value = withTiming(0, { duration: 300 });
     rowOpacity.value = withTiming(0, { duration: 250 }, () => {
       runOnJS(triggerDelete)();
     });
-  }, [triggerDelete]);
+  }, [triggerDelete, item.circuitSession]);
 
   const panGesture = Gesture.Pan()
     .activeOffsetX([-10, 10])
